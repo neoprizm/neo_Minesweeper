@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>지뢰찾기 (Minesweeper) + AI Solver — Pastel Pebble UI (Hybrid Pro / Fix)</title>
+<style>
+  :root{
+    --bg1:#fff6ff; --bg2:#f9fcff; --bg3:#fef9ff;
+    --panel:rgba(255,255,255,0.75);
+    --muted:#6b7280;
+    --accent:#ff69b4;
+    --glass:rgba(255,255,255,.65);
+    --glass-strong:rgba(255,255,255,.9);
+    --shadow:0 12px 28px rgba(152,115,255,.18);
+    --num-1:#6ea8ff; --num-2:#62d39b; --num-3:#ff7aa2; --num-4:#b38bff; --num-5:#ffb266; --num-6:#5fd9e1; --num-7:#7a7f9a; --num-8:#94a3b8;
+    --text-strong:#25324a; --text-soft:#3f4a63;
+  }
+  html,body{height:100%;margin:0;overflow-x:hidden;font-family:Inter, "Noto Sans KR", system-ui, Arial; color:var(--text-strong);
+    background:radial-gradient(1800px 1200px at 10% 0%, var(--bg1) 0%, var(--bg2) 40%, var(--bg3) 100%);
+    display:flex; align-items:center; justify-content:center}
+  .wrap{width:100%; background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.55));
+    border-radius:16px; padding:18px; box-shadow:var(--shadow); backdrop-filter: blur(8px) saturate(130%); border:1px solid rgba(255,255,255,.85)}
+  header{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:nowrap}
+  h1{margin:0;font-size:18px;color:var(--text-strong); font-weight:900}
+  .controls{margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:nowrap}
+  .btn, select, input[type="number"]{ padding:8px 10px; border-radius:12px; background:var(--glass); border:1px solid rgba(255,255,255,.85); color:var(--text-strong); font-weight:800; cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,255,255,.9), 0 1px 0 rgba(0,0,0,.06)} 
+  .btn.secondary{background:#fff}
+  select{appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%23556" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'); background-repeat:no-repeat; background-position:right 8px center; padding-right:28px}
+  select option{color:#0b1220; font-weight:800; background:#fff}
+  .icon-btn{width:36px;height:36px; display:grid; place-items:center; border-radius:12px}
+  .gear{font-size:16px}
+  .settings-pop{position:absolute; top:52px; right:18px; background:var(--glass-strong); border:1px solid rgba(0,0,0,.06); border-radius:14px; padding:10px; min-width:260px; box-shadow:0 14px 40px rgba(0,0,0,.12); display:none; z-index:20}
+  .settings-pop h4{margin:4px 6px 10px; font-size:12px; color:var(--muted); font-weight:800}
+  .row{display:flex; align-items:center; gap:8px; margin:6px}
+  .row label{min-width:64px; font-size:12px; color:var(--text-soft); font-weight:800}
+  .row input[type="range"]{flex:1; appearance:none; height:6px; border-radius:999px; background:#e9edff}
+  .row input[type="range"]::-webkit-slider-thumb{appearance:none; width:16px; height:16px; border-radius:50%; background:#fff; border:2px solid #c7d2fe}
+  .sub{font-size:12px;color:var(--muted)}
+  .content{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px}
+  @media (max-width:980px){ .content{grid-template-columns:1fr} .sidebar{order:-1} }
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,.55)); padding:14px; border-radius:14px; border:1px solid rgba(255,255,255,.85); box-shadow:var(--shadow)}
+  .info{display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:8px}
+  .badge{font-weight:900; min-width:54px; text-align:center; background:#fff; color:var(--text-strong); padding:6px 10px; border-radius:10px; border:1px solid rgba(0,0,0,.06)}
+  .board{display:grid; gap:6px; background:transparent; padding:12px; border-radius:14px; justify-content:flex-start}
+  .cell{position:relative; width:38px; height:38px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:16px; letter-spacing:.2px; color:var(--text-strong); border-radius:14px; user-select:none; cursor:pointer; background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid rgba(255,255,255,.95); box-shadow: 0 10px 22px rgba(180,160,255,.22), inset 0 1px 0 rgba(255,255,255,1), inset 0 -2px 0 rgba(0,0,0,.05); transition: transform .08s ease, filter .12s ease, background .25s ease, box-shadow .25s ease; outline: none; text-shadow:0 1px 0 rgba(255,255,255,.8)} 
+  .cell.hidden{ background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62)) }
+  .cell.hidden:hover{ filter:brightness(1.04); transform:translateY(-1px) scale(1.02) }
+  .cell.open0,.cell.open1,.cell.open2,.cell.open3,.cell.open4,.cell.open5,.cell.open6,.cell.open7,.cell.open8{ background:linear-gradient(180deg, #e8eefb, #dbe5f7); border-color:rgba(0,0,0,.08); box-shadow: inset 0 2px 3px rgba(0,0,0,.06), 0 6px 14px rgba(180,160,255,.18) }
+  .cell.open1{color:var(--num-1)} .cell.open2{color:var(--num-2)} .cell.open3{color:var(--num-3)} .cell.open4{color:var(--num-4)} .cell.open5{color:var(--num-5)} .cell.open6{color:var(--num-6)} .cell.open7{color:var(--num-7)} .cell.open8{color:var(--num-8)}
+  .cell.flag{ background:linear-gradient(180deg, rgba(255,182,193,.75), rgba(255,182,193,.55)); color:#c2185b; border-color:#ffc0cb }
+  .cell.mine{ background:linear-gradient(180deg, rgba(255,105,180,.85), rgba(255,105,180,.65)); color:#fff; border-color:#ff69b4 }
+  .footer{margin-top:10px; display:flex; justify-content:space-between; align-items:center; color:var(--muted)}
+  .ai-log-wrap{margin-top:10px; max-width:100%; overflow:hidden}
+  .ai-toolbar{color:var(--muted); font-size:12px; margin-bottom:4px}
+  #aiLog{word-break:break-all; white-space:pre-wrap; overflow:auto; box-sizing:border-box; padding:10px;  width:100%; min-height:140px; max-height:240px; resize:vertical; background:#fff; color:#374151; border:1px solid rgba(0,0,0,.06); border-radius:12px; padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height:1.35 }
+  .sidebar .card{background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.65)); border:1px solid rgba(0,0,0,.06); border-radius:14px; padding:12px; margin-bottom:12px; box-shadow:var(--shadow)}
+  .avatar{width:64px;height:64px;border-radius:50%; background:conic-gradient(from 220deg, #ffd1dc, #d0f0fd, #d5ffd6, #ffd1dc); border:3px solid #fff; box-shadow:0 6px 16px rgba(0,0,0,.08)}
+  .profile-head{display:flex; gap:12px; align-items:center}
+  .stats{display:flex; gap:10px; margin-top:8px}
+  .pill{background:#fff; border:1px solid rgba(0,0,0,.05); border-radius:999px; padding:6px 10px; font-size:12px; font-weight:900; color:#374151}
+  .history-list{max-height:360px; overflow:auto}
+  .rec{display:flex; align-items:center; gap:8px; padding:8px; border-radius:10px; border:1px solid rgba(0,0,0,.05); background:#fff; margin-bottom:8px; font-size:12px}
+  .rec .title{font-size:12px; font-weight:900; color:#111827}
+  .rec .meta{font-size:11px; color:#6b7280}
+  .rec .tag{font-size:10px; font-weight:900; padding:4px 8px; border-radius:999px}
+  .tag.win{background:#dcfce7; color:#166534}
+  .tag.lose{background:#fee2e2; color:#991b1b}
+  #overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.15); z-index:30}
+ .board{grid-auto-flow:row;grid-auto-rows:auto}.blink-red-locked{animation:blinkRed .5s step-start infinite !important}.wrap{width:100%;max-width:100%}
+#overlay{opacity:0;transition:opacity .6s ease, backdrop-filter .6s ease;backdrop-filter:blur(0px)}
+#overlay.show{opacity:1;backdrop-filter:blur(4px)}
+#overlay .dialog{transform:scale(.96);opacity:0;transition:transform .6s ease, opacity .6s ease}
+#overlay.show .dialog{transform:scale(1);opacity:1}
+h1{cursor:pointer} h1:hover{opacity:.9; transform:translateY(-1px)} </style>
+
+<style>
+/* ===== Minesweeper: 윤곽 강화 패치 (톤 유지) ===== */
+:root{
+  --line: rgba(37,50,74,.18);
+  --line-strong: rgba(37,50,74,.28);
+  --cell-glow: rgba(152,115,255,.18);
+}
+.wrap{
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow:
+    0 12px 28px rgba(152,115,255,.18),
+    0 0 0 1px var(--line);
+}
+.panel{
+  border: 1px solid rgba(255,255,255,.88);
+  box-shadow:
+    0 12px 28px rgba(152,115,255,.18),
+    0 0 0 1px var(--line);
+}
+.badge{ border-color: var(--line); }
+.board{
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+}
+.cell{
+  border-color: rgba(255,255,255,.96);
+  box-shadow:
+    0 10px 22px rgba(180,160,255,.22),
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -2px 0 rgba(0,0,0,.06),
+    0 0 0 1px var(--line);
+}
+.cell.hidden:hover{
+  box-shadow:
+    0 12px 24px rgba(180,160,255,.24),
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -2px 0 rgba(0,0,0,.06),
+    0 0 0 2px var(--line-strong),
+    0 0 0 6px rgba(152,115,255,.08);
+}
+.cell.open0,.cell.open1,.cell.open2,.cell.open3,
+.cell.open4,.cell.open5,.cell.open6,.cell.open7,.cell.open8{
+  border-color: var(--line);
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,.06),
+    0 6px 14px rgba(180,160,255,.18),
+    0 0 0 1px var(--line);
+}
+.cell.flag{
+  border-color: color-mix(in srgb, #ffc0cb 70%, #25324a 30%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 0 0 1px var(--line-strong);
+}
+.cell.mine{
+  border-color: color-mix(in srgb, #ff69b4 70%, #25324a 30%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 0 0 1px var(--line-strong);
+}
+.cell:focus-visible{
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--line-strong),
+    0 0 0 6px var(--cell-glow);
+}
+.sidebar .card{
+  border-color: var(--line);
+  box-shadow:
+    0 10px 24px rgba(152,115,255,.16),
+    0 0 0 1px var(--line);
+}
+.rec{ border-color: var(--line); }
+</style>
+
+<style>
+/* ===== Minesweeper: 상태별 Gradient 분류 + open0(빈칸) 더 어둡게 ===== */
+:root{
+  /* 기존 톤 유지용 기준 색 (보라/핑크 계열) */
+  --hue-accent: #9873ff; /* 기존 그림자색 힌트에서 채택 */
+  --hue-soft:   #f3eaff; /* 밝은 면 */
+  --hue-pink:   #ffc0cb; /* 깃발/경고 뉘앙스 */
+  --hue-deeppink:#ff69b4;
+  --hue-ink:    #25324a; /* 윤곽 잉크 */
+}
+
+/* 공통: 배경은 상태별 --cell-bg 사용 */
+.cell{ 
+  background-image: var(--cell-bg, none);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* 1) 숨겨진 셀: 살짝 입체감(위 밝고, 아래 진하게) */
+.cell.hidden{
+  --cell-bg: linear-gradient(180deg,
+      color-mix(in srgb, var(--hue-soft) 85%, white 15%) 0%,
+      color-mix(in srgb, var(--hue-accent) 20%, white 80%) 100%);
+}
+
+/* 2) 깃발 셀: 핑크 계열로 식별 강화 */
+.cell.flag{
+  --cell-bg: linear-gradient(180deg,
+      color-mix(in srgb, var(--hue-pink) 80%, white 20%) 0%,
+      color-mix(in srgb, var(--hue-deeppink) 40%, var(--hue-pink) 60%) 100%);
+}
+
+/* 3) 열린 숫자 셀들: 과하지 않게 밝은 톤 유지 */
+.cell.open1,.cell.open2,.cell.open3,
+.cell.open4,.cell.open5,.cell.open6,.cell.open7,.cell.open8{
+  --cell-bg: linear-gradient(180deg,
+      color-mix(in srgb, var(--hue-soft) 92%, white 8%) 0%,
+      color-mix(in srgb, var(--hue-accent) 12%, white 88%) 100%);
+}
+
+/* 4) 폭탄 셀: 경고 강조(핑크-보라 딥톤) */
+.cell.mine{
+  --cell-bg: linear-gradient(180deg,
+      color-mix(in srgb, var(--hue-deeppink) 40%, var(--hue-pink) 60%) 0%,
+      color-mix(in srgb, var(--hue-accent) 55%, black 45%) 100%);
+}
+
+/* 5) 열린 것 중 숫자 없는 셀(open0): 요청대로 가장 어둡고 무거운 그라디언트 */
+.cell.open0{
+  --cell-bg: linear-gradient(180deg,
+      color-mix(in srgb, var(--hue-accent) 40%, black 60%) 0%,
+      color-mix(in srgb, var(--hue-accent) 25%, black 75%) 60%,
+      color-mix(in srgb, var(--hue-ink) 35%, black 65%) 100%);
+  /* 윤곽도 조금 더 강하게 */
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.08),
+    inset 0 -3px 0 rgba(0,0,0,.18),
+    0 0 0 1.5px rgba(37,50,74,.32),
+    0 8px 18px rgba(152,115,255,.18);
+}
+
+/* 접근성: 상태 변화 시 전환이 너무 번쩍이지 않도록 */
+.cell{
+  transition: background-image .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+/* color-mix 미지원 브라우저 대응(필요 시 단색 대체) */
+@supports not (background: color-mix(in srgb, white, black)){
+  .cell.hidden{ background-color: #f3eaff; }
+  .cell.flag{ background-color: #ffc0cb; }
+  .cell.open1,.cell.open2,.cell.open3,
+  .cell.open4,.cell.open5,.cell.open6,.cell.open7,.cell.open8{ background-color: #f9f4ff; }
+  .cell.mine{ background-color: #f08bbf; }
+  .cell.open0{ background-color: #4b3f7a; }
+}
+</style>
+
+<style id="log-styles">
+#aiLog.log-list{
+  width:100%;
+  min-height:calc(5 * 32px);
+  max-height:calc(5 * 32px);
+  overflow-y:auto;
+  background:#fff;
+  color:#374151;
+  border:1px solid rgba(0,0,0,.06);
+  border-radius:12px;
+  padding:6px;
+  box-sizing:border-box;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  line-height:1.35;
+  word-break:break-all;
+  white-space:pre-wrap;
+  font-size:11px;
+  font-family:Inter, "Noto Sans KR", system-ui, Arial;
+}
+#aiLog .log-item{
+  display:flex; gap:8px; align-items:flex-start;
+  padding:6px 8px; border-radius:8px; cursor:pointer; user-select:text;
+}
+#aiLog .log-item:hover{ background:rgba(0,0,0,.03); }
+#aiLog .log-item.active{
+  background:rgba(152,115,255,.06);
+  outline:2px solid rgba(152,115,255,.35);
+}
+#aiLog .log-time{ flex:none; font-weight:900; color:#6b7280; }
+#aiLog .log-text{ flex:1; color:#374151; }
+</style>
+</head>
+<body onload="(window._fxInit&&_fxInit())">
+  <div class="wrap">
+    <header>
+      <h1>지뢰찾기 ⛏️💖</h1>
+      <div class="controls">
+        <label for="difficulty" class="sub">난이도</label>
+        <select id="difficulty" title="난이도">
+          <option value="easy">초급 (9 x 9, 10)</option>
+          <option value="medium" selected>중급 (16 x 16, 40)</option>
+          <option value="hard">고급 (16 x 30, 99)</option>
+        </select>
+        <button id="newGameBtn" class="btn">New</button>
+        <button id="resetBtn" class="btn" title="리셋">🔄</button>
+        <button id="aiBtn" class="btn" title="AI 자동 해결">AI ▶</button>
+        <label for="algoSel" class="sub">알고리즘</label>
+        <select id="algoSel" title="AI 알고리즘">
+          <option value="dijkstra">Dijkstra</option>
+          <option value="csp">CSP</option>
+          <option value="hybrid">Hybrid</option>
+          <option value="hybrid_pro" selected>Hybrid Pro</option>
+        </select>
+        <button id="gearBtn" class="btn icon-btn" title="설정"><span class="gear">⚙️</span></button>
+      </div>
+      <div id="settingsPop" class="settings-pop">
+        <h4>설정</h4>
+        <div class="row">
+          <label for="aiRate">AI 속도</label>
+          <input id="aiRate" type="number" min="60" step="60" value="600" title="600=1초" style="width:84px">
+          <input id="aiRateSlider" type="range" min="60" max="2400" step="60" value="600" style="flex:1">
+        </div>
+        <div class="row"><span class="sub" id="aiRateLabel">600 (=1.00s)</span></div>
+        <div class="row">
+          <label for="soundEnable">사운드</label>
+          <input id="soundEnable" type="checkbox" checked>
+          <label for="volSlider" style="width:48px">볼륨</label>
+          <input id="volSlider" type="range" min="0" max="100" value="40">
+        </div>
+        <div class="row">
+          <label for="pitchBase">피치</label>
+          <input id="pitchBase" type="number" min="200" max="1200" step="10" value="760" style="width:88px">
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="panel game-area">
+        <div class="info">
+          <div style="display:flex; gap:10px; align-items:center">
+            <span class="sub">남은 지뢰</span>
+            <span id="mineCount" class="badge">0</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center">
+            <span class="sub">시간</span>
+            <span id="timer" class="badge">0s</span>
+          </div>
+        </div>
+        <div id="board" class="board" aria-hidden="true"></div>
+        <div class="footer">
+          <div class="sub">좌클릭: 열기 • 숫자칸 재클릭: 주변 자동 오픈 • 우클릭: 깃발 • AI: 1스텝/간격</div>
+          <div class="sub">만든이: NeoPrizm</div>
+        </div>
+        <div class="ai-log-wrap">
+          <div class="ai-toolbar">로그: 결정 규칙/정확·근사 확률/실패 이유가 스텝마다 출력됩니다.</div>
+          <div id="aiLog" class="log-list" role="list" aria-label="AI 계산 로그(최신이 위)"></div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="card">
+          <div class="profile-head">
+            <div class="avatar"></div>
+            <div>
+              <div style="font-weight:900">Player</div>
+              <div class="stats">
+                <span class="pill" id="statWins">Wins 0</span>
+                <span class="pill" id="statLosses">Losses 0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+            <div style="font-weight:900">기록</div>
+            <button id="clearRecBtn" class="btn" style="padding:4px 8px; border-radius:8px; font-size:12px">지우기</button>
+          </div>
+          <div class="history-list" id="recordList"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  
+  <div id="fxOverlay" style="position:fixed;inset:0;display:none;background:rgba(0,0,0,.15);z-index:40;align-items:center;justify-content:center"><canvas id="fxGL" style="max-width:90vw;max-height:80vh"></canvas></div>
+<div id="overlay">
+    <div class="panel" style="text-align:center; min-width:280px;">
+      <div id="dialogText" style="font-weight:900; margin-bottom:10px">결과</div>
+      <div style="display:flex; gap:8px; justify-content:center">
+        <button id="dialogClose" class="btn">다시하기</button>
+        <button id="dialogQuit" class="btn secondary">종료</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script>
+$(function(){
+  'use strict';
+
+  // Hook: stop explosion loop and reload if quitting; stop only if restarting
+  $('#dialogQuit').off('click.fx').on('click.fx', function(){
+    try{ window._fxExplodeStop = true; }catch(e){}
+    location.reload();
+  });
+  $('#dialogClose').off('click.fx').on('click.fx', function(){
+    try{ window._fxExplodeStop = true; }catch(e){}
+  });
+  $('#newGameBtn').off('click.fx').on('click.fx', function(){
+    try{ window._fxExplodeStop = true; }catch(e){}
+  });
+
+  const DIFFS={ easy:{rows:9,cols:9,mines:10}, medium:{rows:16,cols:16,mines:40}, hard:{rows:16,cols:30,mines:99} };
+  const STORAGE_KEY='ms_records_v1';
+  const SMALL_MAX=14, MEDIUM_MAX=28, SAMPLE_LIMIT=500, TIME_BUDGET_MS=40;
+
+  const $board=$('#board'), $mineCount=$('#mineCount'), $timer=$('#timer');
+  const $difficulty=$('#difficulty'), $newGame=$('#newGameBtn'), $reset=$('#resetBtn');
+  const $aiBtn=$('#aiBtn'), $algo=$('#algoSel');
+  const $gear=$('#gearBtn'), $settings=$('#settingsPop');
+  const $aiRate=$('#aiRate'), $aiRateSlider=$('#aiRateSlider'), $aiRateLabel=$('#aiRateLabel');
+  const $soundEnable=$('#soundEnable'), $vol=$('#volSlider'), $pitch=$('#pitchBase');
+  const $aiLog=$('#aiLog');
+  const $overlay=$('#overlay'), $dialogText=$('#dialogText'), $dialogClose=$('#dialogClose'), $dialogQuit=$('#dialogQuit');
+  const $recordList=$('#recordList'), $statWins=$('#statWins'), $statLosses=$('#statLosses'), $clearRec=$('#clearRecBtn');
+
+  let rows=16, cols=16, totalMines=40;
+  let grid=[], started=false, gameOver=false, timer=0, timerHandle=null;
+  let remainingMines=0, cellsToReveal=0; let aiHandle=null, aiRunning=false, lastActionDesc='';
+
+  const now=function(){return new Date().toLocaleTimeString();};
+  const log=function(m){ const $row=$('<div/>',{class:'log-item','data-ts':Date.now(),role:'listitem',tabindex:0}); $('<span/>',{class:'log-time', text:'['+now()+']'}).appendTo($row); $('<span/>',{class:'log-text', text:String(m)}).appendTo($row); $aiLog.prepend($row);};
+$(document).on('click keydown', '#aiLog .log-item', function(e){ if(e.type==='click' || (e.type==='keydown' && (e.key==='Enter'||e.key===' '))){   $(this).toggleClass('active'); e.preventDefault(); }});;
+  const setDifficulty=function(k){ const c=DIFFS[k]; rows=c.rows; cols=c.cols; totalMines=c.mines; };
+  const idxOf=function(r,c){ return (r<0||r>=rows||c<0||c>=cols)?-1:r*cols+c; };
+  const neighborsIdx=function(r,c){ const out=[]; for(let dr=-1;dr<=1;dr++){ for(let dc=-1;dc<=1;dc++){ if(dr||dc){ const i=idxOf(r+dr,c+dc); if(i>=0) out.push(i); } } } return out; };
+  const isFrontier=function(i){ const cell=grid[i]; if(cell.revealed||cell.flagged) return false; const ns=neighborsIdx(cell.row,cell.col); for(let k=0;k<ns.length;k++){ if(grid[ns[k]].revealed) return true; } return false; };
+  const countFlags=function(){ return grid.reduce(function(a,c){ return a+(c.flagged?1:0); },0); };
+  const remainingMinesNow=function(){ return Math.max(0, totalMines - countFlags()); };
+
+  let audioCtx=null; function clickBeep(freq,dur){ if(freq===undefined) freq=760; if(dur===undefined) dur=0.05; if(!$soundEnable.is(':checked')) return; const volV=parseInt($vol.val(),10)/100; const base=parseFloat($pitch.val()||'760'); const f=Math.max(70,freq*(base/760)); try{ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='square'; o.frequency.value=f; g.gain.value=0.05*volV; o.connect(g); g.connect(audioCtx.destination); o.start(); setTimeout(function(){ try{o.stop();}catch(e){} }, Math.max(20,dur*1000)); }catch(e){} }
+  const chordBeep=function(ok){ if(ok===undefined) ok=true; if(!$soundEnable.is(':checked')) return; const seq= ok ? [800,1000,1200] : [300,240,200]; seq.forEach(function(f,i){ setTimeout(function(){ clickBeep(f,0.06); }, i*90); }); };
+
+  const loadRecords=function(){ try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');}catch(e){return [];} };
+  const setRecords=function(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); };
+  const addRecord=function(rec){ const arr=loadRecords(); arr.unshift(rec); setRecords(arr.slice(0,200)); renderRecords(); };
+  const clearRecords=function(){ setRecords([]); renderRecords(); };
+  function renderRecords(){ const arr=loadRecords(); $recordList.empty(); let wins=0,losses=0; arr.forEach(function(r){ if(r.result==='win') wins++; else losses++; const $row=$('<div/>',{'class':'rec'}); $('<span/>',{'class':(r.result==='win'?'tag win':'tag lose'),'text':(r.result==='win'?'WIN':'LOSE')}).appendTo($row); const $main=$('<div/>',{'style':'flex:1;'}).appendTo($row); $('<div/>',{'class':'title','text':(r.difficulty.toUpperCase()+' • '+r.algo+' • '+r.intervalMs+'ms')}).appendTo($main); $('<div/>',{'class':'meta','text':(new Date(r.ts).toLocaleString()+' · 시간 '+r.timeSec+'s · 지뢰 '+r.correctFlags+'/'+r.totalMines+(r.result==='lose'&&r.reason?(' · '+r.reason):''))}).appendTo($main); $recordList.append($row); }); $statWins.text('Wins '+wins); $statLosses.text('Losses '+losses); }
+
+  const startTimer=function(){ clearInterval(timerHandle); timerHandle=setInterval(function(){ timer++; $timer.text(String(timer)+'s'); },1000); };
+  const stopTimer=function(){ clearInterval(timerHandle); timerHandle=null; };
+
+  function newGame(){ stopTimer(); stopAI(); started=false; gameOver=false; timer=0; $timer.text('0s'); grid=[]; $board.empty(); $board.css({'gridTemplateColumns':('repeat('+cols+', auto)'),'gridTemplateRows':('repeat('+rows+', auto)')}); remainingMines=totalMines; $mineCount.text(String(remainingMines)); $aiLog.empty(); for(let r=0;r<rows;r++){ for(let c=0;c<cols;c++){ const $cell=$('<div/>',{'class':'cell hidden','data-r':r,'data-c':c}); $board.append($cell); grid.push({row:r,col:c,mine:false,adj:0,revealed:false,flagged:false,$el:$cell}); } } cellsToReveal=rows*cols-totalMines; log('새 게임 시작: '+rows+'x'+cols+', 지뢰 '+totalMines+'개'); }
+
+  const placeMinesAndAdj=function(fr,fc){ const banned=new Set(); for(let dr=-1;dr<=1;dr++){ for(let dc=-1;dc<=1;dc++){ const i=idxOf(fr+dr,fc+dc); if(i>=0) banned.add(i); } } let m=0; const total=rows*cols; while(m<totalMines){ const p=Math.floor(Math.random()*total); if(banned.has(p)||grid[p].mine) continue; grid[p].mine=true; m++; } grid.forEach(function(cell){ if(cell.mine) return; let adj=0; neighborsIdx(cell.row,cell.col).forEach(function(j){ if(grid[j].mine) adj++; }); cell.adj=adj; }); };
+  function startGame(fr,fc){ placeMinesAndAdj(fr,fc); started=true; startTimer(); revealCell(fr,fc); log('첫 클릭: ('+fr+','+fc+') 주변 금지영역 설정'); }
+
+  function revealCell(r,c){ if(gameOver) return; const i=idxOf(r,c); if(i<0) return; const cell=grid[i]; if(cell.revealed||cell.flagged) return; cell.revealed=true; cell.$el.removeClass('hidden').addClass('open0').text(cell.mine?'💣':(cell.adj>0?String(cell.adj):'')); if(cell.mine){ cell.$el.addClass('mine');  window._lastClickedEl = cell.$el && cell.$el[0]; if(cell.$el){ cell.$el.addClass('blink-red blink-red-locked'); } loseGame(); return; } cell.$el.addClass('open'+cell.adj); cellsToReveal--; window._fxBurstAtEl && window._fxBurstAtEl(cell.$el[0],'reveal'); if(cellsToReveal<=0){ winGame(); return; } if(cell.adj===0){ neighborsIdx(r,c).forEach(function(j){ const nb=grid[j]; if(!nb.revealed) revealCell(nb.row,nb.col); }); } }
+  const setFlag=function(cell,val){ if(cell.revealed) return; const want=!!val; if(cell.flagged===want) return; cell.flagged=want; if(want){ cell.$el.addClass('flag').text('🚩'); window._fxBurstAtEl && window._fxBurstAtEl(cell.$el[0],'flag'); remainingMines=Math.max(0,remainingMines-1);} else { cell.$el.removeClass('flag').text(''); window._fxBurstAtEl && window._fxBurstAtEl($el[0],'reveal'); remainingMines=Math.min(totalMines,remainingMines+1);} $mineCount.text(String(remainingMines)); };
+  const chordIfSatisfied=function(cell){ if(cell.adj<=0) return; let flags=0; const ns=neighborsIdx(cell.row,cell.col); const unknown=[]; ns.forEach(function(i){ const nb=grid[i]; if(nb.flagged) flags++; else if(!nb.revealed) unknown.push(nb); }); if(flags===cell.adj){ unknown.forEach(function(nc){ revealCell(nc.row,nc.col); }); } };
+
+  const countCorrectFlags=function(){ return grid.reduce(function(acc,c){ return acc+(c.flagged&&c.mine?1:0); },0); };
+  function showDialog(msg){ $dialogText.text(msg); $overlay.css('display','flex'); requestAnimationFrame(function(){ $overlay.addClass('show'); }); }
+  function hideDialog(){ $overlay.removeClass('show'); setTimeout(function(){ $overlay.hide(); }, 650); }
+  function loseGame(){ try{ window._ensureBlinkHold && window._ensureBlinkHold(); }catch(e){} gameOver=true; stopTimer(); stopAI();  try{ try{ window.playExplosionSound && window.playExplosionSound({intensity:1.6,duration:2.2}); }catch(e){}
+window._fxExplodeStop=false; window._fxExplodeAll && window._fxExplodeAll(Array.from(document.querySelectorAll('#board .cell'))); }catch(e){} grid.forEach(function(c){ if(c.mine){ c.$el.removeClass('hidden').addClass('mine').text('💣'); } }); addRecord({ ts:Date.now(), result:'lose', difficulty:$difficulty.val(), algo:$algo.val(), intervalMs:currentIntervalMs(), timeSec:timer, correctFlags:countCorrectFlags(), totalMines:totalMines, reason:lastActionDesc }); setTimeout(function(){ try{ document.querySelectorAll('.blink-red').forEach(function(el){ el.classList.remove('blink-red'); }); }catch(e){} showDialog('패배! 지뢰를 밟았습니다 💥'); }, 2500); log('❌ 실패: '+(lastActionDesc||'마지막 선택이 지뢰였습니다.')); chordBeep(false); }
+  function winGame(){ gameOver=true; stopTimer(); stopAI(); addRecord({ ts:Date.now(), result:'win', difficulty:$difficulty.val(), algo:$algo.val(), intervalMs:currentIntervalMs(), timeSec:timer, correctFlags:countCorrectFlags(), totalMines:totalMines }); showDialog('승리! 모든 안전 칸을 열었습니다 🎉'); log('🎉 성공: 모든 안전 칸 오픈 완료'); chordBeep(true); }
+
+  function deterministicSingleStep(){ for(let gi=0; gi<grid.length; gi++){ const cell=grid[gi]; if(!cell.revealed||cell.adj<=0) continue; let flags=0; const unknown=[]; neighborsIdx(cell.row,cell.col).forEach(function(i){ const nb=grid[i]; if(nb.flagged) flags++; else if(!nb.revealed) unknown.push(nb); }); const need=cell.adj-flags; if(need===0 && unknown.length){ const u=unknown[0]; lastActionDesc='결정규칙(안전): 기준('+cell.row+','+cell.col+') → ('+u.row+','+u.col+') 오픈'; log('✔ '+lastActionDesc); revealCell(u.row,u.col); return true; } if(need>0 && need===unknown.length){ const u2=unknown[0]; lastActionDesc='결정규칙(지뢰): 기준('+cell.row+','+cell.col+') → ('+u2.row+','+u2.col+') 깃발'; log('✔ '+lastActionDesc); setFlag(u2,true); return true; } } return false; }
+
+  function buildFrontierGraph(){ const unknown=[]; grid.forEach(function(c,i){ if(!c.revealed&&!c.flagged) unknown.push(i); }); const adjU=new Map(); const eqs=new Map(); grid.forEach(function(cell,i){ if(!cell.revealed||cell.adj<=0) return; let flags=0; const vars=[]; neighborsIdx(cell.row,cell.col).forEach(function(j){ const nb=grid[j]; if(nb.flagged) flags++; else if(!nb.revealed) vars.push(j); }); const need=cell.adj-flags; if(vars.length){ eqs.set(i,{need:need,vars:vars}); for(let a=0;a<vars.length;a++){ for(let b=a+1;b<vars.length;b++){ if(!adjU.has(vars[a])) adjU.set(vars[a], new Set()); if(!adjU.has(vars[b])) adjU.set(vars[b], new Set()); adjU.get(vars[a]).add(vars[b]); adjU.get(vars[b]).add(vars[a]); } } } }); const comps=[]; const vis=new Set(); unknown.forEach(function(u){ if(vis.has(u) || !adjU.has(u)) return; const q=[u]; const comp=[]; vis.add(u); while(q.length){ const x=q.pop(); comp.push(x); (adjU.get(x)||[]).forEach(function(y){ if(!vis.has(y)){ vis.add(y); q.push(y); } }); } const compEqs=[]; eqs.forEach(function(e,ri){ for(let k=0;k<e.vars.length;k++){ if(comp.indexOf(e.vars[k])!==-1){ compEqs.push({ri:ri,need:e.need,vars:e.vars.slice()}); break; } } }); comps.push({vars:comp, eqs:compEqs}); }); unknown.forEach(function(u){ if(!vis.has(u)) comps.push({vars:[u], eqs:[]}); }); return comps; }
+
+  function enumerateExact(comp){ const v=comp.vars.slice(); const E=comp.eqs.slice(); const n=v.length; const pos=new Map(v.map(function(x,i){return [x,i];})); const assign=new Array(n).fill(-1); let eqVars=E.map(function(e){ return e.vars.map(function(x){ return pos.get(x); }); }); const need=E.map(function(e){ return e.need; }); let sol=0; const cnt=new Array(n).fill(0); const dist=new Array(n+1).fill(0);
+    function okPartial(){ for(let k=0;k<E.length;k++){ let s=0,u=0; const arr=eqVars[k]; for(let t=0;t<arr.length;t++){ const a=assign[arr[t]]; if(a===1) s++; else if(a===-1) u++; } if(s>need[k]||s+u<need[k]) return false; } return true; }
+    function dfs(i){ if(i===n){ for(let k=0;k<E.length;k++){ let s2=0; const arr=eqVars[k]; for(let t=0;t<arr.length;t++){ s2+=(assign[arr[t]]===1); } if(s2!==need[k]) return; } sol++; let mines=0; for(let t2=0;t2<n;t2++){ if(assign[t2]===1){ cnt[t2]++; mines++; } } dist[mines]++; return; }
+      // 변수 선택 순서: 제약수 높은 순으로 스왑
+      let next=i, bestDeg=-1; for(let j=i;j<n;j++){ let deg=0; for(let k=0;k<E.length;k++){ if(eqVars[k].indexOf(j)!==-1) deg++; } if(deg>bestDeg){ bestDeg=deg; next=j; } }
+      if(next!==i){ const tmp=v[i]; v[i]=v[next]; v[next]=tmp; const p=new Map(v.map(function(x,ii){return [x,ii];})); eqVars=E.map(function(e){ return e.vars.map(function(x){ return p.get(x); }); }); }
+      assign[i]=0; if(okPartial()) dfs(i+1); assign[i]=-1; assign[i]=1; if(okPartial()) dfs(i+1); assign[i]=-1; }
+    dfs(0); if(sol===0) return {type:'infeasible'}; const probs=cnt.map(function(c){ return c/sol; }); let minP=1,minI=0,maxP=0,maxI=0; for(let i0=0;i0<n;i0++){ if(probs[i0]<minP){minP=probs[i0];minI=i0;} if(probs[i0]>maxP){maxP=probs[i0];maxI=i0;} } return {type:'ok', vars:v.slice(), probs:probs, min:{idx:v[minI], p:minP}, max:{idx:v[maxI], p:maxP}, solutions:sol, dist:dist}; }
+
+  function sampleSolutions(comp, sampleCap, timeBudget){ if(sampleCap===undefined) sampleCap=SAMPLE_LIMIT; if(timeBudget===undefined) timeBudget=TIME_BUDGET_MS; const v=comp.vars.slice(); const E=comp.eqs; const n=v.length; const pos=new Map(v.map(function(x,i){return [x,i];})); const eqVars=E.map(function(e){ return e.vars.map(function(x){ return pos.get(x); }); }); const need=E.map(function(e){ return e.need; }); const cnt=new Array(n).fill(0); const dist=new Array(n+1).fill(0); let samples=0; const t0=performance.now();
+    function okPartial(assign){ for(let k=0;k<E.length;k++){ let s=0,u=0; const arr=eqVars[k]; for(let t=0;t<arr.length;t++){ const a=assign[arr[t]]; if(a===1) s++; else if(a===-1) u++; } if(s>need[k]||s+u<need[k]) return false; } return true; }
+    function rndDFS(){ const assign=new Array(n).fill(-1); const order=[]; for(let i=0;i<n;i++){ order.push(i); } for(let i2=n-1;i2>0;i2--){ const j=(Math.random()*(i2+1))|0; const tmp=order[i2]; order[i2]=order[j]; order[j]=tmp; }
+      function step(i3){ if(i3===n){ for(let k=0;k<E.length;k++){ let s=0; const arr=eqVars[k]; for(let t=0;t<arr.length;t++){ s+=(assign[arr[t]]===1); } if(s!==need[k]) return false; } let mines=0; for(let t2=0;t2<n;t2++){ if(assign[t2]===1){ cnt[t2]++; mines++; } } dist[mines]++; samples++; return true; }
+        const orderVal=order[i3]; assign[orderVal]=0; if(okPartial(assign)){ if(step(i3+1)) return true; } assign[orderVal]=-1; assign[orderVal]=1; if(okPartial(assign)){ if(step(i3+1)) return true; } assign[orderVal]=-1; return false; }
+      step(0); }
+    while(samples<sampleCap && (performance.now()-t0)<timeBudget){ rndDFS(); }
+    if(samples===0) return null; const probs=cnt.map(function(c){ return c/samples; }); let minP=1,minI=0,maxP=0,maxI=0; for(let i0=0;i0<n;i0++){ if(probs[i0]<minP){minP=probs[i0];minI=i0;} if(probs[i0]>maxP){maxP=probs[i0];maxI=i0;} } return {type:'approx', vars:v, probs:probs, min:{idx:v[minI], p:minP}, max:{idx:v[maxI], p:maxP}, samples:samples, dist:dist}; }
+
+  function computeRiskMap(){ const risk=new Map(); let flaggedCnt=0; const hidden=[]; grid.forEach(function(c,i){ if(c.flagged) flaggedCnt++; if(!c.revealed&&!c.flagged) hidden.push(i); }); const remaining=Math.max(0,totalMines-flaggedCnt); grid.forEach(function(cell,i){ if(!cell.revealed||cell.adj<=0) return; let flags=0; const unknown=[]; neighborsIdx(cell.row,cell.col).forEach(function(j){ const nb=grid[j]; if(nb.flagged) flags++; else if(!nb.revealed) unknown.push(j); }); const U=unknown.length; if(!U) return; const p=Math.min(1, Math.max(0,(cell.adj-flags)/U)); unknown.forEach(function(ui){ const prev=risk.get(ui)||0; risk.set(ui, 1-(1-prev)*(1-p)); }); }); const baseline = hidden.length? Math.min(1, remaining/hidden.length):1; hidden.forEach(function(i){ if(!risk.has(i)) risk.set(i, baseline); }); return {risk:risk}; }
+  function dijkstraPick(rm){ const R=rm.risk; const hidden=Array.from(R.keys()); if(!hidden.length) return null; const frontier=hidden.filter(function(i){ return isFrontier(i); }); const seeds=frontier.length?frontier:hidden; const dist=new Map(); const vis=new Set(); hidden.forEach(function(i){ dist.set(i,Infinity); }); seeds.forEach(function(s){ dist.set(s, R.get(s)||1); }); while(vis.size<hidden.length){ let u=null, best=Infinity; hidden.forEach(function(i){ if(!vis.has(i)){ const d=dist.get(i); if(d<best){ best=d; u=i; } } }); if(u===null) break; vis.add(u); const ur=Math.floor(u/cols), uc=u%cols; neighborsIdx(ur,uc).forEach(function(v){ if(!R.has(v)||vis.has(v)) return; const alt=best+(R.get(v)||1); if(alt<dist.get(v)) dist.set(v,alt); }); } let pick=null, best=Infinity; dist.forEach(function(d,i){ if(d<best){ best=d; pick=i; } }); return pick; }
+
+  function hybridProStep(){ const startT=performance.now(); const comps=buildFrontierGraph(); for(let ci=0; ci<comps.length; ci++){ const comp=comps[ci]; const n=comp.vars.length; if(!n) continue; if(n<=SMALL_MAX){ const ex=enumerateExact(comp); if(ex && ex.type==='ok'){ if(ex.max.p===1){ const i=ex.max.idx; lastActionDesc='HybridPro 확정지뢰: ('+Math.floor(i/cols)+','+(i%cols)+') 깃발 (정확, 해 '+ex.solutions+'개)'; log('✔ '+lastActionDesc); setFlag(grid[i],true); return true; } if(ex.min.p===0){ const i2=ex.min.idx; lastActionDesc='HybridPro 확정안전: ('+Math.floor(i2/cols)+','+(i2%cols)+') 오픈 (정확, 해 '+ex.solutions+'개)'; log('✔ '+lastActionDesc); revealCell(Math.floor(i2/cols), i2%cols); return true; } } } }
+    const pMap=new Map(); const compRecords=[]; const hiddenGlobal=[]; grid.forEach(function(c,i){ if(!c.revealed && !c.flagged) hiddenGlobal.push(i); });
+    for(let ci=0; ci<comps.length; ci++){ const comp=comps[ci]; const n=comp.vars.length; if(!n) continue; let res=null, tag=''; if(n<=SMALL_MAX){ res=enumerateExact(comp); tag='exact'; } else if(n<=MEDIUM_MAX){ const remained=Math.max(10, TIME_BUDGET_MS - (performance.now()-startT)); res=sampleSolutions(comp, SAMPLE_LIMIT, remained); tag='approx'; } else { tag='skip'; }
+      if(res && (res.type==='ok' || res.type==='approx')){ compRecords.push({tag:tag, size:n, dist:res.dist, vars:res.vars}); res.vars.forEach(function(vid,idx){ pMap.set(vid, res.probs[idx]); }); } }
+    const rm=computeRiskMap(); hiddenGlobal.forEach(function(i){ if(!pMap.has(i)) pMap.set(i, rm.risk.get(i) || 0.5); });
+    const R=remainingMinesNow(); let pSum=0, H=0; hiddenGlobal.forEach(function(i){ if(!grid[i].flagged && !grid[i].revealed){ pSum+=(pMap.get(i)||0); H++; } }); if(H>0 && pSum>0){ const s=Math.min(3, Math.max(0.2, R/pSum)); hiddenGlobal.forEach(function(i){ if(pMap.has(i)){ const v=pMap.get(i)*s; pMap.set(i, v<0?0:(v>1?1:v)); } }); }
+    let pick=null, best=Infinity, bestDeg=-1; hiddenGlobal.forEach(function(i){ const p=pMap.get(i); if(p==null) return; const r=Math.floor(i/cols), c=i%cols; const deg=neighborsIdx(r,c).length; if(p<best || (p===best && deg>bestDeg)){ best=p; pick=i; bestDeg=deg; } });
+    if(pick==null) return false; const pr=Math.floor(pick/cols), pc=pick%cols; lastActionDesc='HybridPro 최소위험 오픈: ('+pr+','+pc+'), 추정 위험='+(best*100).toFixed(1)+'%'+(compRecords.length?(' · comps='+window._summarizeComps(compRecords, 6)):''); log('➜ '+lastActionDesc); revealCell(pr,pc); return true; }
+
+  function cspSingleStep(){ const comps=buildFrontierGraph(); for(let ci=0; ci<comps.length; ci++){ const comp=comps[ci]; const n=comp.vars.length; if(!n) continue; if(n<=SMALL_MAX){ const ex=enumerateExact(comp); if(ex && ex.type==='ok'){ if(ex.max.p===1){ const i=ex.max.idx; lastActionDesc='CSP 확정지뢰: ('+Math.floor(i/cols)+','+(i%cols)+') 깃발'; log('✔ '+lastActionDesc); setFlag(grid[i],true); return true; } if(ex.min.p===0){ const i2=ex.min.idx; lastActionDesc='CSP 확정안전: ('+Math.floor(i2/cols)+','+(i2%cols)+') 오픈'; log('✔ '+lastActionDesc); revealCell(Math.floor(i2/cols), i2%cols); return true; } } } }
+    // 근사 최소위험
+    let best={p:1, idx:null}; const comps2=buildFrontierGraph(); for(let ci=0; ci<comps2.length; ci++){ const comp=comps2[ci]; const n=comp.vars.length; if(!n) continue; const approx = n<=MEDIUM_MAX ? sampleSolutions(comp) : null; if(approx && approx.min.p<best.p){ best={p:approx.min.p, idx:approx.min.idx}; } }
+    if(best.idx!=null){ const r=Math.floor(best.idx/cols), c=best.idx%cols; lastActionDesc='CSP 근사 최소위험: ('+r+','+c+'), 위험='+(best.p*100).toFixed(1)+'%'; log('➜ '+lastActionDesc); revealCell(r,c); return true; } return false; }
+
+  function computeRiskMapSimple(){ return computeRiskMap(); }
+  function dijkstraSingleStep(){ const rm=computeRiskMapSimple(); const pick=dijkstraPick(rm); if(pick==null){ log('ℹ Dijkstra: 후보 없음'); return false; } const r=Math.floor(pick/cols), c=pick%cols; const risk=rm.risk.get(pick)||1; lastActionDesc='Dijkstra: ('+r+','+c+') 오픈, 위험='+(risk*100).toFixed(1)+'%'; log('➜ '+lastActionDesc); revealCell(r,c); return true; }
+
+  function aiStep(){ if(gameOver){ stopAI(); return; } if(!started){ const cr=Math.floor(rows/2), cc=Math.floor(cols/2); startGame(cr,cc); clickBeep(820,0.05); return; } if(deterministicSingleStep()){ clickBeep(780,0.04); return; } const mode=$algo.val(); if(mode==='csp'){ if(cspSingleStep()){ clickBeep(780,0.04); return; } log('ℹ CSP로 확정/선택 불가'); stopAI(); return; } if(mode==='hybrid'){ if(cspSingleStep()){ clickBeep(780,0.04); return; } if(dijkstraSingleStep()){ clickBeep(760,0.04); return; } log('ℹ Hybrid: 후보 없음'); stopAI(); return; } if(mode==='hybrid_pro'){ if(hybridProStep()){ clickBeep(800,0.04); return; } log('ℹ Hybrid Pro: 후보 없음'); stopAI(); return; } if(dijkstraSingleStep()){ clickBeep(760,0.04); return; } stopAI(); }
+
+  const currentIntervalMs=function(){ const v=parseInt($aiRate.val()||'600',10); const vv=isNaN(v)?600:v; const ms=Math.max(50, Math.round((Math.max(1, vv)/600)*1000)); return ms; };
+  function startAI(){ if(aiRunning) return; aiRunning=true; $aiBtn.text('AI ⏸'); aiStep(); aiHandle=setInterval(aiStep, currentIntervalMs()); log('AI 시작 (난이도='+$difficulty.val()+', 알고리즘='+$algo.val()+', 간격='+currentIntervalMs()+'ms)'); }
+  function stopAI(){ clearInterval(aiHandle); aiHandle=null; if(aiRunning) log('AI 정지'); aiRunning=false; $aiBtn.text('AI ▶'); }
+  function restartAIIntervalIfRunning(){ if(!aiRunning) return; clearInterval(aiHandle); aiHandle=setInterval(aiStep, currentIntervalMs()); log('⏱ 속도 변경: '+currentIntervalMs()+'ms'); }
+
+  $board.on('click', '.cell', function(){ if(gameOver) return; const $el=$(this); const r=+$el.data('r'), c=+$el.data('c'); const cell=grid[idxOf(r,c)]; if(!started){ startGame(r,c); return; } if(cell.flagged) return; if(cell.revealed){ chordIfSatisfied(cell); return; } revealCell(r,c); clickBeep(); });
+  $board.on('contextmenu', '.cell', function(e){ e.preventDefault(); if(gameOver) return; const $el=$(this); const r=+$el.data('r'), c=+$el.data('c'); const cell=grid[idxOf(r,c)]; if(cell.revealed) return; setFlag(cell, !cell.flagged); clickBeep(520,0.045); });
+  $board.on('dblclick', '.cell', function(){ if(gameOver) return; const $el=$(this); const r=+$el.data('r'), c=+$el.data('c'); const cell=grid[idxOf(r,c)]; if(!cell.revealed||cell.adj===0) return; chordIfSatisfied(cell); clickBeep(900,0.05); });
+  $newGame.on('click', function(){ setDifficulty($difficulty.val()); newGame(); clickBeep(880,0.05); });
+  $reset.on('click', function(){ newGame(); clickBeep(880,0.05); });
+  $aiBtn.on('click', function(){ if(aiRunning) stopAI(); else startAI(); clickBeep(980,0.05); });
+  $algo.on('change', function(){ log('알고리즘 변경: '+$algo.val()); restartAIIntervalIfRunning(); clickBeep(900,0.04); });
+  const toggleSettings=function(){ $settings.toggle(); };
+  $gear.on('click', function(e){ e.stopPropagation(); toggleSettings(); clickBeep(860,0.04); });
+  $(document).on('click', function(e){ if($(e.target).closest('#settingsPop, #gearBtn').length===0) $settings.hide(); });
+  const updateRateLabel=function(){ const v=Math.max(1, parseInt($aiRate.val()||'600',10)); $aiRateLabel.text(v+' (='+ (v/600).toFixed(2) +'s)'); };
+  $aiRate.on('input', function(){ $aiRateSlider.val($aiRate.val()); updateRateLabel(); restartAIIntervalIfRunning(); });
+  $aiRateSlider.on('input', function(){ $aiRate.val($aiRateSlider.val()); updateRateLabel(); restartAIIntervalIfRunning(); });
+  $dialogClose.on('click', function(){ hideDialog(); newGame(); if(aiRunning) startAI(); clickBeep(980,0.05); });
+  $dialogQuit.on('click', function(){ hideDialog(); stopAI(); clickBeep(500,0.05); });
+  $clearRec.on('click', function(){ clearRecords(); clickBeep(700,0.04); });
+  $(document).on('keydown', function(e){ if(e.key==='r'||e.key==='R'){ newGame(); clickBeep(880,0.05);} if(e.key==='a'||e.key==='A'){ if(aiRunning) stopAI(); else startAI(); clickBeep(980,0.05);} });
+
+  setDifficulty($difficulty.val()); newGame(); updateRateLabel(); renderRecords();
+});
+</script>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>(function(){window._fxActive=window._fxActive||false;window._fxInit=window._fxInit||function(){};
+function makeCoinScene(canvas){const scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(35,4/3,0.1,100);
+const renderer=new THREE.WebGLRenderer({canvas:canvas,alpha:true,antialias:true,preserveDrawingBuffer:false});
+function resize(){const w=Math.min(window.innerWidth*0.9,800);const h=Math.min(window.innerHeight*0.8,600);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+resize();window.addEventListener('resize',resize);
+const geo=new THREE.CylinderGeometry(0.8,0.8,0.12,64,1,false);const edgeGeo=new THREE.CylinderGeometry(0.82,0.82,0.14,64,1,false);
+const gold=new THREE.MeshStandardMaterial({color:0xF7C948,metalness:0.85,roughness:0.25,emissive:0x4A2,emissiveIntensity:0.05});
+const rim=new THREE.MeshStandardMaterial({color:0xF7C948,metalness:0.85,roughness:0.25,emissive:0x4A2,emissiveIntensity:0.05});const coin=new THREE.Mesh(geo,gold);const rimMesh=new THREE.Mesh(edgeGeo,rim);coin.add(rimMesh);scene.add(coin);
+try{const c2=document.createElement('canvas');c2.width=256;c2.height=256;const ctx=c2.getContext('2d');ctx.fillStyle='#fff';ctx.font='bold 180px system-ui,Segoe UI,Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('$',128,140);
+const tex=new THREE.CanvasTexture(c2);const mat=new THREE.SpriteMaterial({map:tex,depthWrite:false});const sp=new THREE.Sprite(mat);sp.scale.set(0.9,0.9,1);sp.position.set(0,0.085,0);coin.add(sp);}catch(e){}
+scene.add(new THREE.AmbientLight(0xffffff,0.5));const key=new THREE.DirectionalLight(0xffffff,0.9);key.position.set(3,4,5);scene.add(key);
+const rimL=new THREE.PointLight(0xffd27a,1.2,10);rimL.position.set(-2,2,1);scene.add(rimL);
+camera.position.set(0,0.8,4);camera.lookAt(0,0,0);
+return{scene:scene,camera:camera,renderer:renderer,coin:coin,dispose:()=>{renderer.dispose();const gl=canvas.getContext('webgl')||canvas.getContext('webgl2');try{gl&&gl.getExtension('WEBGL_lose_context')&&gl.getExtension('WEBGL_lose_context').loseContext();}catch(e){}window.removeEventListener('resize',resize);}};}
+function playCoinFX(ms,done){ try{ if(window._coinDispose){ window._coinDispose(); } }catch(e){}
+    try{ if(window._coinDispose){ window._coinDispose(); } }catch(e){}const ov=document.getElementById('fxOverlay');const cv=document.getElementById('fxGL');if(!ov||!cv){done&&done();return;}
+cv.width=Math.min((window.innerWidth*0.9)|0,800);cv.height=Math.min((window.innerHeight*0.8)|0,600);
+const sc=makeCoinScene(cv);let st=null;window._fxActive=true;ov.style.display='flex';
+function step(ts){if(!st)st=ts;const t=(ts-st)/ms;const p=Math.min(1,t);const y=1.2-(1.2+0.3)*(p*p);
+sc.coin.rotation.y=p*Math.PI*3;sc.coin.rotation.x=0.5*Math.sin(p*Math.PI*2);sc.coin.position.y=y;sc.renderer.render(sc.scene,sc.camera);
+if(p<1){requestAnimationFrame(step);}else{ov.style.display='none';window._fxActive=false;sc.dispose();done&&done();}}requestAnimationFrame(step);}window._playCoinFX=playCoinFX;})();</script>
+
+<script>
+(function(){
+  // Lightweight WebGL burst FX using Three.js (already loaded for coin FX).
+  // Creates a single shared renderer & scene; draws brief (<=400ms) bursts.
+  const MAX_CONCURRENT = 3;
+  let renderer, scene, camera, clock, running = false;
+  let canvas, container;
+  const effects = [];
+
+  function ensure(){
+    if (renderer) return;
+    container = document.createElement('div');
+    container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9998;';
+    canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+    document.body.appendChild(container);
+    renderer = new THREE.WebGLRenderer({canvas: canvas, alpha:true, antialias:true});
+    scene = new THREE.Scene();
+    camera = new THREE.OrthographicCamera(-1,1,1,-1, -1, 1);
+    clock = new THREE.Clock();
+    function onResize(){
+      const w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      // Ortho in NDC space; we'll position sprites in NDC
+    }
+    onResize(); window.addEventListener('resize', onResize);
+  }
+
+  function ndcFromClient(x, y){
+    const w = renderer.domElement.width, h = renderer.domElement.height;
+    const nx = (x / w) * 2 - 1;
+    const ny = -((y / h) * 2 - 1);
+    return {x:nx, y:ny};
+  }
+
+  function makeBurst(ndcX, ndcY, kind){
+    // Build a small group of sprites (points) with additive blending
+    const grp = new THREE.Group(); grp.position.set(ndcX, ndcY, 0);
+    const count = kind==='flag' ? 18 : 24;
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const speeds = new Float32Array(count);
+    for(let i=0;i<count;i++){
+      const a = (i / count) * Math.PI * 2;
+      const r = (kind==='flag'? 0.03:0.05) * (0.6 + 0.8*Math.random());
+      positions[i*3+0] = 0;
+      positions[i*3+1] = 0;
+      positions[i*3+2] = 0;
+      speeds[i] = r * (1.0 + Math.random());
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    geo.setAttribute('speed', new THREE.BufferAttribute(speeds,1));
+
+    const mat = new THREE.PointsMaterial({size: (kind==='flag'? 8:10), color: (kind==='flag'? 0x66ccff: 0xffcc55), transparent:true, opacity:0.95});
+    mat.depthWrite = false;
+    mat.blending = THREE.AdditiveBlending;
+    const pts = new THREE.Points(geo, mat);
+    grp.add(pts);
+
+    // simple ring sprite
+    const ringGeo = new THREE.RingGeometry(0.0, 0.001, 32);
+    const ringMat = new THREE.MeshBasicMaterial({color:(kind==='flag'? 0x66ccff: 0xffcc55), transparent:true, opacity:0.9, side:THREE.DoubleSide});
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    grp.add(ring);
+
+    scene.add(grp);
+    return {grp, pts, ring, t:0, kind, dispose(){
+      scene.remove(grp);
+      pts.geometry.dispose(); pts.material.dispose();
+      ring.geometry.dispose(); ring.material.dispose();
+    }};
+  }
+
+  function animate(){
+    if(!running) return;
+    const dt = Math.min(0.033, clock.getDelta());
+    for(let i=effects.length-1; i>=0; i--){
+      const e = effects[i];
+      e.t += dt;
+      const p = e.t / (e.kind==='flag'?0.28:0.36);
+      // Update points positions radially
+      const attr = e.pts.geometry.getAttribute('position');
+      for(let j=0;j<attr.count;j++){
+        const angle = (j/attr.count) * Math.PI*2;
+        const sp = e.pts.geometry.getAttribute('speed').getX(j);
+        const rr = Math.min(1, p) * sp;
+        attr.setXYZ(j, Math.cos(angle)*rr, Math.sin(angle)*rr, 0);
+      }
+      attr.needsUpdate = true;
+      // Ring expansion & fade
+      e.ring.scale.setScalar(1 + p*2.2);
+      e.ring.material.opacity = 0.9 * (1-p);
+      e.pts.material.opacity = 0.95 * (1-p);
+      // End
+      if(p>=1){
+        e.dispose();
+        effects.splice(i,1);
+      }
+    }
+    renderer.render(scene, camera);
+    if(effects.length===0){
+      running=false;
+      return;
+    }
+    requestAnimationFrame(animate);
+  }
+
+  function startLoop(){
+    if(running) return;
+    running = true; clock.getDelta(); // reset
+    requestAnimationFrame(animate);
+  }
+
+  function burstAtClientXY(x, y, kind){
+    ensure();
+    if(effects.length >= MAX_CONCURRENT) return;
+    const ndc = ndcFromClient(x, y);
+    effects.push(makeBurst(ndc.x, ndc.y, kind||'reveal'));
+    startLoop();
+  }
+
+  function burstAtEl(el, kind){
+    try{
+      const rect = el.getBoundingClientRect();
+      burstAtClientXY(rect.left + rect.width/2, rect.top + rect.height/2, kind);
+    }catch(e){}
+  }
+
+  window._fxBurstAtEl = burstAtEl;
+  window._fxBurstAtXY = burstAtClientXY;
+})();
+</script>
+
+<script>
+(function(){
+  // Dedicated "explode all cells" WebGL effect (independent renderer for simplicity & performance).
+  // Renders a single Points cloud with per-point origin and polar velocity; auto-disposes after ~0.9s.
+  window._fxExplodeStop=false; window._fxExplodeAll = function(els){
+    try{
+      if(!window.THREE) return;
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9997;';
+      const canvas = document.createElement('canvas');
+      container.appendChild(canvas);
+      document.body.appendChild(container);
+      const renderer = new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-1,1,1,-1,-1,1);
+      function onResize(){
+        const w = window.innerWidth, h = window.innerHeight;
+        renderer.setSize(w, h, false);
+      }
+      onResize(); window.addEventListener('resize', onResize, {once:true});
+
+      // Collect centers in client coords
+      const centers = [];
+      for(const el of els){
+        if(!el || !el.getBoundingClientRect) continue;
+        const r = el.getBoundingClientRect();
+        centers.push([r.left + r.width/2, r.top + r.height/2]);
+      }
+      if(centers.length===0){ document.body.removeChild(container);
+          if(!window._fxExplodeStop){ try{ window._fxExplodeAll(els); }catch(e){} } return; }
+
+      const W = renderer.domElement.width, H = renderer.domElement.height;
+      function toNDC(x,y){ return [(x/W)*2 - 1, -((y/H)*2 - 1)]; }
+
+      // Build one points system: ~3 particles per cell
+      let per = 6; const MAX_P=2400; if(centers.length*per>MAX_P){ per=Math.max(2, Math.floor(MAX_P/Math.max(1,centers.length))); }
+      const n = centers.length * per;
+      const pos = new Float32Array(n*3);
+      const org = new Float32Array(n*2);
+      const ang = new Float32Array(n);
+      const spd = new Float32Array(n);
+      for(let i=0;i<centers.length;i++){
+        const [cx, cy] = centers[i];
+        const [nx, ny] = toNDC(cx, cy);
+        for(let k=0;k<per;k++){
+          const j = i*per + k;
+          org[j*2+0] = nx; org[j*2+1] = ny;
+          const base=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4][Math.floor(Math.random()*4)]; const a = base + (Math.random()-0.5)*0.35;
+          ang[j] = a;
+          spd[j] = 0.08 + Math.random()*0.12;
+          pos[j*3+0] = nx; pos[j*3+1] = ny; pos[j*3+2] = 0;
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+      geo.setAttribute('origin',   new THREE.BufferAttribute(org,2));
+      geo.setAttribute('theta',    new THREE.BufferAttribute(ang,1));
+      geo.setAttribute('speed',    new THREE.BufferAttribute(spd,1));
+
+      const mat = new THREE.PointsMaterial({size: 6, color: 0xff5533, transparent:true, opacity:1.0});
+      mat.blending = THREE.AdditiveBlending; mat.depthWrite = false;
+      const pts = new THREE.Points(geo, mat);
+      scene.add(pts);
+
+      let start = performance.now();
+      function frame(ts){
+        const t = (ts - start) / 2200; // ~0.9s
+        const p = Math.min(1, t);
+        // update positions: origin + dir * speed * easeOutQuad
+        const posAttr = geo.getAttribute('position');
+        const spdAttr = geo.getAttribute('speed');
+        const thAttr  = geo.getAttribute('theta');
+        const orgAttr = geo.getAttribute('origin');
+        const ease = (1 - (1-p)*(1-p));
+        for(let j=0;j<posAttr.count;j++){
+          const s = spdAttr.getX(j) * ease;
+          const a = thAttr.getX(j);
+          const ox = orgAttr.getX(j), oy = orgAttr.getY(j);
+          posAttr.setXYZ(j, ox + Math.cos(a)*s, oy + Math.sin(a)*s, 0);
+        }
+        posAttr.needsUpdate = true;
+        mat.opacity = 1.0 - p;
+        renderer.render(scene, camera);
+        if(p<1){ requestAnimationFrame(frame); }
+        else{
+          try{
+            geo.dispose(); mat.dispose(); renderer.dispose();
+            document.body.removeChild(container);
+          if(!window._fxExplodeStop){ try{ window._fxExplodeAll(els); }catch(e){} }
+          }catch(e){}
+        }
+      }
+      requestAnimationFrame(frame);
+    }catch(e){ /* no-op */ }
+  };
+})();
+</script>
+
+<script>(function(){window._ensureBlinkHold = function(){ try{ if(window._lastClickedEl){ window._lastClickedEl.classList.add('blink-red','blink-red-locked'); } }catch(e){} };
+if(!window._blinkHoldTimer){ window._blinkHoldTimer = setInterval(window._ensureBlinkHold, 200); setTimeout(function(){ clearInterval(window._blinkHoldTimer); window._blinkHoldTimer=null; }, 2600); }} )();</script>
+
+<script>
+(function(){ window._summarizeComps = function(list, maxItems){
+  try{
+    const m = new Map();
+    list.forEach(function(r){
+      const key = r.tag+'#'+r.size;
+      m.set(key, (m.get(key)||0)+1);
+    });
+    const arr = Array.from(m.entries()).map(function(e){
+      var k=e[0], c=e[1];
+      return c>1 ? (k+'×'+c) : k;
+    });
+    if(arr.length>maxItems){
+      var head = arr.slice(0,maxItems).join(',');
+      var rest = arr.length - maxItems;
+      return head+',…(+ '+rest+')';
+    }
+    return arr.join(',');
+  }catch(e){ return ''; }
+}; })();
+</script>
+
+<script>
+(function(){
+  if(window._resetPatched) return; window._resetPatched=true;
+  function diagonalClearAnimation(done){
+    try{
+      const $cells = $('#board .cell');
+      const rows = parseInt($('#rows').val()||$cells.last().data('rows')||0) || window.rows || 0;
+      const cols = parseInt($('#cols').val()||$cells.last().data('cols')||0) || window.cols || 0;
+      if(!rows || !cols){ done&&done(); return; }
+      const delayStep = 14; // ms per diagonal step
+      const getIdx = (r,c)=> r*cols + c;
+      let diag=0;
+      function step(){
+        if(diag > rows+cols-2){ done&&done(); return; }
+        for(let r=0;r<rows;r++){
+          const c = diag - r;
+          if(c>=0 && c<cols){
+            const i = getIdx(r,c);
+            const el = $cells.get(i);
+            if(el){
+              el.classList.remove('open0','open1','open2','open3','open4','open5','open6','open7','open8','mine','flag');
+              el.classList.add('hidden');
+              el.textContent='';
+            }
+          }
+        }
+        diag++;
+        setTimeout(step, delayStep);
+      }
+      step();
+    }catch(e){ done&&done(); }
+  }
+  window.resetGameSoft = function(){
+    try{ window._fxExplodeStop = true; }catch(e){}
+    // keep current settings
+    const m = parseInt($('#mines').val()||0);
+    const r = parseInt($('#rows').val()||0);
+    const c = parseInt($('#cols').val()||0);
+    // stop AI, timer, etc., and rebuild grid
+    try{ stopAI(); }catch(e){}
+    try{ stopTimer(); }catch(e){}
+    // Clear dialog and logs
+    try{ hideDialog(); }catch(e){}
+    try{ $('#aiLog').empty(); }catch(e){}
+    // diagonal clear visual first, then newGame
+    diagonalClearAnimation(function(){
+      try{ newGame(); }catch(e){}
+    });
+  };
+  // Bind Quit button to soft reset (no reload)
+  $(document).on('click', '#dialogQuit', function(e){
+    e.preventDefault();
+    window.resetGameSoft && window.resetGameSoft();
+  });
+})();
+</script>
+
+<script>
+(function(){
+  // WebAudio Explosion: layered boom + noise + crackle
+  let AC = null;
+  function ensureCtx(){
+    if(AC && AC.state !== 'closed') return AC;
+    AC = new (window.AudioContext||window.webkitAudioContext)();
+    return AC;
+  }
+  function envGain(ctx, dur, curve){
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, ctx.currentTime);
+    const now = ctx.currentTime;
+    // simple attack/decay envelope with optional curve
+    g.gain.cancelScheduledValues(now);
+    g.gain.linearRampToValueAtTime(1.0, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    return g;
+  }
+  function noiseBuffer(ctx, secs=1.0){
+    const rate = ctx.sampleRate, len = Math.floor(secs*rate);
+    const buf = ctx.createBuffer(1, len, rate);
+    const d = buf.getChannelData(0);
+    for(let i=0; i<len; i++){ d[i] = (Math.random()*2-1) * (1 - i/len); } // fade out
+    return buf;
+  }
+  function playExplosionSound(opts){
+    const ctx = ensureCtx(); if(!ctx) return;
+    const intensity = Math.max(0.5, Math.min(2.0, (opts && opts.intensity)||1.4));
+    const dur = Math.max(0.8, Math.min(3.0, (opts && opts.duration)||2.2));
+    const master = ctx.createGain(); master.gain.value = Math.min(1.0, 0.9*intensity);
+    master.connect(ctx.destination);
+
+    // 1) Low BOOM (sine with pitch drop)
+    const osc = ctx.createOscillator(); osc.type='sine';
+    const g1 = envGain(ctx, dur*0.9); g1.gain.value *= 0.9;
+    osc.frequency.setValueAtTime(140*intensity, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + dur*0.7);
+    osc.connect(g1); g1.connect(master); osc.start(); osc.stop(ctx.currentTime + dur*0.9);
+
+    // 2) Wide-band NOISE burst (bandpass + HP)
+    const srcN = ctx.createBufferSource(); srcN.buffer = noiseBuffer(ctx, dur);
+    const bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.5;
+    const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value = 220;
+    const g2 = envGain(ctx, dur*0.7); g2.gain.value *= 1.2*intensity;
+    srcN.connect(bp); bp.connect(hp); hp.connect(g2); g2.connect(master);
+    srcN.start(); srcN.stop(ctx.currentTime + dur*0.7);
+
+    // 3) Crackle grains (short noise ticks)
+    const crackleCount = Math.floor(30*intensity);
+    for(let i=0;i<crackleCount;i++){
+      const t0 = ctx.currentTime + (i/crackleCount)*(dur*0.9);
+      const nsrc = ctx.createBufferSource(); nsrc.buffer = noiseBuffer(ctx, 0.06);
+      const hp2 = ctx.createBiquadFilter(); hp2.type='highpass'; hp2.frequency.value = 1800 + Math.random()*1200;
+      const g3 = ctx.createGain();
+      g3.gain.setValueAtTime(0, t0);
+      g3.gain.linearRampToValueAtTime(0.6+Math.random()*0.4, t0+0.005);
+      g3.gain.exponentialRampToValueAtTime(0.0001, t0+0.08+Math.random()*0.06);
+      nsrc.connect(hp2); hp2.connect(g3); g3.connect(master);
+      nsrc.start(t0); nsrc.stop(t0+0.12);
+    }
+  }
+  window.playExplosionSound = playExplosionSound;
+})();
+</script>
+
+
+
+<script>
+$(function(){
+  try{
+    $('h1').attr('title','클릭하면 코인 애니메이션!').off('click.titlefx').on('click.titlefx', function(){
+      try{ window._playCoinFX && window._playCoinFX(2000); }catch(e){}
+      try{ (typeof clickBeep==='function') && clickBeep(980,0.06); }catch(e){}
+    });
+  }catch(e){}
+});
+</script>
+</body>
+</html>
