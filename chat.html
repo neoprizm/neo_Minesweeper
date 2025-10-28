@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>P2P Chat (Trystero) – Kakao-like</title>
+  <title>P2P Chat (Trystero × Firebase RTDB)</title>
   <style>
+    /* ---- Kakao-스타일 UI ---- */
     :root{
       --chat-yellow:#ffd84d;
       --chat-bg:#f7f6f2;
@@ -99,12 +100,27 @@
   </form>
 </div>
 
+<!-- ======================= P2P 로직 ======================= -->
 <script type="module">
-  //import { joinRoom, selfId } from 'https://esm.run/trystero';
-  import { joinRoom, selfId } from 'https://esm.run/trystero@0.20.1';
-  
+  /* 1) Firebase & Trystero 로드 */
+  import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+  import { getDatabase }    from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
+  import { joinRoom, selfId } from "https://esm.run/trystero/firebase@0.20.1";
 
-  // ===== 유틸 =====
+  /* 2) Firebase 초기화 */
+	const firebaseConfig = {
+	  apiKey: "AIzaSyAhGKrEYZ-da_Qi0cKywn-WKH2rY0UDXtY",
+	  authDomain: "neoprizm-chat-2025.firebaseapp.com",
+	  databaseURL: "https://neoprizm-chat-2025-default-rtdb.asia-southeast1.firebasedatabase.app",
+	  projectId: "neoprizm-chat-2025",
+	  storageBucket: "neoprizm-chat-2025.firebasestorage.app",
+	  messagingSenderId: "565815382041",
+	  appId: "1:565815382041:web:41e9921711ae51c5b1da88"
+	};
+  const firebaseApp = initializeApp(firebaseConfig);
+  getDatabase(firebaseApp);        // RTDB 인스턴스 준비
+
+  /* ===== 유틸 ===== */
   const $ = (sel)=>document.querySelector(sel);
   const formatTime = (ts)=>{ const d=new Date(ts); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
   const randomId = (len=6)=>Math.random().toString(36).slice(2,2+len);
@@ -121,18 +137,18 @@
     }
     return frag;
   }
-  // Base64 변환 (청크용)
+  /* Base64 변환 (청크용) */
   function bytesToB64(bytes){ let s=''; for(let i=0;i<bytes.length;i+=0x8000){ s += String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); } return btoa(s); }
   function b64ToBytes(b64){ const bin=atob(b64); const len=bin.length; const out=new Uint8Array(len); for(let i=0;i<len;i++) out[i]=bin.charCodeAt(i); return out; }
 
-  // ===== 상태 =====
+  /* ===== 상태 ===== */
   let room, sendMsg, getMsg, sendName, getName, sendFile, getFile;
   let myName = localStorage.getItem('p2p_nick') || '';
   let myRoom = new URL(location.href).searchParams.get('room') || location.hash.slice(1) || '';
   let peers = new Set();
-  const names = {}; // peerId -> name
+  const names = {};           // peerId → name
 
-  // 텍스트 히스토리(방별)
+  /* 텍스트 히스토리(방별) */
   const HIST_LIMIT = 500;
   const histKey = ()=> myRoom ? `p2p_chat_hist::${myRoom}` : '';
   const loadHist = ()=>{ try{ return JSON.parse(localStorage.getItem(histKey())||'[]'); }catch(e){ return []; } };
@@ -140,11 +156,11 @@
   const pushHist = (msg)=>{ if(!histKey()) return; const arr=loadHist(); arr.push({name:msg.name,text:msg.text,ts:msg.ts,fromId:msg.fromId||null,mine:!!msg.mine}); saveHist(arr); };
   const renderHist = ()=> loadHist().forEach(m=>addMessage(m));
 
-  // 초기 값
+  /* 초기 값 */
   $('#nick').value = myName;
   $('#roomId').value = myRoom || randomId();
 
-  // ===== UI 렌더 =====
+  /* ===== UI 렌더 ===== */
   function systemLine(text){ const wrap=document.createElement('div'); wrap.className='sys'; const s=document.createElement('span'); s.textContent=text; wrap.appendChild(s); $('#messages').appendChild(wrap); $('#messages').lastElementChild?.scrollIntoView({block:'end'}); }
   const renderPresence = ()=> $('#presence').textContent = `접속 ${peers.size+1}명`;
   const renderRoomPill = ()=> $('#room-pill').textContent = `room: ${myRoom}`;
@@ -180,35 +196,35 @@
     $('#messages').lastElementChild?.scrollIntoView({block:'end'});
   }
 
-  // ===== 파일 전송 (총 청크수 기반, 완전 수신 후만 복원) =====
-  const CHUNK_SIZE = 64 * 1024;   // 64KB
-  const incoming = new Map();      // id -> { meta, total, received, chunks[] }
+  /* ===== 파일 전송 (총 청크 수 기준) ===== */
+  const CHUNK_SIZE = 64*1024;           // 64 KB
+  const incoming = new Map();           // id → { meta, total, received, chunks[] }
 
   async function prepAttachments(fileList){
     const files = Array.from(fileList||[]), out=[];
     for(const f of files){
-      if(f.size > 2*1024*1024){ systemLine(`${f.name} 은(는) 2MB 초과로 전송하지 않았습니다.`); continue; } // 데모 한도
+      if(f.size > 2*1024*1024){ systemLine(`${f.name} 은(는) 2 MB 초과로 전송하지 않았습니다.`); continue; }   // 데모 한도
       const bytes = new Uint8Array(await f.arrayBuffer());
       out.push({ name:f.name, type:f.type, size:f.size, bytes });
     }
     return out;
   }
-
   async function sendAttachments(fileList){
     if(!room) return;
     const arr = await prepAttachments(fileList);
     for(const a of arr){
-      // 로컬 즉시 미리보기
+      /* 로컬 미리보기 */
       const url = URL.createObjectURL(new Blob([a.bytes], {type:a.type||'application/octet-stream'}));
-      addMessage({ name: myName, text:'', ts: Date.now(), fromId: selfId, attachments:[{ url, name:a.name, type:a.type, size:a.size }], mine:true });
+      addMessage({ name: myName, text:'', ts: Date.now(), fromId: selfId,
+                   attachments:[{ url, name:a.name, type:a.type, size:a.size }], mine:true });
 
-      // P2P 전송(안전한 청크 프로토콜)
+      /* P2P 전송 */
       const id = `${Date.now()}_${randomId(6)}`;
-      const total = Math.ceil(a.bytes.length / CHUNK_SIZE);
+      const total = Math.ceil(a.bytes.length/CHUNK_SIZE);
       try{
         sendFile({ type:'init', id, meta:{ name:a.name, type:a.type, size:a.size }, total });
         for(let off=0, seq=0; off < a.bytes.length; off+=CHUNK_SIZE, seq++){
-          const slice = a.bytes.subarray(off, off+CHUNK_SIZE);
+          const slice = a.bytes.subarray(off,off+CHUNK_SIZE);
           const b64 = bytesToB64(slice);
           sendFile({ type:'chunk', id, seq, b64 });
         }
@@ -217,7 +233,7 @@
     }
   }
 
-  // ===== 이벤트 =====
+  /* ===== 이벤트 ===== */
   $('#start').addEventListener('click', async ()=>{
     myName = $('#nick').value.trim() || `손님-${randomId(3)}`;
     myRoom = $('#roomId').value.trim() || randomId();
@@ -238,92 +254,96 @@
     if(v){
       const msg = { name: myName, text:v, ts: Date.now(), fromId:selfId };
       addMessage(msg); pushHist({...msg, mine:true});
-      try{ sendMsg({ name: myName, text:v, ts: msg.ts, fromId:selfId }); }catch(err){ console.error(err); }
+      try{ sendMsg({ ...msg }); }catch(err){ console.error(err); }
       $('#input').value='';
     }
   });
 
-  // 첨부 버튼/드래그&드롭/붙여넣기
-  const attachBtn = document.getElementById('attach');
-  const fileInput = document.getElementById('file');
-  const pad = document.querySelector('.pad');
+  /* 첨부 버튼/드래그·붙여넣기 */
+  const attachBtn = $('#attach');
+  const fileInput = $('#file');
+  const pad = $('.pad');
   attachBtn.addEventListener('click', ()=> fileInput.click());
   fileInput.addEventListener('change', (e)=>{ if(e.target.files?.length){ sendAttachments(e.target.files); e.target.value=''; } });
-  pad.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+  pad.addEventListener('dragover', (e)=> e.preventDefault());
   pad.addEventListener('drop', (e)=>{ e.preventDefault(); if(e.dataTransfer?.files?.length) sendAttachments(e.dataTransfer.files); });
-  $('#input').addEventListener('paste', (e)=>{ const fs=e.clipboardData?.files; if(fs && fs.length){ e.preventDefault(); sendAttachments(fs); } });
+  $('#input').addEventListener('paste', (e)=>{ const fs=e.clipboardData?.files; if(fs?.length){ e.preventDefault(); sendAttachments(fs); } });
 
-  // ===== Trystero 시작 =====
+  /* ===== Trystero 시작 ===== */
   async function startRoom(){
     if(room) room.leave();
-    //const config = { appId: 'p2p-chat-demo-v1' /*, turnConfig:[{urls:['turn:turn.example.com:3478'],username:'user',credential:'pass'}]*/ };
-	const config = {
-     appId: 'p2p-chat-demo-v1',
-     // Nostr 릴레이 직접 지정 (예시) — 사내망에서 접근 가능한 WSS만 사용
-     relayUrls: [
-       'wss://relay.damus.io',
-       'wss://nostr.fmt.wiz.biz',
-       'wss://relay.nostr.band'
-     ]
-   };
-    room = joinRoom(config, myRoom, (err)=> systemLine('룸 접속 오류: ' + (err?.message || err)));
 
-    // 텍스트
+    /* 3) RTDB 전략 설정 */
+    const trysteroConfig = { firebaseApp /*, rootPath:'__trystero__', password:'sharedSecret' */ };
+
+    room = joinRoom(trysteroConfig, myRoom, err=>systemLine('룸 접속 오류: ' + (err?.message||err)));
+
+    /* 액션 – 텍스트 */
     [sendMsg, getMsg] = room.makeAction('msg');
-    getMsg((data, peerId)=>{ if(data?.name && peerId) names[peerId]=data.name; addMessage(data); if(data?.text) pushHist({...data, mine:false}); });
+    getMsg((data, peerId)=>{
+      if(data?.name && peerId) names[peerId]=data.name;
+      addMessage(data);
+      if(data?.text) pushHist({...data, mine:false});
+    });
 
-    // 닉네임
+    /* 액션 – 닉네임 */
     [sendName, getName] = room.makeAction('name');
     sendName(myName);
-    room.onPeerJoin((pid)=>{ peers.add(pid); renderPresence(); sendName(myName, pid); systemLine(`${names[pid]||'새 참여자'} 입장`); });
-    room.onPeerLeave((pid)=>{ peers.delete(pid); renderPresence(); systemLine(`${names[pid]||'참여자'} 퇴장`); });
+    room.onPeerJoin(pid=>{
+      peers.add(pid); renderPresence();
+      sendName(myName, pid);
+      systemLine(`${names[pid]||'새 참여자'} 입장`);
+    });
+    room.onPeerLeave(pid=>{
+      peers.delete(pid); renderPresence();
+      systemLine(`${names[pid]||'참여자'} 퇴장`);
+    });
     getName((name, pid)=>{ names[pid]=name; });
 
-    // 파일(총 청크 수 기반으로 완전 수신 후 복원)
+    /* 액션 – 파일 */
     [sendFile, getFile] = room.makeAction('file');
     getFile((payload, pid)=>{
-      if(!payload || !payload.type || !payload.id) return;
+      if(!payload?.type || !payload.id) return;
       const id = payload.id;
       if(payload.type === 'init'){
-        incoming.set(id, { meta: payload.meta||{}, total: payload.total||0, received:0, chunks:[] });
+        incoming.set(id,{ meta:payload.meta||{}, total:payload.total||0, received:0, chunks:[] });
       }else if(payload.type === 'chunk'){
-        const rec = incoming.get(id); if(!rec) return;
-        rec.chunks[payload.seq] = payload.b64;
+        const rec=incoming.get(id); if(!rec) return;
+        rec.chunks[payload.seq]=payload.b64;
         rec.received++;
-        if(rec.total && rec.received === rec.total){
-          const parts = rec.chunks.map(b64ToBytes);
-          let totalLen=0; for(const p of parts) totalLen+=p.length;
-          const all = new Uint8Array(totalLen);
-          let off=0; for(const p of parts){ all.set(p, off); off+=p.length; }
-          const blob = new Blob([all], {type: rec.meta.type || 'application/octet-stream'});
-          const url  = URL.createObjectURL(blob);
-          addMessage({ name: names[pid]||'손님', text:'', ts: Date.now(), fromId: pid,
-                       attachments:[{ url, name: rec.meta.name, type: rec.meta.type, size: rec.meta.size }] });
+        if(rec.total && rec.received===rec.total){
+          const parts=rec.chunks.map(b64ToBytes);
+          let len=0; for(const p of parts) len+=p.length;
+          const all=new Uint8Array(len);
+          let off=0; for(const p of parts){ all.set(p,off); off+=p.length; }
+          const blob=new Blob([all],{type:rec.meta.type||'application/octet-stream'});
+          const url=URL.createObjectURL(blob);
+          addMessage({ name:names[pid]||'손님', text:'', ts:Date.now(), fromId:pid,
+                       attachments:[{ url, name:rec.meta.name, type:rec.meta.type, size:rec.meta.size }] });
           incoming.delete(id);
         }
       }else if(payload.type === 'done'){
-        // init/total 없이 올 수도 있어 남겨둠(호환)
-        const rec = incoming.get(id); if(!rec) return;
-        if(rec.total && rec.received < rec.total) return; // 아직 모자람
-        const parts = rec.chunks.map(b64ToBytes);
-        let totalLen=0; for(const p of parts) totalLen+=p.length;
-        const all = new Uint8Array(totalLen);
-        let off=0; for(const p of parts){ all.set(p, off); off+=p.length; }
-        const blob = new Blob([all], {type: rec.meta.type || 'application/octet-stream'});
-        const url  = URL.createObjectURL(blob);
-        addMessage({ name: names[pid]||'손님', text:'', ts: Date.now(), fromId: pid,
-                     attachments:[{ url, name: rec.meta.name, type: rec.meta.type, size: rec.meta.size }] });
+        const rec=incoming.get(id); if(!rec) return;
+        const parts=rec.chunks.map(b64ToBytes);
+        let len=0; for(const p of parts) len+=p.length;
+        const all=new Uint8Array(len);
+        let off=0; for(const p of parts){ all.set(p,off); off+=p.length; }
+        const blob=new Blob([all],{type:rec.meta.type||'application/octet-stream'});
+        const url=URL.createObjectURL(blob);
+        addMessage({ name:names[pid]||'손님', text:'', ts:Date.now(), fromId:pid,
+                     attachments:[{ url, name:rec.meta.name, type:rec.meta.type, size:rec.meta.size }] });
         incoming.delete(id);
       }
     });
 
-    // UI
+    /* UI */
     $('#setup').style.display='none';
     renderPresence(); renderRoomPill(); renderHist();
     systemLine(`룸 "${myRoom}" 에 입장했습니다.`);
   }
 
-  if(myRoom){ startRoom(); }
+  /* URL 파라미터에 room 값이 있으면 자동 입장 */
+  if(myRoom) startRoom();
 </script>
 </body>
 </html>
