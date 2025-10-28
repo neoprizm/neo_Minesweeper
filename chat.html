@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>P2P Chat (Trystero) – Kakao-like</title>
+  <style>
+    :root{
+      --chat-yellow:#ffd84d;
+      --chat-bg:#f7f6f2;
+      --bubble-me:#2f2f33;
+      --bubble-other:#ffffff;
+      --muted:#757575;
+      --radius:18px;
+      --radius-xl:22px;
+      --maxw:860px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:var(--chat-bg);
+      font-family:'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',Pretendard,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    }
+    .app{min-height:100dvh;display:flex;flex-direction:column;}
+    header{position:sticky;top:0;z-index:10;background:var(--chat-yellow);color:#111;padding:10px 14px;border-bottom:1px solid #e5c53a;}
+    .bar{margin:0 auto;max-width:var(--maxw);display:flex;align-items:center;gap:10px}
+    .bar h1{font-size:18px;margin:0;font-weight:800}
+    .room-pill{margin-left:auto;background:#111;color:#fff;padding:4px 10px;border-radius:999px;font-size:12px;}
+    .presence{font-size:12px;color:#111;opacity:.85}
+
+    main{flex:1;overflow:auto;scroll-behavior:smooth;}
+    .pad{max-width:var(--maxw);margin:0 auto;padding:14px;}
+    .sys{display:flex;justify-content:center;margin:12px 0}
+    .sys span{font-size:12px;color:#666;background:#eee;padding:4px 8px;border-radius:999px}
+
+    .msg{display:flex;gap:8px;margin:6px 0;align-items:flex-end}
+    .msg .avatar{width:28px;height:28px;border-radius:50%;flex:0 0 28px;background:#ddd;display:flex;align-items:center;justify-content:center;font-size:12px;color:#444}
+    .bubble{
+      max-width:70%;padding:10px 12px;border-radius:var(--radius);position:relative;
+      box-shadow:0 1px 0 rgba(0,0,0,.04);
+      word-break:keep-all;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.45;font-size:15px;
+    }
+    .from-other .bubble{background:var(--bubble-other);border-top-left-radius:6px;border-top-right-radius:var(--radius-xl)}
+    .from-me{justify-content:flex-end}
+    .from-me .bubble{background:var(--bubble-me);color:#fff;border-top-right-radius:6px;border-top-left-radius:var(--radius-xl)}
+    .name{font-size:12px;color:var(--muted);margin:0 0 4px 2px}
+    .meta{display:flex;gap:6px;align-items:center;margin-top:6px}
+    .time{font-size:11px;color:var(--muted)}
+
+    .bubble a{color:inherit;text-decoration:underline;overflow-wrap:anywhere}
+    .bubble img{max-width:360px;width:100%;height:auto;border-radius:12px;display:block;margin-top:6px}
+
+    form.send{position:sticky;bottom:0;background:#fff;border-top:1px solid #e8e4d8;}
+    .send .row{max-width:var(--maxw);margin:0 auto;padding:10px;display:flex;gap:8px;align-items:center}
+    input[type=text]{flex:1;padding:12px 14px;border:1px solid #ddd;border-radius:14px;font-size:15px;}
+    button{border:0;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font-weight:700;cursor:pointer}
+    button.secondary{background:#fff;color:#111;border:1px solid #ccc}
+    .attach-btn{min-width:40px}
+
+    .setup{background:#fff;border-bottom:1px solid #eee}
+    .setup .row{max-width:var(--maxw);margin:0 auto;padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap}
+    .setup input{padding:10px 12px;border:1px solid #ddd;border-radius:12px}
+    .setup label{font-size:12px;color:#444}
+
+    @media (max-width:640px){
+      .bubble{max-width:80%}
+      .bar h1{font-size:16px}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="bar">
+      <h1>오픈 P2P 채팅</h1>
+      <div class="presence" id="presence">—</div>
+      <div class="room-pill" id="room-pill">room: —</div>
+    </div>
+  </header>
+
+  <section class="setup" id="setup">
+    <div class="row">
+      <label>닉네임 <input id="nick" placeholder="예: 나훈" /></label>
+      <label>룸 ID <input id="roomId" placeholder="예: team-chat" /></label>
+      <button id="start">입장</button>
+      <button class="secondary" id="copy">초대링크 복사</button>
+    </div>
+  </section>
+
+  <main><div class="pad" id="messages"></div></main>
+
+  <form class="send" id="sendForm">
+    <div class="row">
+      <button type="button" id="attach" class="secondary attach-btn" title="파일/이미지 첨부">📎</button>
+      <input type="file" id="file" multiple hidden>
+      <input type="text" id="input" autocomplete="off" placeholder="메시지를 입력하세요… (URL 자동 링크, 이미지 붙여넣기/드래그 지원)" />
+      <button type="submit">보내기</button>
+    </div>
+  </form>
+</div>
+
+<script type="module">
+  import { joinRoom, selfId } from 'https://esm.run/trystero';
+
+  // ===== 유틸 =====
+  const $ = (sel)=>document.querySelector(sel);
+  const formatTime = (ts)=>{ const d=new Date(ts); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+  const randomId = (len=6)=>Math.random().toString(36).slice(2,2+len);
+  const toKB = (b)=>Math.round(b/1024);
+  function linkifyToNodes(text){
+    const urlRe = /(https?:\/\/[^\s]+)/g;
+    const parts = String(text||'').split(urlRe);
+    const frag = document.createDocumentFragment();
+    for(const part of parts){
+      if(/^https?:\/\//.test(part)){
+        const a = document.createElement('a'); a.href=part; a.textContent=part; a.target='_blank'; a.rel='noopener noreferrer';
+        frag.appendChild(a);
+      }else frag.appendChild(document.createTextNode(part));
+    }
+    return frag;
+  }
+  // Base64 변환 (청크용)
+  function bytesToB64(bytes){ let s=''; for(let i=0;i<bytes.length;i+=0x8000){ s += String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); } return btoa(s); }
+  function b64ToBytes(b64){ const bin=atob(b64); const len=bin.length; const out=new Uint8Array(len); for(let i=0;i<len;i++) out[i]=bin.charCodeAt(i); return out; }
+
+  // ===== 상태 =====
+  let room, sendMsg, getMsg, sendName, getName, sendFile, getFile;
+  let myName = localStorage.getItem('p2p_nick') || '';
+  let myRoom = new URL(location.href).searchParams.get('room') || location.hash.slice(1) || '';
+  let peers = new Set();
+  const names = {}; // peerId -> name
+
+  // 텍스트 히스토리(방별)
+  const HIST_LIMIT = 500;
+  const histKey = ()=> myRoom ? `p2p_chat_hist::${myRoom}` : '';
+  const loadHist = ()=>{ try{ return JSON.parse(localStorage.getItem(histKey())||'[]'); }catch(e){ return []; } };
+  const saveHist = (arr)=>{ try{ localStorage.setItem(histKey(), JSON.stringify(arr.slice(-HIST_LIMIT))); }catch(e){} };
+  const pushHist = (msg)=>{ if(!histKey()) return; const arr=loadHist(); arr.push({name:msg.name,text:msg.text,ts:msg.ts,fromId:msg.fromId||null,mine:!!msg.mine}); saveHist(arr); };
+  const renderHist = ()=> loadHist().forEach(m=>addMessage(m));
+
+  // 초기 값
+  $('#nick').value = myName;
+  $('#roomId').value = myRoom || randomId();
+
+  // ===== UI 렌더 =====
+  function systemLine(text){ const wrap=document.createElement('div'); wrap.className='sys'; const s=document.createElement('span'); s.textContent=text; wrap.appendChild(s); $('#messages').appendChild(wrap); $('#messages').lastElementChild?.scrollIntoView({block:'end'}); }
+  const renderPresence = ()=> $('#presence').textContent = `접속 ${peers.size+1}명`;
+  const renderRoomPill = ()=> $('#room-pill').textContent = `room: ${myRoom}`;
+  const avatarText = (name)=> (name||'?').trim().slice(0,2);
+
+  function addMessage({name,text,ts,fromId,mine,attachments}){
+    const wrap = document.createElement('div');
+    const isMe = (typeof mine === 'boolean') ? mine : (fromId === selfId);
+    wrap.className = 'msg ' + (isMe ? 'from-me' : 'from-other');
+
+    const av = document.createElement('div'); av.className='avatar'; av.textContent=avatarText(isMe ? myName : (names[fromId]||'손님'));
+    const col = document.createElement('div');
+    if(!isMe){ const nm=document.createElement('div'); nm.className='name'; nm.textContent=names[fromId]||'손님'; col.appendChild(nm); }
+
+    const bubble = document.createElement('div'); bubble.className='bubble';
+    if(text){ const p=document.createElement('div'); p.appendChild(linkifyToNodes(text)); bubble.appendChild(p); }
+    if(attachments?.length){
+      for(const att of attachments){
+        if(att.type?.startsWith('image/')){
+          const img=document.createElement('img'); img.loading='lazy'; img.src=att.url; img.alt=att.name||'image'; bubble.appendChild(img);
+        }else{
+          const a=document.createElement('a'); a.href=att.url; a.download=att.name||'file'; a.textContent=`${att.name||'파일'} (${toKB(att.size||0)} KB)`; bubble.appendChild(a);
+        }
+      }
+    }
+    const meta=document.createElement('div'); meta.className='meta';
+    const t=document.createElement('span'); t.className='time'; t.textContent=formatTime(ts||Date.now());
+    meta.appendChild(t); bubble.appendChild(meta);
+
+    col.appendChild(bubble);
+    if(isMe){ wrap.appendChild(col); } else { wrap.appendChild(av); wrap.appendChild(col); }
+    $('#messages').appendChild(wrap);
+    $('#messages').lastElementChild?.scrollIntoView({block:'end'});
+  }
+
+  // ===== 파일 전송 (총 청크수 기반, 완전 수신 후만 복원) =====
+  const CHUNK_SIZE = 64 * 1024;   // 64KB
+  const incoming = new Map();      // id -> { meta, total, received, chunks[] }
+
+  async function prepAttachments(fileList){
+    const files = Array.from(fileList||[]), out=[];
+    for(const f of files){
+      if(f.size > 2*1024*1024){ systemLine(`${f.name} 은(는) 2MB 초과로 전송하지 않았습니다.`); continue; } // 데모 한도
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      out.push({ name:f.name, type:f.type, size:f.size, bytes });
+    }
+    return out;
+  }
+
+  async function sendAttachments(fileList){
+    if(!room) return;
+    const arr = await prepAttachments(fileList);
+    for(const a of arr){
+      // 로컬 즉시 미리보기
+      const url = URL.createObjectURL(new Blob([a.bytes], {type:a.type||'application/octet-stream'}));
+      addMessage({ name: myName, text:'', ts: Date.now(), fromId: selfId, attachments:[{ url, name:a.name, type:a.type, size:a.size }], mine:true });
+
+      // P2P 전송(안전한 청크 프로토콜)
+      const id = `${Date.now()}_${randomId(6)}`;
+      const total = Math.ceil(a.bytes.length / CHUNK_SIZE);
+      try{
+        sendFile({ type:'init', id, meta:{ name:a.name, type:a.type, size:a.size }, total });
+        for(let off=0, seq=0; off < a.bytes.length; off+=CHUNK_SIZE, seq++){
+          const slice = a.bytes.subarray(off, off+CHUNK_SIZE);
+          const b64 = bytesToB64(slice);
+          sendFile({ type:'chunk', id, seq, b64 });
+        }
+        sendFile({ type:'done', id });
+      }catch(err){ console.error(err); systemLine(`파일 전송 오류: ${a.name}`); }
+    }
+  }
+
+  // ===== 이벤트 =====
+  $('#start').addEventListener('click', async ()=>{
+    myName = $('#nick').value.trim() || `손님-${randomId(3)}`;
+    myRoom = $('#roomId').value.trim() || randomId();
+    localStorage.setItem('p2p_nick', myName);
+    const url = new URL(location.href); url.searchParams.set('room', myRoom); history.replaceState({}, '', url);
+    await startRoom();
+  });
+  $('#copy').addEventListener('click', async ()=>{
+    const url = new URL(location.href);
+    if(!myRoom){ myRoom=$('#roomId').value.trim()||randomId(); url.searchParams.set('room', myRoom); history.replaceState({}, '', url); }
+    await navigator.clipboard.writeText(url.toString());
+    systemLine('초대 링크를 클립보드에 복사했어요.');
+  });
+  $('#sendForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const v = $('#input').value.trim();
+    if(!room) return;
+    if(v){
+      const msg = { name: myName, text:v, ts: Date.now(), fromId:selfId };
+      addMessage(msg); pushHist({...msg, mine:true});
+      try{ sendMsg({ name: myName, text:v, ts: msg.ts, fromId:selfId }); }catch(err){ console.error(err); }
+      $('#input').value='';
+    }
+  });
+
+  // 첨부 버튼/드래그&드롭/붙여넣기
+  const attachBtn = document.getElementById('attach');
+  const fileInput = document.getElementById('file');
+  const pad = document.querySelector('.pad');
+  attachBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=>{ if(e.target.files?.length){ sendAttachments(e.target.files); e.target.value=''; } });
+  pad.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+  pad.addEventListener('drop', (e)=>{ e.preventDefault(); if(e.dataTransfer?.files?.length) sendAttachments(e.dataTransfer.files); });
+  $('#input').addEventListener('paste', (e)=>{ const fs=e.clipboardData?.files; if(fs && fs.length){ e.preventDefault(); sendAttachments(fs); } });
+
+  // ===== Trystero 시작 =====
+  async function startRoom(){
+    if(room) room.leave();
+    const config = { appId: 'p2p-chat-demo-v1' /*, turnConfig:[{urls:['turn:turn.example.com:3478'],username:'user',credential:'pass'}]*/ };
+    room = joinRoom(config, myRoom, (err)=> systemLine('룸 접속 오류: ' + (err?.message || err)));
+
+    // 텍스트
+    [sendMsg, getMsg] = room.makeAction('msg');
+    getMsg((data, peerId)=>{ if(data?.name && peerId) names[peerId]=data.name; addMessage(data); if(data?.text) pushHist({...data, mine:false}); });
+
+    // 닉네임
+    [sendName, getName] = room.makeAction('name');
+    sendName(myName);
+    room.onPeerJoin((pid)=>{ peers.add(pid); renderPresence(); sendName(myName, pid); systemLine(`${names[pid]||'새 참여자'} 입장`); });
+    room.onPeerLeave((pid)=>{ peers.delete(pid); renderPresence(); systemLine(`${names[pid]||'참여자'} 퇴장`); });
+    getName((name, pid)=>{ names[pid]=name; });
+
+    // 파일(총 청크 수 기반으로 완전 수신 후 복원)
+    [sendFile, getFile] = room.makeAction('file');
+    getFile((payload, pid)=>{
+      if(!payload || !payload.type || !payload.id) return;
+      const id = payload.id;
+      if(payload.type === 'init'){
+        incoming.set(id, { meta: payload.meta||{}, total: payload.total||0, received:0, chunks:[] });
+      }else if(payload.type === 'chunk'){
+        const rec = incoming.get(id); if(!rec) return;
+        rec.chunks[payload.seq] = payload.b64;
+        rec.received++;
+        if(rec.total && rec.received === rec.total){
+          const parts = rec.chunks.map(b64ToBytes);
+          let totalLen=0; for(const p of parts) totalLen+=p.length;
+          const all = new Uint8Array(totalLen);
+          let off=0; for(const p of parts){ all.set(p, off); off+=p.length; }
+          const blob = new Blob([all], {type: rec.meta.type || 'application/octet-stream'});
+          const url  = URL.createObjectURL(blob);
+          addMessage({ name: names[pid]||'손님', text:'', ts: Date.now(), fromId: pid,
+                       attachments:[{ url, name: rec.meta.name, type: rec.meta.type, size: rec.meta.size }] });
+          incoming.delete(id);
+        }
+      }else if(payload.type === 'done'){
+        // init/total 없이 올 수도 있어 남겨둠(호환)
+        const rec = incoming.get(id); if(!rec) return;
+        if(rec.total && rec.received < rec.total) return; // 아직 모자람
+        const parts = rec.chunks.map(b64ToBytes);
+        let totalLen=0; for(const p of parts) totalLen+=p.length;
+        const all = new Uint8Array(totalLen);
+        let off=0; for(const p of parts){ all.set(p, off); off+=p.length; }
+        const blob = new Blob([all], {type: rec.meta.type || 'application/octet-stream'});
+        const url  = URL.createObjectURL(blob);
+        addMessage({ name: names[pid]||'손님', text:'', ts: Date.now(), fromId: pid,
+                     attachments:[{ url, name: rec.meta.name, type: rec.meta.type, size: rec.meta.size }] });
+        incoming.delete(id);
+      }
+    });
+
+    // UI
+    $('#setup').style.display='none';
+    renderPresence(); renderRoomPill(); renderHist();
+    systemLine(`룸 "${myRoom}" 에 입장했습니다.`);
+  }
+
+  if(myRoom){ startRoom(); }
+</script>
+</body>
+</html>
