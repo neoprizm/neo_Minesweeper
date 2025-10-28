@@ -100,7 +100,9 @@
 </div>
 
 <script type="module">
-  import { joinRoom, selfId } from 'https://esm.run/trystero';
+  //import { joinRoom, selfId } from 'https://esm.run/trystero';
+  import { joinRoom, selfId } from 'https://esm.run/trystero@0.20.1';
+  
 
   // ===== 유틸 =====
   const $ = (sel)=>document.querySelector(sel);
@@ -254,7 +256,16 @@
   // ===== Trystero 시작 =====
   async function startRoom(){
     if(room) room.leave();
-    const config = { appId: 'p2p-chat-demo-v1' /*, turnConfig:[{urls:['turn:turn.example.com:3478'],username:'user',credential:'pass'}]*/ };
+    //const config = { appId: 'p2p-chat-demo-v1' /*, turnConfig:[{urls:['turn:turn.example.com:3478'],username:'user',credential:'pass'}]*/ };
+	const config = {
+     appId: 'p2p-chat-demo-v1',
+     // Nostr 릴레이 직접 지정 (예시) — 사내망에서 접근 가능한 WSS만 사용
+     relayUrls: [
+       'wss://relay.damus.io',
+       'wss://nostr.fmt.wiz.biz',
+       'wss://relay.nostr.band'
+     ]
+   };
     room = joinRoom(config, myRoom, (err)=> systemLine('룸 접속 오류: ' + (err?.message || err)));
 
     // 텍스트
