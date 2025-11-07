@@ -22,6 +22,13 @@
             padding: 20px;
         }
 
+        @media (max-width: 600px) {
+            body {
+                padding: 1px;
+                align-items: flex-start;
+            }
+        }
+
         .container {
             background: white;
             border-radius: 24px;
@@ -31,6 +38,17 @@
                 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
             max-width: 500px;
             width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+                border-radius: 0;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: none;
+            }
         }
 
         h1 {
@@ -257,6 +275,43 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) inset;
         }
 
+        @media (max-width: 600px) {
+            .records {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                margin-top: 10px;
+                margin-bottom: 0;
+                padding: 10px;
+            }
+
+            #recordsList {
+                overflow-y: auto;
+                flex: 1;
+                padding-right: 5px;
+            }
+
+            /* 커스텀 스크롤바 스타일 */
+            #recordsList::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            #recordsList::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 3px;
+            }
+
+            #recordsList::-webkit-scrollbar-thumb {
+                background: #667eea;
+                border-radius: 3px;
+            }
+
+            #recordsList::-webkit-scrollbar-thumb:hover {
+                background: #764ba2;
+            }
+        }
+
         .records h3 {
             color: #667eea;
             margin-bottom: 8px;
@@ -280,27 +335,23 @@
         }
 
         @media (max-width: 600px) {
-            .container {
-                padding: 15px;
-            }
-
             h1 {
-                font-size: 22px;
-                margin-bottom: 12px;
+                font-size: 18px;
+                margin-bottom: 8px;
             }
 
             .cell {
-                font-size: 16px;
-            }
-
-            .number-btn {
-                padding: 10px 6px;
                 font-size: 14px;
             }
 
-            .control-btn {
-                padding: 10px 6px;
+            .number-btn {
+                padding: 8px 4px;
                 font-size: 13px;
+            }
+
+            .control-btn {
+                padding: 8px 6px;
+                font-size: 12px;
             }
 
             .info-label {
@@ -308,7 +359,7 @@
             }
 
             .info-value {
-                font-size: 13px !important;
+                font-size: 12px !important;
             }
 
             .difficulty-btn, .difficulty-btn-modal {
@@ -318,8 +369,8 @@
             }
 
             .game-info {
-                padding: 5px 10px !important;
-                gap: 8px;
+                padding: 4px 8px !important;
+                gap: 6px;
             }
 
             .info-item {
@@ -328,11 +379,33 @@
 
             .number-pad {
                 gap: 3px;
+                margin-bottom: 8px;
             }
 
             #settingsBtn {
-                font-size: 16px !important;
-                padding: 6px 10px !important;
+                font-size: 14px !important;
+                padding: 5px 8px !important;
+            }
+
+            .sudoku-board {
+                margin-bottom: 8px;
+            }
+
+            /* 모든 섹션의 마진 축소 */
+            .game-info, .control-btn, [style*="margin-bottom: 15px"] {
+                margin-bottom: 8px !important;
+            }
+
+            /* 기록 섹션 헤더 간격 축소 */
+            .records h3 {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            /* 기록 아이템 간격 축소 */
+            .record-item {
+                padding: 6px 0;
+                font-size: 12px;
             }
         }
 
