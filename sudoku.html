@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Life is Sudoku Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 28px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 8px;
+            box-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.07),
+                0 1px 2px rgba(0, 0, 0, 0.05) inset;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .sudoku-board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 2px;
+            background: #333;
+            padding: 2px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.2),
+                0 0 0 2px #333;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            position: relative;
+        }
+
+        .cell:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+
+        .cell.selected {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+        }
+
+        .cell.fixed {
+            background: #f5f5f5;
+            color: #333;
+            font-weight: 900;
+        }
+
+        .cell.error {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .cell.same-number {
+            background: #d4e6ff;
+        }
+
+        .cell.ai-thinking {
+            background: #fff3cd;
+            animation: aiPulse 0.5s ease-in-out;
+        }
+
+        .cell.ai-placed {
+            background: #d4edda;
+            animation: aiPlace 0.3s ease;
+        }
+
+        @keyframes aiPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes aiPlace {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 3x3 블록 구분 */
+        .cell:nth-child(3n) {
+            border-right: 2px solid #333;
+        }
+
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid #333;
+        }
+
+        .number-pad {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .number-btn, .control-btn {
+            padding: 12px 8px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 
+                0 4px 6px rgba(0, 0, 0, 0.1),
+                0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .number-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .number-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 12px rgba(102, 126, 234, 0.4),
+                0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .number-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 12px rgba(245, 87, 108, 0.4),
+                0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-btn.new-game {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .difficulty-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .difficulty-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            background: #f5f5f5;
+            color: #666;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 11px;
+        }
+
+        .difficulty-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 3px 6px rgba(102, 126, 234, 0.3);
+        }
+
+        .difficulty-btn-modal {
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            background: #f5f5f5;
+            color: #666;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+        }
+
+        .difficulty-btn-modal.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .records {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) inset;
+        }
+
+        .records h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .record-item:last-child {
+            border-bottom: none;
+        }
+
+        #settingsBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 22px;
+                margin-bottom: 12px;
+            }
+
+            .cell {
+                font-size: 16px;
+            }
+
+            .number-btn {
+                padding: 10px 6px;
+                font-size: 14px;
+            }
+
+            .control-btn {
+                padding: 10px 6px;
+                font-size: 13px;
+            }
+
+            .info-label {
+                font-size: 10px !important;
+            }
+
+            .info-value {
+                font-size: 13px !important;
+            }
+
+            .difficulty-btn, .difficulty-btn-modal {
+                padding: 3px 6px !important;
+                font-size: 10px !important;
+                min-width: 40px !important;
+            }
+
+            .game-info {
+                padding: 5px 10px !important;
+                gap: 8px;
+            }
+
+            .info-item {
+                gap: 3px !important;
+            }
+
+            .number-pad {
+                gap: 3px;
+            }
+
+            #settingsBtn {
+                font-size: 16px !important;
+                padding: 6px 10px !important;
+            }
+        }
+
+        .victory-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .victory-modal.show {
+            display: flex;
+        }
+
+        .victory-content {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: victoryPop 0.5s ease;
+        }
+
+        @keyframes victoryPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .victory-content h2 {
+            color: #667eea;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .victory-content p {
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Life is Sudoku Game</h1>
+        
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 15px; align-items: center;">
+            <div class="game-info" style="margin-bottom: 0; padding: 6px 12px;">
+                <div class="info-item" style="display: flex; gap: 5px; align-items: center;">
+                    <div class="info-label" style="font-size: 11px; margin-bottom: 0;">시간</div>
+                    <div class="info-value" style="font-size: 14px;" id="timer">00:00</div>
+                </div>
+                <div class="info-item" style="display: flex; gap: 5px; align-items: center;">
+                    <div class="info-label" style="font-size: 11px; margin-bottom: 0;">난이도</div>
+                    <div class="info-value" style="font-size: 14px;" id="difficulty">쉬움</div>
+                </div>
+                <div class="info-item" style="display: flex; gap: 5px; align-items: center;">
+                    <div class="info-label" style="font-size: 11px; margin-bottom: 0;">실수</div>
+                    <div class="info-value" style="font-size: 14px;" id="mistakes">0</div>
+                </div>
+            </div>
+
+            <button id="settingsBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 18px; box-shadow: 0 3px 6px rgba(102, 126, 234, 0.3); transition: all 0.2s ease;">
+                ⚙️
+            </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+            <button class="control-btn" id="erase" style="font-size: 14px; padding: 12px 8px;">지우기</button>
+            <button class="control-btn new-game" id="newGame" style="font-size: 14px; padding: 12px 8px;">새 게임</button>
+            <div style="position: relative;">
+                <button class="control-btn" id="aiSolve" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); font-size: 14px; padding: 12px 8px; width: 100%;">
+                    🤖 AI 풀이
+                </button>
+                <button class="control-btn" id="stopAi" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); font-size: 14px; padding: 12px 8px; width: 100%; display: none;">
+                    ⏸️ 중지
+                </button>
+            </div>
+        </div>
+
+        <div class="sudoku-board" id="board"></div>
+
+        <div class="number-pad">
+            <button class="number-btn" data-number="1">1</button>
+            <button class="number-btn" data-number="2">2</button>
+            <button class="number-btn" data-number="3">3</button>
+            <button class="number-btn" data-number="4">4</button>
+            <button class="number-btn" data-number="5">5</button>
+            <button class="number-btn" data-number="6">6</button>
+            <button class="number-btn" data-number="7">7</button>
+            <button class="number-btn" data-number="8">8</button>
+            <button class="number-btn" data-number="9">9</button>
+        </div>
+
+        <div class="records">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 style="margin: 0;">🏆 최고 기록</h3>
+                <button id="clearRecordsBtn" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; border: none; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 11px; font-weight: bold; box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);">
+                    🗑️ 삭제
+                </button>
+            </div>
+            <div id="recordsList"></div>
+        </div>
+    </div>
+
+    <div class="victory-modal" id="victoryModal">
+        <div class="victory-content">
+            <h2>🎉 축하합니다!</h2>
+            <p id="victoryMessage"></p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+                <button class="control-btn" onclick="closeVictoryModal()" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">완료</button>
+                <button class="control-btn new-game" onclick="newGame()">새 게임</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="victory-modal" id="settingsModal">
+        <div class="victory-content">
+            <h2>⚙️ 설정</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #667eea; font-weight: bold; margin-bottom: 10px; font-size: 16px;">난이도</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                    <button class="difficulty-btn-modal active" data-level="easy">쉬움</button>
+                    <button class="difficulty-btn-modal" data-level="medium">보통</button>
+                    <button class="difficulty-btn-modal" data-level="hard">어려움</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label style="color: #667eea; font-weight: bold; font-size: 16px;">AI 속도</label>
+                    <span id="speedValueModal" style="color: #666; font-size: 14px;">보통</span>
+                </div>
+                <input type="range" id="aiSpeedModal" min="1" max="5" value="3" step="1" 
+                       style="width: 100%; accent-color: #667eea;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #999; margin-top: 5px;">
+                    <span>느림</span>
+                    <span>빠름</span>
+                </div>
+            </div>
+
+            <button class="control-btn new-game" onclick="closeSettingsModal()" style="width: 100%;">완료</button>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let board = [];
+        let solution = [];
+        let selectedCell = null;
+        let currentDifficulty = 'easy';
+        let startTime = null;
+        let timerInterval = null;
+        let mistakes = 0;
+        
+        // AI 풀이 상태
+        let aiSolving = false;
+        let aiSteps = [];
+        let aiCurrentStep = 0;
+        let aiSpeed = 3; // 1(느림) ~ 5(빠름)
+
+        // 난이도별 빈 칸 수
+        const difficultyLevels = {
+            easy: 40,
+            medium: 50,
+            hard: 60
+        };
+
+        // 사운드 생성
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playClickSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playSuccessSound() {
+            const notes = [523.25, 659.25, 783.99]; // C, E, G
+            notes.forEach((freq, index) => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = freq;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                }, index * 100);
+            });
+        }
+
+        function playErrorSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 200;
+            oscillator.type = 'sawtooth';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        // 스도쿠 생성 알고리즘
+        function generateSudoku() {
+            const grid = Array(9).fill(null).map(() => Array(9).fill(0));
+            
+            function isValid(grid, row, col, num) {
+                // 행 체크
+                for (let x = 0; x < 9; x++) {
+                    if (grid[row][x] === num) return false;
+                }
+                
+                // 열 체크
+                for (let x = 0; x < 9; x++) {
+                    if (grid[x][col] === num) return false;
+                }
+                
+                // 3x3 박스 체크
+                const startRow = Math.floor(row / 3) * 3;
+                const startCol = Math.floor(col / 3) * 3;
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        if (grid[startRow + i][startCol + j] === num) return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            function fillGrid(grid) {
+                const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+                
+                for (let row = 0; row < 9; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        if (grid[row][col] === 0) {
+                            numbers.sort(() => Math.random() - 0.5);
+                            
+                            for (let num of numbers) {
+                                if (isValid(grid, row, col, num)) {
+                                    grid[row][col] = num;
+                                    
+                                    if (fillGrid(grid)) {
+                                        return true;
+                                    }
+                                    
+                                    grid[row][col] = 0;
+                                }
+                            }
+                            
+                            return false;
+                        }
+                    }
+                }
+                
+                return true;
+            }
+            
+            fillGrid(grid);
+            return grid;
+        }
+
+        function removeCells(grid, count) {
+            const puzzle = grid.map(row => [...row]);
+            let removed = 0;
+            
+            while (removed < count) {
+                const row = Math.floor(Math.random() * 9);
+                const col = Math.floor(Math.random() * 9);
+                
+                if (puzzle[row][col] !== 0) {
+                    puzzle[row][col] = 0;
+                    removed++;
+                }
+            }
+            
+            return puzzle;
+        }
+
+        function initBoard() {
+            solution = generateSudoku();
+            board = removeCells(solution, difficultyLevels[currentDifficulty]);
+            mistakes = 0;
+            updateMistakes();
+            renderBoard();
+            startTimer();
+        }
+
+        function renderBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    if (board[row][col] !== 0) {
+                        cell.textContent = board[row][col];
+                        cell.classList.add('fixed');
+                    }
+                    
+                    cell.addEventListener('click', () => selectCell(row, col));
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        function selectCell(row, col) {
+            if (board[row][col] !== 0 && solution[row][col] === board[row][col]) {
+                return; // 고정된 셀은 선택 불가
+            }
+            
+            playClickSound();
+            selectedCell = { row, col };
+            updateCellStyles();
+        }
+
+        function updateCellStyles() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                cell.classList.remove('selected', 'same-number', 'error');
+                
+                if (selectedCell && row === selectedCell.row && col === selectedCell.col) {
+                    cell.classList.add('selected');
+                }
+                
+                // 같은 숫자 하이라이트
+                if (selectedCell && board[row][col] !== 0 && 
+                    board[row][col] === board[selectedCell.row][selectedCell.col]) {
+                    cell.classList.add('same-number');
+                }
+                
+                // 오류 표시
+                if (board[row][col] !== 0 && solution[row][col] !== board[row][col]) {
+                    cell.classList.add('error');
+                }
+            });
+        }
+
+        function placeNumber(num) {
+            if (!selectedCell || aiSolving) return;  // AI 풀이 중에는 입력 불가
+            
+            const { row, col } = selectedCell;
+            
+            // 고정된 셀은 수정 불가
+            if (solution[row][col] === board[row][col] && board[row][col] !== 0) {
+                return;
+            }
+            
+            playClickSound();
+            
+            // 이전 값이 있었는지 확인
+            const hadValue = board[row][col] !== 0;
+            
+            board[row][col] = num;
+            
+            // 화면에 숫자 표시
+            const cells = document.querySelectorAll('.cell');
+            const cellIndex = row * 9 + col;
+            cells[cellIndex].textContent = num;
+            
+            // 정답 확인
+            if (solution[row][col] !== num) {
+                if (!hadValue) { // 새로 입력한 경우만 실수 카운트
+                    mistakes++;
+                    updateMistakes();
+                }
+                playErrorSound();
+            }
+            
+            updateCellStyles();
+            checkVictory();
+        }
+
+        function eraseCell() {
+            if (!selectedCell || aiSolving) return;  // AI 풀이 중에는 지우기 불가
+            
+            const { row, col } = selectedCell;
+            
+            // 고정된 셀은 지울 수 없음
+            if (solution[row][col] === board[row][col] && board[row][col] !== 0) {
+                return;
+            }
+            
+            playClickSound();
+            board[row][col] = 0;
+            
+            // 화면에서 숫자 제거
+            const cells = document.querySelectorAll('.cell');
+            const cellIndex = row * 9 + col;
+            cells[cellIndex].textContent = '';
+            
+            updateCellStyles();
+        }
+
+        function checkVictory() {
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    if (board[row][col] !== solution[row][col]) {
+                        return false;
+                    }
+                }
+            }
+            
+            // 승리!
+            stopTimer();
+            playSuccessSound();
+            
+            const time = document.getElementById('timer').textContent;
+            saveRecord(currentDifficulty, time, mistakes);
+            showVictoryModal(time);
+            
+            return true;
+        }
+
+        // AI 풀이 알고리즘 (백트래킹)
+        // AI 풀이 - solution을 기반으로 빈 칸들을 채워나감
+        function generateAiSteps() {
+            const steps = [];
+            
+            // 빈 칸들을 찾아서 순서대로 채울 목록 만들기
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    if (board[row][col] === 0) {
+                        // solution의 정답 숫자로 채우기
+                        const correctNum = solution[row][col];
+                        steps.push({ row, col, num: correctNum, type: 'place' });
+                    }
+                }
+            }
+            
+            return steps;
+        }
+
+        async function startAiSolver() {
+            if (aiSolving) return;
+            
+            aiSolving = true;
+            document.getElementById('aiSolve').style.display = 'none';
+            document.getElementById('stopAi').style.display = 'block';
+            
+            // AI 풀이 단계 생성
+            aiSteps = generateAiSteps();
+            aiCurrentStep = 0;
+            
+            // 단계별 실행
+            await executeAiSteps();
+        }
+
+        async function executeAiSteps() {
+            const speedMap = {
+                1: 500,  // 느림
+                2: 300,
+                3: 150,  // 보통
+                4: 50,
+                5: 10    // 빠름
+            };
+            
+            const delay = speedMap[aiSpeed];
+            
+            while (aiCurrentStep < aiSteps.length && aiSolving) {
+                const step = aiSteps[aiCurrentStep];
+                const { row, col, num } = step;
+                
+                const cells = document.querySelectorAll('.cell');
+                const cellIndex = row * 9 + col;
+                const cell = cells[cellIndex];
+                
+                // 생각하는 애니메이션
+                cell.classList.add('ai-thinking');
+                await sleep(delay / 2);
+                cell.classList.remove('ai-thinking');
+                
+                // 숫자 배치
+                board[row][col] = num;
+                cell.textContent = num;
+                cell.classList.add('ai-placed');
+                playClickSound();
+                
+                await sleep(delay);
+                cell.classList.remove('ai-placed');
+                
+                aiCurrentStep++;
+                updateCellStyles();
+            }
+            
+            if (aiSolving) {
+                // AI 완료
+                await sleep(500);
+                stopAiSolver();
+                
+                if (checkVictory()) {
+                    playSuccessSound();
+                }
+            }
+        }
+
+        function stopAiSolver() {
+            aiSolving = false;
+            aiSteps = [];
+            aiCurrentStep = 0;
+            document.getElementById('aiSolve').style.display = 'block';
+            document.getElementById('stopAi').style.display = 'none';
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function showVictoryModal(time) {
+            const modal = document.getElementById('victoryModal');
+            const message = document.getElementById('victoryMessage');
+            message.textContent = `완료 시간: ${time} | 실수: ${mistakes}회`;
+            modal.classList.add('show');
+        }
+
+        function closeVictoryModal() {
+            const modal = document.getElementById('victoryModal');
+            modal.classList.remove('show');
+        }
+
+        function openSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.add('show');
+            
+            // 현재 설정값으로 모달 업데이트
+            document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.level === currentDifficulty) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            document.getElementById('aiSpeedModal').value = aiSpeed;
+            updateAiSpeedModal();
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.remove('show');
+            saveSettings();
+        }
+
+        function loadSettings() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('sudokuSettings') || '{}');
+                
+                if (settings.difficulty) {
+                    currentDifficulty = settings.difficulty;
+                    document.getElementById('difficulty').textContent = 
+                        currentDifficulty === 'easy' ? '쉬움' : 
+                        currentDifficulty === 'medium' ? '보통' : '어려움';
+                }
+                
+                if (settings.aiSpeed) {
+                    aiSpeed = settings.aiSpeed;
+                }
+            } catch (e) {
+                console.log('Settings not available');
+            }
+        }
+
+        function saveSettings() {
+            try {
+                const settings = {
+                    difficulty: currentDifficulty,
+                    aiSpeed: aiSpeed
+                };
+                localStorage.setItem('sudokuSettings', JSON.stringify(settings));
+            } catch (e) {
+                console.log('Cannot save settings');
+            }
+        }
+
+        function clearAllRecords() {
+            if (confirm('모든 난이도의 기록을 삭제하시겠습니까?')) {
+                try {
+                    localStorage.removeItem('sudokuRecords');
+                    displayRecords();
+                    alert('기록이 삭제되었습니다.');
+                } catch (e) {
+                    alert('기록을 삭제할 수 없습니다.');
+                }
+            }
+        }
+
+        function updateAiSpeedModal() {
+            const speedMap = ['', '매우 느림', '느림', '보통', '빠름', '매우 빠름'];
+            document.getElementById('speedValueModal').textContent = speedMap[aiSpeed];
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimer() {
+            if (!startTime) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('timer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateMistakes() {
+            document.getElementById('mistakes').textContent = mistakes;
+        }
+
+        function newGame() {
+            stopTimer();
+            stopAiSolver();  // AI 풀이 중이면 중지
+            document.getElementById('victoryModal').classList.remove('show');
+            initBoard();
+        }
+
+        function changeDifficulty(level) {
+            currentDifficulty = level;
+            document.getElementById('difficulty').textContent = 
+                level === 'easy' ? '쉬움' : level === 'medium' ? '보통' : '어려움';
+            
+            saveSettings();
+            displayRecords(); // 난이도가 변경되면 해당 난이도의 기록 표시
+        }
+
+        function saveRecord(difficulty, time, mistakes) {
+            // localStorage를 사용한 기록 저장
+            // 주의: Claude.ai artifact에서는 localStorage가 지원되지 않습니다
+            // 이 코드를 다운로드해서 직접 열면 정상 작동합니다
+            try {
+                const records = JSON.parse(localStorage.getItem('sudokuRecords') || '{}');
+                
+                if (!records[difficulty]) {
+                    records[difficulty] = [];
+                }
+                
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).replace(/\. /g, '.').replace(/\.$/, '');
+                
+                const timeStr = now.toLocaleTimeString('ko-KR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                
+                records[difficulty].push({
+                    time,
+                    mistakes,
+                    date: `${dateStr} ${timeStr}`
+                });
+                
+                // 최근 5개만 유지
+                records[difficulty] = records[difficulty]
+                    .sort((a, b) => a.time.localeCompare(b.time))
+                    .slice(0, 5);
+                
+                localStorage.setItem('sudokuRecords', JSON.stringify(records));
+                displayRecords();
+            } catch (e) {
+                console.log('localStorage not available in this environment');
+            }
+        }
+
+        function displayRecords() {
+            const recordsList = document.getElementById('recordsList');
+            
+            try {
+                const records = JSON.parse(localStorage.getItem('sudokuRecords') || '{}');
+                const currentRecords = records[currentDifficulty] || [];
+                
+                if (currentRecords.length === 0) {
+                    recordsList.innerHTML = '<div style="text-align: center; color: #999;">아직 기록이 없습니다</div>';
+                    return;
+                }
+                
+                recordsList.innerHTML = currentRecords
+                    .map((record, index) => `
+                        <div class="record-item">
+                            <span>${index + 1}. ${record.time} (실수: ${record.mistakes}회)</span>
+                            <span style="color: #999; font-size: 10px;">${record.date}</span>
+                        </div>
+                    `)
+                    .join('');
+            } catch (e) {
+                recordsList.innerHTML = '<div style="text-align: center; color: #999;">기록을 불러올 수 없습니다<br><small>파일을 다운로드해서 열어보세요!</small></div>';
+            }
+        }
+
+        // 이벤트 리스너
+        document.querySelectorAll('.number-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const num = parseInt(btn.dataset.number);
+                placeNumber(num);
+            });
+        });
+
+        document.getElementById('erase').addEventListener('click', eraseCell);
+        document.getElementById('newGame').addEventListener('click', newGame);
+
+        // 설정 버튼
+        document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+        
+        // 기록 삭제 버튼
+        document.getElementById('clearRecordsBtn').addEventListener('click', clearAllRecords);
+
+        // 설정 모달 내 난이도 버튼들
+        document.querySelectorAll('.difficulty-btn-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.difficulty-btn-modal').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                changeDifficulty(btn.dataset.level);
+            });
+        });
+
+        // 설정 모달 내 AI 속도 슬라이더
+        document.getElementById('aiSpeedModal').addEventListener('input', (e) => {
+            aiSpeed = parseInt(e.target.value);
+            updateAiSpeedModal();
+        });
+
+        // AI 풀이 이벤트 리스너
+        document.getElementById('aiSolve').addEventListener('click', startAiSolver);
+        document.getElementById('stopAi').addEventListener('click', stopAiSolver);
+
+        // 키보드 입력
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '1' && e.key <= '9') {
+                placeNumber(parseInt(e.key));
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                eraseCell();
+            }
+        });
+
+        // 게임 시작
+        loadSettings();
+        displayRecords();
+        initBoard();
+    </script>
+</body>
+</html>
