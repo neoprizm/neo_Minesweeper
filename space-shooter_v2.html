@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🕹️ RETRO SHOOTER</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Press Start 2P', 'Courier New', monospace;
+            background: #000;
+            overflow: hidden;
+            color: #0f0;
+            touch-action: none;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 0, 0.03) 0px,
+                    rgba(0, 255, 0, 0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            box-shadow: inset 0 0 100px rgba(0, 255, 0, 0.1);
+        }
+
+        .ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15) 0px,
+                rgba(0, 0, 0, 0.15) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 0.99; }
+            100% { opacity: 0.98; }
+        }
+
+        .hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #0f0;
+            text-shadow: 
+                0 0 5px #0f0,
+                0 0 10px #0f0,
+                2px 2px 0 #000;
+            animation: textGlow 2s infinite;
+        }
+
+        @keyframes textGlow {
+            0%, 100% { text-shadow: 0 0 5px #0f0, 0 0 10px #0f0, 2px 2px 0 #000; }
+            50% { text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 2px 2px 0 #000; }
+        }
+
+        .stats {
+            background: rgba(0, 20, 0, 0.9);
+            padding: 10px;
+            border: 3px solid #0f0;
+            box-shadow: 
+                0 0 10px #0f0,
+                inset 0 0 10px rgba(0, 255, 0, 0.2);
+            line-height: 1.8;
+        }
+
+        .health-bar-container {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 350px;
+        }
+
+        .health-label {
+            font-size: 8px;
+            color: #0f0;
+            text-align: center;
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px #0f0, 2px 2px 0 #000;
+        }
+
+        .health-bar {
+            height: 20px;
+            background: #001100;
+            border: 3px solid #0f0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 10px #0f0, inset 0 0 10px #000;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0066, #ff6600, #ffff00);
+            transition: width 0.2s;
+            box-shadow: 0 0 10px #ff0066;
+            position: relative;
+        }
+
+        .health-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 10px,
+                rgba(255, 255, 255, 0.3) 10px,
+                rgba(255, 255, 255, 0.3) 11px
+            );
+        }
+
+        .health-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at center, rgba(0, 20, 0, 0.95), rgba(0, 0, 0, 0.98)),
+                repeating-linear-gradient(0deg, rgba(0, 255, 0, 0.05) 0px, rgba(0, 255, 0, 0.05) 2px, transparent 2px, transparent 4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: all;
+            border: 10px solid #0f0;
+            box-shadow: inset 0 0 50px rgba(0, 255, 0, 0.2);
+        }
+
+        #menu.hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #0f0;
+            text-shadow: 
+                0 0 10px #0f0,
+                0 0 20px #0f0,
+                0 0 30px #0f0,
+                4px 4px 0 #000;
+            margin-bottom: 10px;
+            animation: titleBlink 0.8s infinite, titleFloat 3s ease-in-out infinite;
+            letter-spacing: 3px;
+        }
+
+        @keyframes titleBlink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.7; }
+        }
+
+        @keyframes titleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .arcade-text {
+            font-size: 10px;
+            color: #0f0;
+            margin: 5px 0;
+            text-shadow: 0 0 5px #0f0, 2px 2px 0 #000;
+        }
+
+        .insert-coin {
+            font-size: 12px;
+            color: #ff0;
+            margin: 30px 0 20px 0;
+            text-shadow: 0 0 10px #ff0, 2px 2px 0 #000;
+            animation: blinkSlow 1s infinite;
+        }
+
+        @keyframes blinkSlow {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        .btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 14px;
+            padding: 15px 30px;
+            margin: 10px;
+            background: #0f0;
+            color: #000;
+            border: 3px solid #000;
+            cursor: pointer;
+            text-transform: uppercase;
+            pointer-events: all;
+            box-shadow: 
+                0 0 10px #0f0,
+                inset 0 0 10px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s;
+        }
+
+        .btn:hover {
+            background: #ff0;
+            box-shadow: 0 0 20px #ff0;
+            transform: scale(1.05);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        #warning {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 0, 0, 0);
+            pointer-events: none;
+            transition: background 0.1s;
+            border: 0px solid #f00;
+        }
+
+        #warning.show {
+            background: rgba(255, 0, 0, 0.3);
+            border: 10px solid #f00;
+            box-shadow: inset 0 0 50px #f00;
+        }
+
+        #combo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ff0;
+            text-shadow: 
+                0 0 20px #ff0,
+                0 0 40px #ff0,
+                4px 4px 0 #000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.5s;
+        }
+
+        #combo.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            width: 90%;
+            max-width: 400px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .joystick-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 20, 0, 0.8);
+            border: 3px solid #0f0;
+            border-radius: 50%;
+            box-shadow: 
+                0 0 10px #0f0,
+                inset 0 0 20px rgba(0, 255, 0, 0.2);
+            touch-action: none;
+            pointer-events: all;
+        }
+
+        .joystick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: #0f0;
+            border: 3px solid #000;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px #0f0;
+            transition: all 0.1s;
+        }
+
+        .fire-btn {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #f00, #a00);
+            border: 5px solid #ff0;
+            border-radius: 50%;
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+            box-shadow: 
+                0 0 20px #f00,
+                inset 0 0 20px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.1s;
+            touch-action: none;
+        }
+
+        .fire-btn:active {
+            transform: scale(0.9);
+            box-shadow: 
+                0 0 30px #f00,
+                inset 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 20px; }
+            .arcade-text { font-size: 8px; }
+            .btn { font-size: 10px; padding: 10px 20px; }
+            .hud { font-size: 8px; }
+        }
+
+        .score-popup {
+            position: absolute;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00, 2px 2px 0 #000;
+            pointer-events: none;
+            animation: scoreFloat 1s ease-out forwards, scoreBlink 0.15s infinite;
+            z-index: 50;
+        }
+
+        @keyframes scoreFloat {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-80px) scale(1.5);
+            }
+        }
+
+        @keyframes scoreBlink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.5; }
+        }
+
+        .boss-warning {
+            position: fixed !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            color: #ff0000 !important;
+            font-size: 60px !important;
+            font-weight: bold !important;
+            text-align: center !important;
+            text-shadow: 0 0 30px #ff0000, 0 0 60px #ff0000, 4px 4px 0 #000 !important;
+            z-index: 9999 !important;
+            pointer-events: none !important;
+            animation: bossWarning 3s ease-out forwards !important;
+            white-space: nowrap !important;
+        }
+
+        @keyframes bossWarning {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            10% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            20% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+            80% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+        }
+
+        .item {
+            position: absolute;
+            font-size: 30px;
+            pointer-events: none;
+            animation: itemFloat 2s ease-in-out infinite, itemGlow 1s infinite;
+            z-index: 45;
+        }
+
+        @keyframes itemFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(180deg); }
+        }
+
+        @keyframes itemGlow {
+            0%, 100% { filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 10px #0ff); }
+            50% { filter: drop-shadow(0 0 15px #0ff) drop-shadow(0 0 25px #0ff); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="ui">
+            <div class="scanlines"></div>
+            
+            <div class="hud">
+                <div class="stats">
+                    <div>SCORE: <span id="score">0000000</span></div>
+                    <div>LEVEL: <span id="level">1</span></div>
+                    <div>COMBO: x<span id="combo-text">00</span></div>
+                    <div>FPS: <span id="fps">60</span></div>
+                </div>
+                <div class="stats">
+                    <div>ENEMIES: <span id="enemies">00</span></div>
+                    <div>POWER: <span id="power">1.0</span>x</div>
+                    <div>RATE: <span id="rate">0.10</span>s</div>
+                </div>
+            </div>
+
+            <div class="health-bar-container">
+                <div class="health-label">◤ SHIELD ENERGY ◥</div>
+                <div class="health-bar">
+                    <div class="health-fill" id="healthFill" style="width: 100%;"></div>
+                    <div class="health-text" id="healthText">100</div>
+                </div>
+            </div>
+
+            <div id="warning"></div>
+            <div id="combo"></div>
+        </div>
+
+        <div id="menu">
+            <h1>◢ RETRO SHOOTER ◣</h1>
+            <div class="arcade-text">▼ DESTROY ALL ENEMIES ▼</div>
+            <div class="arcade-text">█ SURVIVAL MODE █</div>
+            <div class="insert-coin">♦ INSERT COIN ♦</div>
+            <button class="btn" id="startBtn">▶ START GAME ◀</button>
+            <div class="arcade-text" style="margin-top: 30px;">CONTROLS:</div>
+            <div class="arcade-text">WASD / ARROWS = MOVE</div>
+            <div class="arcade-text">AUTO FIRE ENABLED</div>
+        </div>
+
+        <div class="controls">
+            <div class="joystick-container" id="joystickContainer">
+                <div class="joystick" id="joystick"></div>
+            </div>
+            <button class="fire-btn" id="fireBtn">FIRE</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const gl = canvas.getContext('webgl', {
+            antialias: false,
+            depth: false,
+            preserveDrawingBuffer: false,
+            powerPreference: "high-performance"
+        });
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+                const vertexShaderSource = `
+            attribute vec2 a_position;
+            attribute vec3 a_color;
+            attribute float a_size;
+            attribute float a_kind;   // 0 = circle(default), 1 = pacman
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            varying vec3 v_color;
+            varying float v_kind;
+            void main() {
+                vec2 pos = (a_position / u_resolution) * 2.0 - 1.0;
+                gl_Position = vec4(pos.x, -pos.y, 0.0, 1.0);
+                gl_PointSize = a_size;
+                v_color = a_color;
+                v_kind = a_kind;
+            }
+        `;
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec3 v_color;
+            varying float v_kind;
+            uniform float u_time;
+            uniform sampler2D u_enemyTexture;
+            
+            void main() {
+                vec2 coord = gl_PointCoord - vec2(0.5);
+                float dist = length(coord);
+                
+                // v_kind == 2.0: 적 텍스처 렌더링
+                if (v_kind > 1.5) {
+                    vec4 texColor = texture2D(u_enemyTexture, gl_PointCoord);
+                    if (texColor.a < 0.1) discard;
+                    gl_FragColor = texColor;
+                }
+                // v_kind == 1.0: 팩맨 (사용 안 함)
+                else if (v_kind > 0.5 && v_kind < 1.5) {
+                    if (dist > 0.5) discard;
+                    float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+                    float mouth = 0.35 + 0.07 * abs(sin(u_time * 4.0));
+                    float ang = atan(coord.y, coord.x);
+                    if (coord.x > 0.0 && abs(ang) < mouth) discard;
+                    gl_FragColor = vec4(v_color, alpha);
+                }
+                // v_kind == 0.0: 일반 원형 스프라이트
+                else {
+                    if (dist > 0.5) discard;
+                    float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+                    gl_FragColor = vec4(v_color, alpha);
+                }
+            }
+        `;
+function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        const positionLoc = gl.getAttribLocation(program, 'a_position');
+        const colorLoc = gl.getAttribLocation(program, 'a_color');
+        const sizeLoc = gl.getAttribLocation(program, 'a_size');
+        const kindLoc = gl.getAttribLocation(program, 'a_kind');
+        const resolutionLoc = gl.getUniformLocation(program, 'u_resolution');
+        const timeLoc = gl.getUniformLocation(program, 'u_time');
+        const enemyTextureLoc = gl.getUniformLocation(program, 'u_enemyTexture');
+
+        // 적 텍스처 로드
+    
+		const enemyTexture = gl.createTexture();
+		const enemyImage = new Image();
+		enemyImage.crossOrigin = 'anonymous';  // 외부 도메인(CORS) 텍스처 허용
+		enemyImage.onload = function () {
+		  gl.bindTexture(gl.TEXTURE_2D, enemyTexture);
+		  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, enemyImage);
+		  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		};
+		enemyImage.src = 'https://neoprizm.github.io/neo_Minesweeper/enermy.png';  // 변경된 경로
+
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+		// 텍스처 활성화
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D, enemyTexture);
+		gl.uniform1i(enemyTextureLoc, 0);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        
+        // 텍스처 활성화
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, enemyTexture);
+        gl.uniform1i(enemyTextureLoc, 0);
+
+        const MAX_ENTITIES = 10000;
+        const positions = new Float32Array(MAX_ENTITIES * 2);
+        const colors = new Float32Array(MAX_ENTITIES * 3);
+        const sizes = new Float32Array(MAX_ENTITIES);
+        const kinds = new Float32Array(MAX_ENTITIES);
+
+        const positionBuffer = gl.createBuffer();
+        const colorBuffer = gl.createBuffer();
+        const sizeBuffer = gl.createBuffer();
+        const kindBuffer = gl.createBuffer();
+
+        let wasmModule = null;
+
+        async function initWasm() {
+            const wasmCode = new Uint8Array([
+                0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+                0x01, 0x07, 0x01, 0x60, 0x02, 0x7d, 0x7d, 0x01, 0x7d,
+                0x03, 0x02, 0x01, 0x00,
+                0x07, 0x09, 0x01, 0x05, 0x61, 0x64, 0x64, 0x58, 0x59, 0x00, 0x00,
+                0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x92, 0x0b
+            ]);
+            const wasmModule = await WebAssembly.instantiate(wasmCode);
+            return wasmModule.instance.exports;
+        }
+
+        const gameState = {
+            running: false,
+            score: 0,
+            combo: 0,
+            comboTimer: 0,
+            level: 1,  // 레벨 추가
+            nextLevelScore: 1000,  // 첫 레벨은 1000점
+            levelMultiplier: 3,  // 레벨당 3배 증가
+            player: {
+                x: 0, y: 0,
+                vx: 0, vy: 0,
+                size: 24,  // 기존 12에서 2배 증가
+                speed: 6,
+                health: 100,
+                maxHealth: 100,
+                bulletSizeMultiplier: 1.0,  // 총알 크기 배율
+                maxBulletSize: 72  // 최대 총알 크기 (우주선 본체의 3배)
+            },
+            bullets: [],
+            enemies: [],
+            enemyChunks: [],
+            particles: [],
+            items: [],  // 아이템 배열 추가
+            stars: [],  // 배경 별 배열
+            boss: null,  // 보스
+            bossBullets: [],  // 보스 총알
+            bossTimer: 0,  // 보스 타이머
+            bossInterval: 60,  // 1분 (60초)
+            isBossBattle: false,  // 보스 전투 중인지
+            bossAppearCount: 0,  // 보스 등장 횟수
+            shootTimer: 0,
+            shootInterval: 0.1,
+            enemySpawnTimer: 0,
+            enemySpawnInterval: 1.0,
+            gameTime: 0,  // 게임 시간 추적
+            lastSpeedIncrease: 0,  // 마지막 속도 증가 시간
+            baseEnemySpeed: 1.0,  // 기본 적 속도
+            killCount: 0,  // 킬 카운트 추가
+            mouseX: 0,  // 마우스 X 위치
+            mouseY: 0   // 마우스 Y 위치
+        };
+
+        let audioContext = null;
+        let bgmGain = null;
+        let bgmSource = null;  // bgmSource 변수 추가
+        let bgmPlaying = false;
+        let bgmLoopTimeout = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                bgmGain = audioContext.createGain();
+                bgmGain.gain.value = 0.45;
+                bgmGain.connect(audioContext.destination);
+            }
+            return audioContext;
+        }
+
+        // 레트로 멜로디를 3배 더 길게 확장
+        const melody = [
+            // 첫 번째 파트
+            { note: 523.25, duration: 0.15 }, // C5
+            { note: 587.33, duration: 0.15 }, // D5
+            { note: 659.25, duration: 0.15 }, // E5
+            { note: 698.46, duration: 0.15 }, // F5
+            { note: 783.99, duration: 0.3 },  // G5
+            { note: 659.25, duration: 0.15 }, // E5
+            { note: 698.46, duration: 0.15 }, // F5
+            { note: 783.99, duration: 0.3 },  // G5
+            { note: 880.00, duration: 0.15 }, // A5
+            { note: 783.99, duration: 0.15 }, // G5
+            { note: 659.25, duration: 0.15 }, // E5
+            { note: 523.25, duration: 0.3 },  // C5
+            
+            // 두 번째 파트 (변형)
+            { note: 587.33, duration: 0.15 }, // D5
+            { note: 659.25, duration: 0.15 }, // E5
+            { note: 698.46, duration: 0.15 }, // F5
+            { note: 783.99, duration: 0.15 }, // G5
+            { note: 880.00, duration: 0.3 },  // A5
+            { note: 783.99, duration: 0.15 }, // G5
+            { note: 880.00, duration: 0.15 }, // A5
+            { note: 987.77, duration: 0.3 },  // B5
+            { note: 1046.50, duration: 0.15 }, // C6
+            { note: 987.77, duration: 0.15 }, // B5
+            { note: 880.00, duration: 0.15 }, // A5
+            { note: 698.46, duration: 0.3 },  // F5
+            
+            // 세 번째 파트 (더 높은 옥타브)
+            { note: 783.99, duration: 0.15 }, // G5
+            { note: 880.00, duration: 0.15 }, // A5
+            { note: 987.77, duration: 0.15 }, // B5
+            { note: 1046.50, duration: 0.15 }, // C6
+            { note: 1174.66, duration: 0.3 },  // D6
+            { note: 1046.50, duration: 0.15 }, // C6
+            { note: 987.77, duration: 0.15 }, // B5
+            { note: 880.00, duration: 0.3 },  // A5
+            { note: 783.99, duration: 0.15 }, // G5
+            { note: 659.25, duration: 0.15 }, // E5
+            { note: 523.25, duration: 0.15 }, // C5
+            { note: 523.25, duration: 0.3 },  // C5
+        ];
+
+        function playBGM() {
+            if (!bgmPlaying) return;
+            
+            const ctx = initAudio();
+            let currentTime = ctx.currentTime;
+            
+            melody.forEach((note, i) => {
+                const osc = ctx.createOscillator();
+                const noteGain = ctx.createGain();
+                
+                osc.connect(noteGain);
+                noteGain.connect(bgmGain);
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(note.note, currentTime);
+                
+                noteGain.gain.setValueAtTime(0, currentTime);
+                noteGain.gain.linearRampToValueAtTime(0.3, currentTime + 0.01);
+                noteGain.gain.exponentialRampToValueAtTime(0.01, currentTime + note.duration);
+                
+                osc.start(currentTime);
+                osc.stop(currentTime + note.duration);
+                
+                currentTime += note.duration;
+            });
+            
+            const totalDuration = melody.reduce((sum, note) => sum + note.duration, 0);
+            bgmLoopTimeout = setTimeout(() => playBGM(), totalDuration * 1000);
+        }
+
+        function startBGM() {
+            bgmPlaying = true;
+            playBGM();
+        }
+
+        function playSound(type) {
+            try {
+                const ctx = initAudio();
+                
+                switch(type) {
+                    case 'shoot':
+                        const shoot = ctx.createOscillator();
+                        const shootGain = ctx.createGain();
+                        shoot.connect(shootGain);
+                        shootGain.connect(ctx.destination);
+                        shoot.type = 'sawtooth';
+                        shoot.frequency.setValueAtTime(800, ctx.currentTime);
+                        shoot.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.05);
+                        shootGain.gain.setValueAtTime(0.08, ctx.currentTime);
+                        shootGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+                        shoot.start(ctx.currentTime);
+                        shoot.stop(ctx.currentTime + 0.05);
+                        break;
+                        
+                    case 'explosion':
+                        const explosion = ctx.createOscillator();
+                        const explosionGain = ctx.createGain();
+                        explosion.connect(explosionGain);
+                        explosionGain.connect(ctx.destination);
+                        explosion.type = 'sawtooth';
+                        explosion.frequency.setValueAtTime(200, ctx.currentTime);
+                        explosion.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.2);
+                        explosionGain.gain.setValueAtTime(0.2, ctx.currentTime);
+                        explosionGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                        explosion.start(ctx.currentTime);
+                        explosion.stop(ctx.currentTime + 0.2);
+                        break;
+                        
+                    case 'damage':
+                        const damage = ctx.createOscillator();
+                        const damageGain = ctx.createGain();
+                        damage.connect(damageGain);
+                        damageGain.connect(ctx.destination);
+                        damage.type = 'triangle';
+                        damage.frequency.setValueAtTime(300, ctx.currentTime);
+                        damage.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
+                        damageGain.gain.setValueAtTime(0.15, ctx.currentTime);
+                        damageGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                        damage.start(ctx.currentTime);
+                        damage.stop(ctx.currentTime + 0.1);
+                        break;
+                }
+            } catch(e) {
+                console.log('Sound error:', e);
+            }
+        }
+
+        
+        // 메인 BGM: '스페이스 오딧세이'로 알려진 자라투스트라 테마의 MIDI 느낌 모티프
+        function startBGM() {
+            const ctx = initAudio();
+            if (!ctx || bgmSource) return;
+
+            // C-G-C 삼화음이 옥타브를 오르내리며 점진적으로 커지는 단순 모티프
+            const seq2 = [
+                {f: 65.41, d: 1.8}, {f: 98.00, d: 1.8}, {f: 130.81, d: 1.8}, // C2-G2-C3
+                {f: 0.0,   d: 0.6}, // 휴지
+                {f: 65.41, d: 1.2}, {f: 98.00, d: 1.2}, {f: 130.81, d: 1.2}, // 반복
+                {f: 0.0,   d: 0.6},
+                {f: 130.81, d: 1.0}, {f: 196.00, d: 1.0}, {f: 261.63, d: 2.0} // C3-G3-C4
+            ];
+			
+
+
+          /*───────────────────────────────────────────────────────────────
+  IKARUGA STAGE-3  “Azure & Green” ● 8-Channel · 32 s Loop
+  ▸ solemn pad + heroic brass + ticking arpeggio
+  ▸ lightweight oscillator mix (≈2 MB RAM @ 48 kHz)
+────────────────────────────────────────────────────────────────*/
+
+/* 1. 8-채널 믹스 (폭넓은 스테레오·음색) */
+const channelCfg = [
+  { shift:   0,  vol: 0.16, wave: 'square'   }, // Lead brass
+  { shift:  +7,  vol: 0.11, wave: 'square'   }, // Perfect-5th layer
+  { shift: -12,  vol: 0.14, wave: 'triangle' }, // Warm bass
+  { shift: +12,  vol: 0.12, wave: 'saw'      }, // Upper pad
+  { shift: -24,  vol: 0.08, wave: 'saw'      }, // Sub-bass
+  { shift:  +0,  vol: 0.06, wave: 'sine'     }, // Choir pad
+  { shift: +19,  vol: 0.05, wave: 'sine'     }, // Sparkle
+  { shift:  +5,  vol: 0.05, wave: 'triangle' }  // 3rd-harmony
+];
+
+/* 2. 코드 & 멜로디 시퀀스 (Em–C–G–D minor-color) */
+const Q       = 0.40;                          // quarter ≈ 75 BPM feel
+const arpeDur = 0.10;                          // 16th tick
+const rootHz  = { E:164.81, C:130.81, G:196.00, D:146.83 };
+
+const chordSeq = ['E','C','G','D'];            // 4 bars
+const arpeggio = r => [r*2, r*2.5, r*3, r*2.5];// simple 4-note rise
+
+let seq = [];
+for (let bar = 0; bar < 4; bar++) {            // 4× → 16 bars ≈ 32 s
+  chordSeq.forEach(ch => {
+    // pad stab (whole beat)
+    seq.push({ f: rootHz[ch]*2, d: Q });
+    // arpeggio ticks within this beat
+    arpeggio(rootHz[ch]).forEach(f => seq.push({ f, d: arpeDur }));
+    seq.push({ f: 0, d: Q - (arpeDur*4) });    // fill remaining time
+  });
+}
+const totalDuration = seq.reduce((s,n)=>s+n.d,0); // ≈ 31.8 s
+
+/* 3. OSC 함수 */
+function osc(type,θ){
+  switch(type){
+    case 'square':   return Math.sign(Math.sin(θ));
+    case 'triangle': return 2/Math.PI*Math.asin(Math.sin(θ));
+    case 'saw':      return 2*(θ/(2*Math.PI)-Math.floor(θ/(2*Math.PI)+.5));
+    default:         return Math.sin(θ);
+  }
+}
+
+/* 4. 버퍼 합성 & 루프 재생 */
+const playBGMLoop = ()=>{
+  if(!gameState.running||gameState.isBossBattle) return;
+
+  try{
+    bgmSource = ctx.createBufferSource();
+    const chN   = channelCfg.length;
+    const sampN = Math.ceil(ctx.sampleRate*totalDuration);
+    const buf   = ctx.createBuffer(chN,sampN,ctx.sampleRate);
+
+    let cur=0;
+    for(const {f,d} of seq){
+      const st=Math.floor(cur*ctx.sampleRate);
+      const en=Math.floor((cur+d)*ctx.sampleRate);
+
+      for(let s=st;s<en;s++){
+        const t=(s-st)/ctx.sampleRate;
+        const a=Math.min(1,(t/d)*1.4);
+        const env=Math.pow(a,1.25)*(1-0.15*t/d);
+
+        channelCfg.forEach((ch,i)=>{
+          const data=buf.getChannelData(i);
+          if(f){
+            const hz=f*Math.pow(2,ch.shift/12);
+            data[s]+=osc(ch.wave,2*Math.PI*hz*t)*ch.vol*env;
+          }
+        });
+      }
+      cur+=d;
+    }
+
+    bgmSource.buffer=buf;
+    bgmSource.loop=true;           // seamless 32 s loop
+    bgmSource.connect(bgmGain);
+    bgmSource.start();
+  }catch(e){console.log('BGM error:',e);}
+};
+
+playBGMLoop();
+        }
+
+        // 보스 BGM - 위협적이고 긴장감 있는 음악
+        function startBossBGM() {
+            try {
+                const ctx = initAudio();
+                if (!ctx) {
+                    console.log('Audio context not available');
+                    return;
+                }
+                
+                // 기존 BGM 정리
+                if (bgmSource) {
+                    try {
+                        bgmSource.stop();
+                        bgmSource.disconnect();
+                    } catch(e) {}
+                    bgmSource = null;
+                }
+                
+                // 낮고 위협적인 음계 패턴
+                const notes = [
+                    // 불길한 반복 패턴 (낮은 옥타브)
+                    110, 110, 117, 110, 110, 117, 110, 110,
+                    104, 104, 110, 104, 104, 110, 104, 104,
+                    98, 98, 104, 98, 98, 104, 98, 98,
+                    110, 117, 123, 117, 110, 104, 98, 104,
+                    
+                    // 상승하는 긴장감
+                    110, 123, 139, 147, 156, 165, 175, 185,
+                    185, 175, 165, 156, 147, 139, 123, 110,
+                    
+                    // 반복 - 더 빠르게
+                    110, 117, 110, 117, 123, 139, 123, 117,
+                    110, 104, 98, 104, 110, 117, 123, 139,
+                    
+                    // 클라이맥스
+                    147, 139, 123, 110, 147, 139, 123, 110,
+                    165, 156, 147, 139, 165, 156, 147, 139,
+                    185, 175, 165, 156, 185, 175, 165, 156,
+                    220, 208, 196, 185, 175, 165, 156, 147
+                ];
+                
+                const noteDuration = 0.2;  // 느리고 무거운 템포
+                const totalDuration = notes.length * noteDuration;
+                
+                const playBossBGMLoop = () => {
+                    if (!gameState.running || !gameState.isBossBattle) return;
+                    
+                    try {
+                        bgmSource = ctx.createBufferSource();
+                        const buffer = ctx.createBuffer(1, ctx.sampleRate * totalDuration, ctx.sampleRate);
+                        const data = buffer.getChannelData(0);
+                        
+                        notes.forEach((freq, i) => {
+                            const startSample = Math.floor(i * noteDuration * ctx.sampleRate);
+                            const endSample = Math.floor((i + 1) * noteDuration * ctx.sampleRate);
+                            
+                            for (let j = startSample; j < endSample; j++) {
+                                const t = (j - startSample) / ctx.sampleRate;
+                                const envelope = Math.max(0, 1 - t / noteDuration);
+                                
+                                // 어두운 톤 (사각파 + 삼각파)
+                                const darkTone = Math.sign(Math.sin(2 * Math.PI * freq * t)) * 0.5;
+                                const subBass = Math.sin(2 * Math.PI * freq * 0.5 * t) * 0.4;
+                                const rumble = Math.sin(2 * Math.PI * freq * 1.5 * t) * 0.2;
+                                
+                                data[j] = (darkTone + subBass + rumble) * envelope * 0.15;
+                            }
+                        });
+                        
+                        bgmSource.buffer = buffer;
+                        bgmSource.connect(bgmGain);
+                        bgmSource.loop = false;
+                        bgmSource.onended = () => {
+                            bgmSource = null;
+                            if (gameState.isBossBattle) {
+                                playBossBGMLoop();
+                            }
+                        };
+                        bgmSource.start();
+                    } catch(e) {
+                        console.log('Boss BGM loop error:', e);
+                        bgmSource = null;
+                    }
+                };
+                
+                playBossBGMLoop();
+            } catch(e) {
+                console.log('Boss BGM init error:', e);
+            }
+        }
+
+        function stopBGM() {
+            if (bgmSource) {
+                try {
+                    bgmSource.stop();
+                    bgmSource.disconnect();
+                } catch(e) {
+                    console.log('BGM stop error:', e);
+                }
+                bgmSource = null;
+            }
+        }
+
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        // 마우스 위치 추적
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            gameState.mouseX = e.clientX - rect.left;
+            gameState.mouseY = e.clientY - rect.top;
+        });
+
+        // 터치 위치도 마우스 위치로 사용
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                gameState.mouseX = e.touches[0].clientX - rect.left;
+                gameState.mouseY = e.touches[0].clientY - rect.top;
+            }
+        });
+
+        let joystickActive = false;
+        let joystickDelta = { x: 0, y: 0 };
+
+        const joystickContainer = document.getElementById('joystickContainer');
+        const joystick = document.getElementById('joystick');
+
+        function handleJoystick(e) {
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = joystickContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const deltaX = touch.clientX - centerX;
+            const deltaY = touch.clientY - centerY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const maxDistance = 35;
+            
+            if (distance > maxDistance) {
+                joystickDelta.x = (deltaX / distance) * maxDistance;
+                joystickDelta.y = (deltaY / distance) * maxDistance;
+            } else {
+                joystickDelta.x = deltaX;
+                joystickDelta.y = deltaY;
+            }
+            
+            joystick.style.transform = `translate(calc(-50% + ${joystickDelta.x}px), calc(-50% + ${joystickDelta.y}px))`;
+        }
+
+        joystickContainer.addEventListener('touchstart', e => {
+            joystickActive = true;
+            handleJoystick(e);
+        });
+
+        joystickContainer.addEventListener('touchmove', e => {
+            if (joystickActive) handleJoystick(e);
+        });
+
+        joystickContainer.addEventListener('touchend', () => {
+            joystickActive = false;
+            joystickDelta = { x: 0, y: 0 };
+            joystick.style.transform = 'translate(-50%, -50%)';
+        });
+
+        joystickContainer.addEventListener('mousedown', e => {
+            joystickActive = true;
+            handleJoystick(e);
+        });
+
+        joystickContainer.addEventListener('mousemove', e => {
+            if (joystickActive) handleJoystick(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            joystickActive = false;
+            joystickDelta = { x: 0, y: 0 };
+            joystick.style.transform = 'translate(-50%, -50%)';
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('fireBtn').addEventListener('touchstart', e => e.preventDefault());
+
+        function checkCollision(x1, y1, x2, y2, r1, r2) {
+            const dx = x1 - x2;
+            const dy = y1 - y2;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            return dist < (r1 + r2);
+        }
+
+        // 무지개 색상 계산
+        let rainbowHue = 0;
+        function getRainbowColor() {
+            rainbowHue = (rainbowHue + 3) % 360;  // 빠르게 변화
+            const h = rainbowHue;
+            const s = 100;
+            const l = 50;
+            
+            const c = (1 - Math.abs(2 * l / 100 - 1)) * s / 100;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = l / 100 - c / 2;
+            
+            let r, g, b;
+            if (h < 60) { r = c; g = x; b = 0; }
+            else if (h < 120) { r = x; g = c; b = 0; }
+            else if (h < 180) { r = 0; g = c; b = x; }
+            else if (h < 240) { r = 0; g = x; b = c; }
+            else if (h < 300) { r = x; g = 0; b = c; }
+            else { r = c; g = 0; b = x; }
+            
+            return [r + m, g + m, b + m];
+        }
+
+        function shootBullet() {
+            // 플레이어에서 마우스 포인터 방향으로 발사
+            const dx = gameState.mouseX - gameState.player.x;
+            const dy = gameState.mouseY - gameState.player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // 거리가 너무 가까우면 위쪽으로 발사
+            let angle;
+            if (distance < 10) {
+                angle = -Math.PI / 2;  // 위쪽
+            } else {
+                angle = Math.atan2(dy, dx);
+            }
+            
+            const speed = 12;
+            // 총알 크기 계산 (최대값 제한)
+            let bulletSize = 8 * gameState.player.bulletSizeMultiplier;
+            bulletSize = Math.min(bulletSize, gameState.player.maxBulletSize);
+            
+            gameState.bullets.push({
+                x: gameState.player.x,
+                y: gameState.player.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: bulletSize,
+                life: 3,
+                color: getRainbowColor()  // 무지개 색상 추가
+            });
+            
+            playSound('shoot');
+        }
+
+        // 배경 별 초기화
+        function initStars() {
+            gameState.stars = [];
+            for (let i = 0; i < 150; i++) {
+                gameState.stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    speed: Math.random() * 2 + 0.5,
+                    size: Math.random() * 2 + 1,
+                    brightness: Math.random() * 0.5 + 0.5
+                });
+            }
+        }
+
+        // 배경 별 업데이트
+        function updateStars(dt) {
+            for (let star of gameState.stars) {
+                star.y += star.speed;
+                
+                // 화면 아래로 벗어나면 위에서 다시 시작
+                if (star.y > canvas.height) {
+                    star.y = -5;
+                    star.x = Math.random() * canvas.width;
+                }
+            }
+        }
+
+        function spawnEnemy() {
+            const types = [
+                { size: 80, health: 15, baseSpeed: 2.5, score: 1 },   // 작은 적 - 빠름
+                { size: 100, health: 40, baseSpeed: 1.8, score: 2 },  
+                { size: 120, health: 75, baseSpeed: 1.2, score: 3 }, 
+                { size: 140, health: 125, baseSpeed: 0.8, score: 4 }, 
+                { size: 160, health: 200, baseSpeed: 0.5, score: 5 }  // 큰 적 - 느림
+            ];
+            
+            const type = types[Math.min(Math.floor(Math.random() * 5), 4)];
+            
+            // 10마리 중 1마리는 1.5배 빠른 적
+            const isFastEnemy = Math.random() < 0.1;  // 10% 확률
+            const speedBonus = isFastEnemy ? 1.5 : 1.0;
+            
+            // 기본 속도에 시간에 따른 증가율 적용
+            const speedMultiplier = gameState.baseEnemySpeed * speedBonus;
+            
+            gameState.enemies.push({
+                x: Math.random() * (canvas.width - 100) + 50,
+                y: -50,
+                vx: (Math.random() - 0.5) * 2 * speedMultiplier,
+                vy: (Math.random() * 0.5 + type.baseSpeed) * speedMultiplier,  // 크기 기반 속도
+                size: type.size,
+                currentSize: type.size,
+                minSize: type.size * 0.3,  // 최소 크기 = 원래 크기의 30%
+                health: type.health,
+                maxHealth: type.health,
+                sizeMultiplier: type.score,
+                type: Math.floor(Math.random() * 5),
+                score: type.score * 100,  // 점수 저장
+                isFast: isFastEnemy  // 빠른 적 표시
+            });
+        }
+
+        // 보스 생성
+        function spawnBoss() {
+            const bossSize = Math.min(canvas.width, canvas.height) * 0.15;  // 화면의 15% (절반으로 줄임)
+            
+            // 모든 일반 적 제거
+            gameState.enemies = [];
+            gameState.isBossBattle = true;
+            gameState.bossAppearCount++;  // 등장 횟수 증가
+            
+            // 보스 체력 계산: 기본 1000 (2배) × 레벨 × (1 + 0.3 × 등장횟수)
+            const baseHealth = 1000 * gameState.level;
+            const healthMultiplier = 1 + (0.3 * (gameState.bossAppearCount - 1));
+            const bossHealth = Math.floor(baseHealth * healthMultiplier);
+            
+            // 총알 크기 증가: 기본 12 × (1 + 0.2 × 등장횟수)
+            const bulletSizeMultiplier = 1 + (0.2 * (gameState.bossAppearCount - 1));
+            const bossBulletSize = 12 * bulletSizeMultiplier;
+            
+            gameState.boss = {
+                x: canvas.width / 2,
+                y: -bossSize / 2,
+                vx: 0,
+                vy: 1.5,  // 좀 더 빠르게 등장
+                size: bossSize,
+                currentSize: bossSize,
+                health: bossHealth,
+                maxHealth: bossHealth,
+                shootTimer: 0,
+                shootInterval: 0.5,  // 발사 간격 조정
+                moveTimer: 0,
+                movePattern: 0,
+                tentacles: [],  // 촉수/파츠 정보
+                isBoss: true,
+                bulletSize: bossBulletSize  // 총알 크기 저장
+            };
+            
+            // 촉수/파츠 생성 (오징어/고래 형태) - 더 명확하게
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                gameState.boss.tentacles.push({
+                    angle: angle,
+                    distance: bossSize * 0.6,
+                    size: bossSize * 0.25,
+                    offset: Math.random() * Math.PI * 2
+                });
+            }
+            
+            console.log(`BOSS APPEARED! #${gameState.bossAppearCount} Level ${gameState.level} - HP: ${bossHealth} - Bullet Size: ${bossBulletSize.toFixed(1)}`);
+            
+            // 보스 등장 알림 - 새로운 클래스 사용
+            const popup = document.createElement('div');
+            popup.className = 'boss-warning';
+            popup.textContent = '⚠️ BOSS BATTLE! ⚠️';
+            
+            document.body.appendChild(popup);  // body에 직접 추가
+            setTimeout(() => popup.remove(), 3000);
+            
+            // 보스 BGM으로 전환 (안전하게)
+            try {
+                stopBGM();
+                setTimeout(() => {
+                    try {
+                        startBossBGM();
+                    } catch(e) {
+                        console.log('Boss BGM start error:', e);
+                    }
+                }, 200);
+            } catch(e) {
+                console.log('BGM transition error:', e);
+            }
+        }
+
+        // 보스 업데이트
+        function updateBoss(dt) {
+            if (!gameState.boss) return;
+            
+            const boss = gameState.boss;
+            
+            // 등장 애니메이션
+            if (boss.y < 100) {
+                boss.y += boss.vy;
+                return;
+            }
+            
+            // 이동 패턴
+            boss.moveTimer += dt;
+            if (boss.moveTimer > 3) {
+                boss.moveTimer = 0;
+                boss.movePattern = (boss.movePattern + 1) % 3;
+            }
+            
+            // 좌우 이동
+            switch(boss.movePattern) {
+                case 0: // 왼쪽
+                    boss.vx = -2;
+                    break;
+                case 1: // 오른쪽
+                    boss.vx = 2;
+                    break;
+                case 2: // 정지
+                    boss.vx = 0;
+                    break;
+            }
+            
+            boss.x += boss.vx;
+            boss.x = Math.max(boss.size / 2, Math.min(canvas.width - boss.size / 2, boss.x));
+            
+            // 총알 발사
+            boss.shootTimer += dt;
+            if (boss.shootTimer >= boss.shootInterval) {
+                boss.shootTimer = 0;
+                
+                // 플레이어를 향해 3방향 탄막
+                for (let i = -1; i <= 1; i++) {
+                    const dx = gameState.player.x - boss.x;
+                    const dy = gameState.player.y - boss.y;
+                    const angle = Math.atan2(dy, dx) + (i * 0.3);
+                    const speed = 4;
+                    
+                    gameState.bossBullets.push({
+                        x: boss.x,
+                        y: boss.y + boss.size / 3,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: boss.bulletSize,  // 증가된 총알 크기 사용
+                        life: 5
+                    });
+                }
+                
+                playSound('shoot');
+            }
+            
+            // 촉수 애니메이션
+            boss.tentacles.forEach(t => {
+                t.offset += dt * 2;
+            });
+        }
+
+        function createParticles(x, y, count, color, sizeMultiplier = 1) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 2;
+                gameState.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: (Math.random() * 4 + 2) * sizeMultiplier,  // 크기 배율 적용
+                    life: 1,
+                    color: color
+                });
+            }
+        }
+
+        // 폭죽 이펙트 생성 - 불꽃 색상으로
+        function createFireworkEffect(x, y, sizeMultiplier = 1) {
+            const fireColors = [
+                [1, 0.9, 0],      // 밝은 노랑 (중심)
+                [1, 0.7, 0],      // 주황-노랑
+                [1, 0.5, 0],      // 주황
+                [1, 0.3, 0],      // 진한 주황
+                [0.9, 0.2, 0],    // 주황-빨강
+                [0.8, 0.1, 0],    // 어두운 빨강
+                [0.6, 0, 0]       // 검붉은색
+            ];
+            
+            // 첫 번째 폭발 - 밝은 중심부
+            for (let i = 0; i < 30; i++) {
+                const angle = (Math.PI * 2 * i) / 30;
+                const speed = (Math.random() * 8 + 5) * sizeMultiplier * 0.5;
+                // 중심에서 바깥으로 갈수록 어두운 색
+                const colorIndex = Math.min(Math.floor(Math.random() * 4), 3);
+                const color = fireColors[colorIndex];
+                
+                gameState.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: (Math.random() * 6 + 3) * sizeMultiplier,
+                    life: 1.5,
+                    color: color
+                });
+            }
+            
+            // 두 번째 폭발 (약간 지연) - 더 어두운 외곽
+            setTimeout(() => {
+                for (let i = 0; i < 20; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = (Math.random() * 6 + 3) * sizeMultiplier * 0.5;
+                    // 바깥쪽 어두운 색상
+                    const colorIndex = Math.min(Math.floor(Math.random() * 3) + 3, 6);
+                    const color = fireColors[colorIndex];
+                    
+                    gameState.particles.push({
+                        x, y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: (Math.random() * 5 + 2) * sizeMultiplier,
+                        life: 1.2,
+                        color: color
+                    });
+                }
+            }, 100);
+        }
+
+        // 점수 팝업 표시
+        function showScorePopup(x, y, score) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = `+${score}`;
+            popup.style.left = `${x}px`;
+            popup.style.top = `${y}px`;
+            
+            document.getElementById('gameContainer').appendChild(popup);
+            
+            setTimeout(() => {
+                popup.remove();
+            }, 1000);
+        }
+
+        // 아이템 생성
+        function spawnItem(x, y) {
+            const item = document.createElement('div');
+            item.className = 'item';
+            item.textContent = '⭐';
+            item.style.left = `${x}px`;
+            item.style.top = `${y}px`;
+            
+            document.getElementById('gameContainer').appendChild(item);
+            
+            gameState.items.push({
+                x: x,
+                y: y,
+                element: item,
+                vx: 0,
+                vy: 2  // 천천히 아래로 이동
+            });
+        }
+
+        // 아이템 수집 체크
+        function checkItemCollection() {
+            gameState.items = gameState.items.filter(item => {
+                const dx = item.x - gameState.player.x;
+                const dy = item.y - gameState.player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // 플레이어와 충돌 체크
+                if (distance < 40) {
+                    // 총알 크기 0.5배 증가
+                    gameState.player.bulletSizeMultiplier += 0.5;
+                    
+                    // 발사 속도 0.5배 빠르게 (interval을 절반으로)
+                    gameState.shootInterval = Math.max(0.02, gameState.shootInterval * 0.5);
+                    
+                    // 시각 효과
+                    createParticles(item.x, item.y, 20, [0, 1, 1]);
+                    playSound('shoot');
+                    
+                    // 알림 표시
+                    const popup = document.createElement('div');
+                    popup.className = 'score-popup';
+                    popup.textContent = 'POWER UP!';
+                    popup.style.left = `${item.x}px`;
+                    popup.style.top = `${item.y}px`;
+                    popup.style.color = '#00ffff';
+                    popup.style.textShadow = '0 0 10px #00ffff, 2px 2px 0 #000';
+                    document.getElementById('gameContainer').appendChild(popup);
+                    setTimeout(() => popup.remove(), 1000);
+                    
+                    console.log(`Power Up! Bullet size: ${gameState.player.bulletSizeMultiplier.toFixed(1)}x, Fire interval: ${gameState.shootInterval.toFixed(3)}s`);
+                    
+                    // DOM에서 제거
+                    item.element.remove();
+                    return false;
+                }
+                
+                // 아이템 위치 업데이트
+                item.y += item.vy;
+                item.element.style.top = `${item.y}px`;
+                
+                // 화면 밖으로 나가면 제거
+                if (item.y > canvas.height + 50) {
+                    item.element.remove();
+                    return false;
+                }
+                
+                return true;
+            });
+        }
+
+        // 레벨업 체크 및 처리
+        function checkLevelUp() {
+            if (gameState.score >= gameState.nextLevelScore) {
+                gameState.level++;
+                gameState.nextLevelScore = Math.floor(gameState.nextLevelScore * gameState.levelMultiplier);  // 3배씩 증가
+                
+                // 체력 풀 회복
+                gameState.player.health = gameState.player.maxHealth;
+                
+                // 미사일 크기 0.5배 증가
+                gameState.player.bulletSizeMultiplier += 0.5;
+                
+                // 적 속도 10% 증가
+                gameState.baseEnemySpeed *= 1.1;
+                
+                // 화려한 레벨업 이펙트
+                createFireworkEffect(gameState.player.x, gameState.player.y);
+                createParticles(gameState.player.x, gameState.player.y, 50, [1, 1, 0]);
+                
+                // 레벨업 사운드
+                playSound('explosion');
+                
+                // 레벨업 메시지
+                const popup = document.createElement('div');
+                popup.className = 'score-popup';
+                popup.textContent = `LEVEL ${gameState.level}!`;
+                popup.style.left = `${gameState.player.x}px`;
+                popup.style.top = `${gameState.player.y - 50}px`;
+                popup.style.color = '#ffff00';
+                popup.style.fontSize = '30px';
+                popup.style.textShadow = '0 0 20px #ffff00, 3px 3px 0 #000';
+                document.getElementById('gameContainer').appendChild(popup);
+                setTimeout(() => popup.remove(), 2000);
+                
+                console.log(`Level Up! Level ${gameState.level} - Next: ${gameState.nextLevelScore} - Enemy speed: ${gameState.baseEnemySpeed.toFixed(2)}x`);
+            }
+        }
+
+        function createEnemyChunks(enemy, hitX, hitY) {
+            const chunkCount = Math.floor(5 * enemy.sizeMultiplier);
+            for (let i = 0; i < chunkCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                gameState.enemyChunks.push({
+                    x: hitX,
+                    y: hitY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 3 + 1,
+                    life: 1
+                });
+            }
+        }
+
+        function showCombo() {
+            const comboDiv = document.getElementById('combo');
+            comboDiv.textContent = `COMBO x${gameState.combo}!`;
+            comboDiv.classList.add('show');
+            setTimeout(() => comboDiv.classList.remove('show'), 500);
+        }
+
+        function updateGame(dt) {
+            if (!gameState.running) return;
+
+            // 배경 별 업데이트
+            updateStars(dt);
+
+            // 게임 시간 업데이트
+            gameState.gameTime += dt;
+            
+            // 3분마다 보스 소환 체크
+            gameState.bossTimer += dt;
+            if (gameState.bossTimer >= gameState.bossInterval && !gameState.boss) {
+                spawnBoss();
+                gameState.bossTimer = 0;
+            }
+            
+            // 2분(120초)마다 적 속도 10% 증가
+            const speedIncreaseInterval = 120;  // 2분
+            if (gameState.gameTime - gameState.lastSpeedIncrease >= speedIncreaseInterval) {
+                gameState.baseEnemySpeed *= 1.1;  // 10% 증가
+                gameState.lastSpeedIncrease = gameState.gameTime;
+                console.log(`Speed increased! New speed: ${gameState.baseEnemySpeed.toFixed(2)}x`);
+            }
+
+            let vx = 0, vy = 0;
+            if (keys['w'] || keys['arrowup']) vy = -1;
+            if (keys['s'] || keys['arrowdown']) vy = 1;
+            if (keys['a'] || keys['arrowleft']) vx = -1;
+            if (keys['d'] || keys['arrowright']) vx = 1;
+
+            if (joystickActive) {
+                vx += joystickDelta.x / 35;
+                vy += joystickDelta.y / 35;
+            }
+
+            if (vx !== 0 || vy !== 0) {
+                const dist = Math.sqrt(vx * vx + vy * vy);
+                gameState.player.vx = (vx / dist) * gameState.player.speed;
+                gameState.player.vy = (vy / dist) * gameState.player.speed;
+            } else {
+                gameState.player.vx *= 0.9;
+                gameState.player.vy *= 0.9;
+            }
+
+            gameState.player.x += gameState.player.vx;
+            gameState.player.y += gameState.player.vy;
+            gameState.player.x = Math.max(20, Math.min(canvas.width - 20, gameState.player.x));
+            gameState.player.y = Math.max(20, Math.min(canvas.height - 150, gameState.player.y));
+
+            gameState.shootTimer += dt;
+            if (gameState.shootTimer >= gameState.shootInterval) {
+                shootBullet();
+                gameState.shootTimer = 0;
+            }
+
+            gameState.enemySpawnTimer += dt;
+            if (gameState.enemySpawnTimer >= gameState.enemySpawnInterval && !gameState.isBossBattle) {
+                spawnEnemy();
+                gameState.enemySpawnTimer = 0;
+                gameState.enemySpawnInterval = Math.max(0.3, gameState.enemySpawnInterval * 0.98);
+            }
+
+            gameState.bullets = gameState.bullets.filter(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+                b.life -= dt * 0.5;
+                // 무지개 색상 업데이트
+                b.color = getRainbowColor();
+                return b.life > 0 && b.x > -50 && b.x < canvas.width + 50 && b.y > -50 && b.y < canvas.height + 50;
+            });
+
+            gameState.enemies = gameState.enemies.filter(e => {
+                e.x += e.vx;
+                e.y += e.vy;
+
+                if (checkCollision(e.x, e.y, gameState.player.x, gameState.player.y, e.currentSize / 2, gameState.player.size)) {
+                    const damage = Math.floor(5 * e.sizeMultiplier);
+                    gameState.player.health -= damage;
+                    createParticles(e.x, e.y, 15, [1, 0, 0]);
+                    playSound('damage');
+                    
+                    if (gameState.player.health <= 0) {
+                        endGame();
+                    }
+                    
+                    document.getElementById('warning').classList.add('show');
+                    setTimeout(() => document.getElementById('warning').classList.remove('show'), 500);
+                    return false;
+                }
+
+                for (let b of gameState.bullets) {
+                    if (checkCollision(b.x, b.y, e.x, e.y, 4, e.currentSize / 2)) {
+                        // 총알 크기에 비례한 데미지 (기본 10 + 크기 보너스)
+                        const damage = 10 * (b.size / 8);  // 기본 크기(8) 대비 비율로 데미지
+                        e.health -= damage;
+                        b.life = 0;
+                        
+                        const healthRatio = e.health / e.maxHealth;
+                        e.currentSize = e.size * healthRatio;
+                        
+                        // 최소 크기에 도달했는지 체크
+                        if (e.currentSize <= e.minSize || e.health <= 0) {
+                            // 크기 배율 계산 (기본 크기 60 기준)
+                            const particleSizeMultiplier = e.size / 60;
+                            
+                            // 폭죽 이펙트 (크기 비례) - 불꽃 색상
+                            createFireworkEffect(e.x, e.y, particleSizeMultiplier);
+                            
+                            // 추가 불꽃 파티클 생성 (어두운 외곽)
+                            const darkParticleCount = Math.floor(20 * particleSizeMultiplier);
+                            for (let i = 0; i < darkParticleCount; i++) {
+                                const angle = Math.random() * Math.PI * 2;
+                                const speed = Math.random() * 4 + 1;
+                                // 검붉은 색상
+                                const darkRed = 0.4 + Math.random() * 0.3;
+                                gameState.particles.push({
+                                    x: e.x,
+                                    y: e.y,
+                                    vx: Math.cos(angle) * speed,
+                                    vy: Math.sin(angle) * speed,
+                                    size: (Math.random() * 5 + 3) * particleSizeMultiplier,
+                                    life: 1.2,
+                                    color: [darkRed, 0, 0],  // 어두운 빨강
+                                    isSquare: true  // 사각형 표시
+                                });
+                            }
+                            
+                            playSound('explosion');
+                            
+                            const baseScore = e.score;
+                            const finalScore = baseScore * (gameState.combo + 1);
+                            gameState.score += finalScore;
+                            gameState.combo++;
+                            gameState.comboTimer = 2;
+                            
+                            // 킬 카운트 증가
+                            gameState.killCount++;
+                            
+                            // 10킬마다 아이템 드롭
+                            if (gameState.killCount % 10 === 0) {
+                                spawnItem(e.x, e.y);
+                            }
+                            
+                            // 점수 팝업 표시
+                            showScorePopup(e.x, e.y, finalScore);
+                            showCombo();
+                            
+                            return false;
+                        }
+                        
+                        createEnemyChunks(e, b.x, b.y);
+                        break;
+                    }
+                }
+                return true;
+            });
+
+            gameState.enemyChunks = gameState.enemyChunks.filter(c => {
+                c.x += c.vx; c.y += c.vy;
+                c.vx *= 0.97; c.vy *= 0.97;
+                c.life -= dt * 0.8;
+                return c.life > 0;
+            });
+
+            gameState.particles = gameState.particles.filter(p => {
+                p.x += p.vx; p.y += p.vy;
+                p.vx *= 0.95; p.vy *= 0.95;
+                p.life -= dt * 2;
+                return p.life > 0;
+            });
+
+            gameState.comboTimer -= dt;
+            if (gameState.comboTimer <= 0) gameState.combo = 0;
+
+            // 보스 업데이트
+            if (gameState.boss) {
+                updateBoss(dt);
+                
+                // 보스와 플레이어 충돌
+                if (checkCollision(gameState.boss.x, gameState.boss.y, gameState.player.x, gameState.player.y, 
+                                   gameState.boss.size / 2, gameState.player.size)) {
+                    const damage = 20;
+                    gameState.player.health -= damage;
+                    createParticles(gameState.player.x, gameState.player.y, 20, [1, 0, 0], 2);
+                    playSound('damage');
+                    
+                    if (gameState.player.health <= 0) {
+                        endGame();
+                    }
+                    
+                    document.getElementById('warning').classList.add('show');
+                    setTimeout(() => document.getElementById('warning').classList.remove('show'), 500);
+                }
+                
+                // 보스와 총알 충돌
+                for (let b of gameState.bullets) {
+                    if (checkCollision(b.x, b.y, gameState.boss.x, gameState.boss.y, 4, gameState.boss.size / 2)) {
+                        const damage = 10 * (b.size / 8);
+                        gameState.boss.health -= damage;
+                        b.life = 0;
+                        
+                        const healthRatio = gameState.boss.health / gameState.boss.maxHealth;
+                        gameState.boss.currentSize = gameState.boss.size * healthRatio;
+                        
+                        createParticles(b.x, b.y, 10, [1, 0.5, 0], 2);
+                        
+                        // 보스 처치
+                        if (gameState.boss.health <= 0) {
+                            const particleSizeMultiplier = gameState.boss.size / 60;
+                            createFireworkEffect(gameState.boss.x, gameState.boss.y, particleSizeMultiplier * 3);
+                            playSound('explosion');
+                            
+                            const bossScore = 5000 * gameState.level;
+                            gameState.score += bossScore;
+                            showScorePopup(gameState.boss.x, gameState.boss.y, bossScore);
+                            
+                            // 아이템 5개 드롭
+                            for (let i = 0; i < 5; i++) {
+                                const offsetX = (Math.random() - 0.5) * 100;
+                                const offsetY = (Math.random() - 0.5) * 100;
+                                spawnItem(gameState.boss.x + offsetX, gameState.boss.y + offsetY);
+                            }
+                            
+                            gameState.boss = null;
+                            gameState.bossBullets = [];
+                            gameState.isBossBattle = false;
+                            
+                            // 일반 BGM으로 복귀 (안전하게)
+                            try {
+                                stopBGM();
+                                setTimeout(() => {
+                                    try {
+                                        startBGM();
+                                    } catch(e) {
+                                        console.log('BGM restart error:', e);
+                                    }
+                                }, 200);
+                            } catch(e) {
+                                console.log('BGM transition error:', e);
+                            }
+                        }
+                        
+                        break;
+                    }
+                }
+            }
+            
+            // 보스 총알 업데이트
+            gameState.bossBullets = gameState.bossBullets.filter(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+                b.life -= dt * 0.3;
+                
+                // 플레이어와 충돌 체크
+                if (checkCollision(b.x, b.y, gameState.player.x, gameState.player.y, b.size / 2, gameState.player.size)) {
+                    gameState.player.health -= gameState.player.maxHealth * 0.1;  // 10% 데미지
+                    createParticles(b.x, b.y, 15, [1, 0.5, 0], 1.5);
+                    playSound('damage');
+                    
+                    if (gameState.player.health <= 0) {
+                        endGame();
+                    }
+                    
+                    document.getElementById('warning').classList.add('show');
+                    setTimeout(() => document.getElementById('warning').classList.remove('show'), 500);
+                    
+                    return false;
+                }
+                
+                return b.life > 0 && b.y < canvas.height + 50;
+            });
+
+            // 아이템 수집 체크
+            checkItemCollection();
+
+            // 레벨업 체크
+            checkLevelUp();
+
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = String(Math.floor(gameState.score)).padStart(7, '0');
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('combo-text').textContent = String(gameState.combo).padStart(2, '0');
+            document.getElementById('enemies').textContent = String(gameState.enemies.length).padStart(2, '0');
+            document.getElementById('power').textContent = gameState.player.bulletSizeMultiplier.toFixed(1);
+            const hp = Math.max(0, Math.floor((gameState.player.health / gameState.player.maxHealth) * 100));
+            document.getElementById('healthFill').style.width = `${hp}%`;
+            document.getElementById('healthText').textContent = Math.max(0, Math.floor(gameState.player.health));
+        }
+
+        function render() {
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            let idx = 0;
+
+            // 배경 별 렌더링 (가장 먼저)
+            for (let star of gameState.stars) {
+                if (idx >= MAX_ENTITIES) break;
+                positions[idx * 2] = star.x;
+                positions[idx * 2 + 1] = star.y;
+                colors[idx * 3] = star.brightness;
+                colors[idx * 3 + 1] = star.brightness;
+                colors[idx * 3 + 2] = star.brightness;
+                sizes[idx] = star.size;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+
+
+            // 플레이어를 '슈퍼맨' 느낌의 히어로로 렌더링 (점 스프라이트 조합)
+            // 1) 망토 (좌/우 뒤쪽)
+            if (idx < MAX_ENTITIES) {
+                positions[idx * 2] = gameState.player.x - 10;
+                positions[idx * 2 + 1] = gameState.player.y + 16;
+                colors[idx * 3] = 1.0; colors[idx * 3 + 1] = 0.0; colors[idx * 3 + 2] = 0.0; // 빨강
+                sizes[idx] = gameState.player.size * 0.9;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+            if (idx < MAX_ENTITIES) {
+                positions[idx * 2] = gameState.player.x + 10;
+                positions[idx * 2 + 1] = gameState.player.y + 14;
+                colors[idx * 3] = 1.0; colors[idx * 3 + 1] = 0.0; colors[idx * 3 + 2] = 0.0; // 빨강
+                sizes[idx] = gameState.player.size * 0.8;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+            // 2) 몸통(파란 슈트)
+            if (idx < MAX_ENTITIES) {
+                positions[idx * 2] = gameState.player.x;
+                positions[idx * 2 + 1] = gameState.player.y;
+                colors[idx * 3] = 0.0; colors[idx * 3 + 1] = 0.3; colors[idx * 3 + 2] = 1.0; // 파랑
+                sizes[idx] = gameState.player.size * 1.1;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+            // 3) 가슴 엠블럼(노랑 점)
+            if (idx < MAX_ENTITIES) {
+                positions[idx * 2] = gameState.player.x;
+                positions[idx * 2 + 1] = gameState.player.y - 3;
+                colors[idx * 3] = 1.0; colors[idx * 3 + 1] = 0.9; colors[idx * 3 + 2] = 0.0; // 노랑
+                sizes[idx] = gameState.player.size * 0.35;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+            // 4) 머리(살색)
+            if (idx < MAX_ENTITIES) {
+                positions[idx * 2] = gameState.player.x;
+                positions[idx * 2 + 1] = gameState.player.y - 14;
+                colors[idx * 3] = 1.0; colors[idx * 3 + 1] = 0.8; colors[idx * 3 + 2] = 0.6; // 살색
+                sizes[idx] = gameState.player.size * 0.6;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+
+
+            for (let b of gameState.bullets) {
+                if (idx >= MAX_ENTITIES) break;
+                positions[idx * 2] = b.x; positions[idx * 2 + 1] = b.y;
+                colors[idx * 3] = b.color[0]; colors[idx * 3 + 1] = b.color[1]; colors[idx * 3 + 2] = b.color[2];
+                sizes[idx] = b.size;
+                idx++;
+            }
+
+            for (let e of gameState.enemies) {
+                if (idx >= MAX_ENTITIES) break;
+                positions[idx * 2] = e.x; positions[idx * 2 + 1] = e.y;
+                
+                // 색상은 사용하지 않지만 버퍼를 위해 설정
+                colors[idx * 3] = 1; 
+                colors[idx * 3 + 1] = 1; 
+                colors[idx * 3 + 2] = 1;
+                
+                sizes[idx] = e.currentSize;
+                kinds[idx] = 2.0; // 텍스처 렌더링
+                idx++;
+            }
+
+            // 보스 렌더링 (고래/오징어 형태)
+            if (gameState.boss) {
+                const boss = gameState.boss;
+                
+                // 보스 중심부 (몸통)
+                if (idx < MAX_ENTITIES) {
+                    positions[idx * 2] = boss.x;
+                    positions[idx * 2 + 1] = boss.y;
+                    colors[idx * 3] = 0.8; colors[idx * 3 + 1] = 0; colors[idx * 3 + 2] = 0.8;  // 보라색
+                    sizes[idx] = boss.currentSize;
+                    kinds[idx] = 0.0;
+                idx++;
+                }
+                
+                // 촉수/파츠 렌더링
+                for (let t of boss.tentacles) {
+                    if (idx >= MAX_ENTITIES) break;
+                    const tentacleX = boss.x + Math.cos(t.angle + t.offset) * t.distance;
+                    const tentacleY = boss.y + Math.sin(t.angle + t.offset) * t.distance;
+                    
+                    positions[idx * 2] = tentacleX;
+                    positions[idx * 2 + 1] = tentacleY;
+                    colors[idx * 3] = 0.6; colors[idx * 3 + 1] = 0; colors[idx * 3 + 2] = 0.6;  // 어두운 보라
+                    sizes[idx] = t.size;
+                    kinds[idx] = 0.0;
+                idx++;
+                }
+            }
+
+            // 보스 총알 렌더링
+            for (let b of gameState.bossBullets) {
+                if (idx >= MAX_ENTITIES) break;
+                positions[idx * 2] = b.x; positions[idx * 2 + 1] = b.y;
+                colors[idx * 3] = 1; colors[idx * 3 + 1] = 0; colors[idx * 3 + 2] = 0;  // 빨간색
+                sizes[idx] = b.size;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+
+            for (let c of gameState.enemyChunks) {
+                if (idx >= MAX_ENTITIES) break;
+                positions[idx * 2] = c.x; positions[idx * 2 + 1] = c.y;
+                colors[idx * 3] = 0.7; colors[idx * 3 + 1] = 0.2; colors[idx * 3 + 2] = 0.2;
+                sizes[idx] = c.size;
+                idx++;
+            }
+
+            for (let p of gameState.particles) {
+                if (idx >= MAX_ENTITIES) break;
+                positions[idx * 2] = p.x; positions[idx * 2 + 1] = p.y;
+                colors[idx * 3] = p.color[0]; colors[idx * 3 + 1] = p.color[1]; colors[idx * 3 + 2] = p.color[2];
+                sizes[idx] = p.size;
+                kinds[idx] = 0.0;
+                idx++;
+            }
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(positionLoc);
+            gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(colorLoc);
+            gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, 0, 0);
+
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(sizeLoc);
+            gl.vertexAttribPointer(sizeLoc, 1, gl.FLOAT, false, 0, 0);
+
+            // kinds
+            gl.bindBuffer(gl.ARRAY_BUFFER, kindBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, kinds, gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(kindLoc);
+            gl.vertexAttribPointer(kindLoc, 1, gl.FLOAT, false, 0, 0);
+            gl.uniform2f(resolutionLoc, canvas.width, canvas.height);
+            gl.uniform1f(timeLoc, performance.now() / 1000.0);
+            gl.drawArrays(gl.POINTS, 0, idx);
+        }
+
+        function endGame() {
+            gameState.running = false;
+            stopBGM();
+            setTimeout(() => {
+                alert(`GAME OVER!\n\nSCORE: ${String(Math.floor(gameState.score)).padStart(7, '0')}\nMAX COMBO: x${gameState.combo}`);
+                location.reload();
+            }, 100);
+        }
+
+        let lastTime = 0;
+        let frameCount = 0;
+        let fpsTime = 0;
+
+        function gameLoop(time) {
+            if (!time) time = 0;
+            const dt = Math.min((time - lastTime) / 1000, 0.1);
+            lastTime = time;
+
+            frameCount++;
+            fpsTime += dt;
+            if (fpsTime >= 1) {
+                document.getElementById('fps').textContent = frameCount;
+                frameCount = 0;
+                fpsTime = 0;
+            }
+
+            if (gameState.running) {
+                updateGame(dt);
+                render();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        async function startGame() {
+            await initWasm();
+            initAudio();
+            
+            gameState.running = true;
+            gameState.player.x = canvas.width / 2;
+            gameState.player.y = canvas.height / 2;
+            gameState.gameTime = 0;
+            gameState.lastSpeedIncrease = 0;
+            gameState.baseEnemySpeed = 0.6;  // 기본 속도를 낮춤 (기존 1.0에서 0.6으로)
+            gameState.killCount = 0;
+            gameState.level = 1;
+            gameState.nextLevelScore = 1000;  // 첫 레벨 1000점
+            gameState.player.bulletSizeMultiplier = 1.0;
+            gameState.shootInterval = 0.1;  // 발사 속도 초기화
+            gameState.bossTimer = 0;  // 보스 타이머 초기화
+            gameState.isBossBattle = false;  // 보스 전투 플래그 초기화
+            gameState.bossAppearCount = 0;  // 보스 등장 횟수 초기화
+            gameState.mouseX = canvas.width / 2;  // 초기 마우스 위치
+            gameState.mouseY = 0;  // 위쪽을 향하도록
+            
+            // 배경 별 초기화
+            initStars();
+            
+            document.getElementById('menu').classList.add('hidden');
+            
+            if (audioContext) audioContext.resume();
+            
+            startBGM();
+            
+            gameLoop(0);
+        }
+    </script>
+</body>
+</html>
