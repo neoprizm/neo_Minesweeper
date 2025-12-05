@@ -221,27 +221,28 @@
         
         @media (max-width: 768px) {
             .title {
-                font-size: 28px;
-                letter-spacing: 4px;
-                top: 15px;
+                font-size: 24px;
+                letter-spacing: 3px;
+                top: 10px;
             }
             
             .stats {
-                top: 60px;
+                top: 45px;
                 right: 10px;
                 left: 10px;
-                padding: 12px;
+                padding: 8px;
                 min-width: auto;
                 display: flex;
                 flex-wrap: wrap;
-                gap: 10px;
+                gap: 6px;
                 border-width: 2px;
             }
             
             .stat-item {
                 margin-bottom: 0;
                 flex: 1 1 45%;
-                min-width: 120px;
+                min-width: 100px;
+                padding: 4px;
             }
             
             .stat-item:last-child {
@@ -249,63 +250,64 @@
             }
             
             .stat-label {
-                font-size: 11px;
-                letter-spacing: 1px;
+                font-size: 10px;
+                letter-spacing: 0.5px;
+                margin-bottom: 2px;
             }
             
             .stat-value, .fps-counter {
-                font-size: 20px;
+                font-size: 18px;
             }
             
             .controls {
-                bottom: 15px;
+                bottom: 12px;
                 flex-direction: row;
-                gap: 10px;
+                gap: 8px;
                 width: calc(100% - 20px);
                 justify-content: center;
             }
             
             .btn {
-                font-size: 14px;
-                padding: 12px 20px;
+                font-size: 13px;
+                padding: 10px 16px;
                 flex: 1;
-                max-width: 180px;
+                max-width: 160px;
             }
             
             .slots {
-                bottom: 80px;
+                bottom: 65px;
                 flex-wrap: wrap;
                 width: 95%;
                 justify-content: center;
-                gap: 6px;
+                gap: 5px;
             }
             
             .slot {
-                width: 45px;
-                height: 55px;
+                width: 42px;
+                height: 50px;
                 border-width: 2px;
             }
             
             .slot-count {
-                font-size: 20px;
+                font-size: 18px;
             }
             
             .slot-label {
-                font-size: 12px;
+                font-size: 11px;
             }
         }
         
         @media (max-width: 480px) {
             .title {
-                font-size: 24px;
+                font-size: 20px;
                 letter-spacing: 2px;
-                top: 10px;
+                top: 8px;
             }
             
             .stats {
-                top: 50px;
-                padding: 10px;
-                gap: 8px;
+                top: 38px;
+                padding: 6px;
+                gap: 5px;
             }
             
             .stat-item {
@@ -313,84 +315,33 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                padding: 2px 4px;
             }
             
             .stat-label {
-                font-size: 10px;
+                font-size: 9px;
                 margin: 0;
             }
             
             .stat-value, .fps-counter {
-                font-size: 18px;
+                font-size: 16px;
             }
             
             .btn {
-                font-size: 13px;
-                padding: 14px 20px;
+                font-size: 12px;
+                padding: 10px 14px;
                 letter-spacing: 1px;
-                min-height: 44px;
+                min-height: 40px;
             }
             
             .slots {
-                bottom: 70px;
+                bottom: 60px;
                 gap: 4px;
             }
             
             .slot {
                 width: 38px;
-                height: 48px;
-            }
-            
-            .slot-count {
-                font-size: 18px;
-            }
-            
-            .slot-label {
-                font-size: 11px;
-            }
-        }
-        
-        @media (orientation: landscape) and (max-height: 600px) {
-            .title {
-                font-size: 20px;
-                top: 5px;
-            }
-            
-            .stats {
-                top: 30px;
-                padding: 6px;
-                font-size: 10px;
-                flex-direction: row;
-            }
-            
-            .stat-item {
-                flex: 1 1 auto;
-                min-width: 80px;
-            }
-            
-            .stat-value, .fps-counter {
-                font-size: 14px;
-            }
-            
-            .controls {
-                bottom: 5px;
-                gap: 8px;
-            }
-            
-            .btn {
-                padding: 6px 12px;
-                font-size: 10px;
-                min-height: 36px;
-            }
-            
-            .slots {
-                bottom: 42px;
-                gap: 3px;
-            }
-            
-            .slot {
-                width: 32px;
-                height: 38px;
+                height: 46px;
             }
             
             .slot-count {
@@ -399,6 +350,65 @@
             
             .slot-label {
                 font-size: 10px;
+            }
+        }
+        
+        @media (orientation: landscape) and (max-height: 600px) {
+            .title {
+                font-size: 18px;
+                top: 3px;
+                letter-spacing: 2px;
+            }
+            
+            .stats {
+                top: 25px;
+                padding: 4px 8px;
+                font-size: 9px;
+                flex-direction: row;
+                gap: 6px;
+            }
+            
+            .stat-item {
+                flex: 1 1 auto;
+                min-width: 70px;
+                padding: 2px;
+            }
+            
+            .stat-label {
+                font-size: 8px;
+            }
+            
+            .stat-value, .fps-counter {
+                font-size: 13px;
+            }
+            
+            .controls {
+                bottom: 4px;
+                gap: 6px;
+            }
+            
+            .btn {
+                padding: 6px 10px;
+                font-size: 10px;
+                min-height: 32px;
+            }
+            
+            .slots {
+                bottom: 38px;
+                gap: 3px;
+            }
+            
+            .slot {
+                width: 30px;
+                height: 36px;
+            }
+            
+            .slot-count {
+                font-size: 14px;
+            }
+            
+            .slot-label {
+                font-size: 9px;
             }
         }
     </style>
@@ -425,8 +435,8 @@
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">🎪 투입구</div>
-                    <div style="height: 10px; background: rgba(255, 20, 147, 0.3); border-radius: 5px; margin-top: 5px; position: relative; overflow: hidden;">
-                        <div id="dropperIndicator" style="position: absolute; left: 50%; width: 4px; height: 100%; background: linear-gradient(90deg, #ff1493, #ff4081); transform: translateX(-50%); transition: left 0.05s linear; box-shadow: 0 0 10px rgba(255, 20, 147, 0.8);"></div>
+                    <div style="height: 8px; background: rgba(255, 20, 147, 0.3); border-radius: 4px; margin-top: 3px; position: relative; overflow: hidden;">
+                        <div id="dropperIndicator" style="position: absolute; left: 50%; width: 3px; height: 100%; background: linear-gradient(90deg, #ff1493, #ff4081); transform: translateX(-50%); transition: left 0.05s linear; box-shadow: 0 0 8px rgba(255, 20, 147, 0.8);"></div>
                     </div>
                 </div>
             </div>
@@ -484,11 +494,11 @@
                 this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
                 
                 // 게임 설정
-                this.rows = 12;
+                this.rows = this.isMobile ? 8 : 12; // 모바일에서 행 감소
                 this.slots = 9;
-                this.pinRadius = 0.15;
-                this.ballRadius = 0.2;
-                this.spacing = 1.2;
+                this.pinRadius = this.isMobile ? 0.12 : 0.15; // 모바일에서 작게
+                this.ballRadius = this.isMobile ? 0.16 : 0.2; // 모바일에서 작게
+                this.spacing = this.isMobile ? 1.0 : 1.2; // 모바일에서 간격 축소
                 this.ballsPerDrop = this.isMobile ? 3 : 5; // 모바일에서는 3개
                 
                 // 투입구 설정
@@ -535,14 +545,14 @@
                 
                 // 카메라 생성
                 this.camera = new THREE.PerspectiveCamera(
-                    60,
+                    this.isMobile ? 75 : 60, // 모바일에서 FOV 증가
                     this.width / this.height,
                     0.1,
                     1000
                 );
                 // 모바일에서 카메라를 더 멀리 배치
                 if (this.isMobile) {
-                    this.camera.position.set(0, 8, 18);
+                    this.camera.position.set(0, 5, 14);
                 } else {
                     this.camera.position.set(0, 8, 15);
                 }
@@ -561,17 +571,17 @@
             }
             
             setupLights() {
-                const ambientLight = new THREE.AmbientLight(0xffeeff, 0.5);
+                const ambientLight = new THREE.AmbientLight(0xffeeff, this.isMobile ? 0.6 : 0.5);
                 this.scene.add(ambientLight);
                 
-                const mainLight = new THREE.PointLight(0xff4081, 1.5, 100);
+                const mainLight = new THREE.PointLight(0xff4081, this.isMobile ? 1.2 : 1.5, 100);
                 mainLight.position.set(0, 10, 10);
-                mainLight.castShadow = true;
+                mainLight.castShadow = !this.isMobile;
                 mainLight.shadow.mapSize.width = 1024;
                 mainLight.shadow.mapSize.height = 1024;
                 this.scene.add(mainLight);
                 
-                const backLight = new THREE.PointLight(0x9c27b0, 1, 100);
+                const backLight = new THREE.PointLight(0x9c27b0, this.isMobile ? 0.8 : 1, 100);
                 backLight.position.set(0, 5, -10);
                 this.scene.add(backLight);
                 
@@ -652,7 +662,7 @@
                 this.scene.add(this.pinMesh);
                 
                 // 슬롯
-                const slotHeight = 1.5;
+                const slotHeight = this.isMobile ? 1.0 : 1.5; // 모바일에서 높이 감소
                 const slotGeometry = new THREE.BoxGeometry(
                     this.spacing - 0.1,
                     slotHeight,
@@ -761,7 +771,9 @@
             createDropper() {
                 const dropperGroup = new THREE.Group();
                 
-                const funnelGeometry = new THREE.ConeGeometry(0.4, 0.8, 8);
+                const scale = this.isMobile ? 0.7 : 1.0; // 모바일에서 70% 크기
+                
+                const funnelGeometry = new THREE.ConeGeometry(0.4 * scale, 0.8 * scale, 8);
                 const funnelMaterial = new THREE.MeshStandardMaterial({
                     color: 0xff1493,
                     metalness: 0.7,
@@ -774,7 +786,7 @@
                 funnel.castShadow = true;
                 dropperGroup.add(funnel);
                 
-                const tubeGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 8);
+                const tubeGeometry = new THREE.CylinderGeometry(0.15 * scale, 0.15 * scale, 0.3 * scale, 8);
                 const tubeMaterial = new THREE.MeshStandardMaterial({
                     color: 0x9c27b0,
                     metalness: 0.8,
@@ -783,11 +795,11 @@
                     emissiveIntensity: 0.6
                 });
                 const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
-                tube.position.y = -0.55;
+                tube.position.y = -0.55 * scale;
                 tube.castShadow = true;
                 dropperGroup.add(tube);
                 
-                const ringGeometry = new THREE.TorusGeometry(0.5, 0.05, 8, 16);
+                const ringGeometry = new THREE.TorusGeometry(0.5 * scale, 0.05 * scale, 8, 16);
                 const ringMaterial = new THREE.MeshBasicMaterial({
                     color: 0x2196f3,
                     transparent: true,
@@ -795,10 +807,10 @@
                 });
                 const ring = new THREE.Mesh(ringGeometry, ringMaterial);
                 ring.rotation.x = Math.PI / 2;
-                ring.position.y = 0.4;
+                ring.position.y = 0.4 * scale;
                 dropperGroup.add(ring);
                 
-                const startY = (this.rows - 1) * this.spacing / 2 + 2.5;
+                const startY = (this.rows - 1) * this.spacing / 2 + 2.0;
                 dropperGroup.position.set(this.dropperX, startY, 0);
                 
                 this.scene.add(dropperGroup);
@@ -978,7 +990,7 @@
                         if (!ball) return;
                         
                         const startX = this.dropperX + (Math.random() - 0.5) * 0.2;
-                        const startY = (this.rows - 1) * this.spacing / 2 + 1.5;
+                        const startY = (this.rows - 1) * this.spacing / 2 + (this.isMobile ? 1.2 : 1.5);
                         
                         ball.x = startX;
                         ball.y = startY;
@@ -1193,13 +1205,14 @@
                     this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
                     
                     this.camera.aspect = this.width / this.height;
+                    this.camera.fov = this.isMobile ? 75 : 60;
                     this.camera.updateProjectionMatrix();
                     
                     // 모바일에서 카메라 위치 조정
                     if (this.isMobile) {
-                        this.camera.position.z = 18;
+                        this.camera.position.set(0, 5, 14);
                     } else {
-                        this.camera.position.z = 15;
+                        this.camera.position.set(0, 8, 15);
                     }
                     
                     this.renderer.setSize(this.width, this.height);
