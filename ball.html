@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>✨ 3D 핀볼 사다리 ✨</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #ff69b4 0%, #ba68c8 25%, #64b5f6 50%, #4dd0e1 75%, #ff85c0 100%);
+            color: #ff1493;
+            overflow: hidden;
+            height: 100vh;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        #game-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+            cursor: pointer;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .title {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            background: linear-gradient(135deg, #ff1493 0%, #9c27b0 25%, #2196f3 50%, #00bcd4 75%, #ff4081 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(255, 20, 147, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+            filter: drop-shadow(0 2px 10px rgba(255, 64, 129, 0.6));
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .stats {
+            position: absolute;
+            top: 100px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 3px solid #ff1493;
+            border-radius: 20px;
+            padding: 20px;
+            min-width: 200px;
+            box-shadow: 0 8px 32px rgba(255, 20, 147, 0.4);
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-item {
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .stat-label {
+            color: #ff1493;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+        
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            font-weight: 900;
+            color: #9c27b0;
+            text-shadow: 0 0 10px rgba(156, 39, 176, 0.5);
+        }
+        
+        .fps-counter {
+            font-size: 18px;
+            color: #2196f3;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            pointer-events: all;
+        }
+        
+        .btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(255, 182, 193, 0.3);
+            position: relative;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff1493 0%, #ff4081 100%);
+            color: #ffffff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(255, 20, 147, 0.6);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%);
+            color: #ffffff;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(156, 39, 176, 0.6);
+        }
+        
+        .btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.5s ease;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .slots {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .slot {
+            width: 50px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px solid #ff1493;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 4px 20px rgba(255, 20, 147, 0.4);
+            transition: all 0.5s ease;
+        }
+        
+        .slot-count {
+            font-size: 24px;
+            color: #9c27b0;
+            text-shadow: 0 0 10px rgba(156, 39, 176, 0.4);
+        }
+        
+        .slot-label {
+            font-size: 10px;
+            color: #ff1493;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .title {
+                font-size: 28px;
+                letter-spacing: 4px;
+                top: 15px;
+            }
+            
+            .stats {
+                top: 60px;
+                right: 10px;
+                left: 10px;
+                padding: 12px;
+                min-width: auto;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                border-width: 2px;
+            }
+            
+            .stat-item {
+                margin-bottom: 0;
+                flex: 1 1 45%;
+                min-width: 120px;
+            }
+            
+            .stat-item:last-child {
+                flex: 1 1 100%;
+            }
+            
+            .stat-label {
+                font-size: 11px;
+                letter-spacing: 1px;
+            }
+            
+            .stat-value, .fps-counter {
+                font-size: 20px;
+            }
+            
+            .controls {
+                bottom: 15px;
+                flex-direction: row;
+                gap: 10px;
+                width: calc(100% - 20px);
+                justify-content: center;
+            }
+            
+            .btn {
+                font-size: 14px;
+                padding: 12px 20px;
+                flex: 1;
+                max-width: 180px;
+            }
+            
+            .slots {
+                bottom: 80px;
+                flex-wrap: wrap;
+                width: 95%;
+                justify-content: center;
+                gap: 6px;
+            }
+            
+            .slot {
+                width: 45px;
+                height: 55px;
+                border-width: 2px;
+            }
+            
+            .slot-count {
+                font-size: 20px;
+            }
+            
+            .slot-label {
+                font-size: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .title {
+                font-size: 24px;
+                letter-spacing: 2px;
+                top: 10px;
+            }
+            
+            .stats {
+                top: 50px;
+                padding: 10px;
+                gap: 8px;
+            }
+            
+            .stat-item {
+                flex: 1 1 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .stat-label {
+                font-size: 10px;
+                margin: 0;
+            }
+            
+            .stat-value, .fps-counter {
+                font-size: 18px;
+            }
+            
+            .btn {
+                font-size: 13px;
+                padding: 14px 20px;
+                letter-spacing: 1px;
+                min-height: 44px;
+            }
+            
+            .slots {
+                bottom: 70px;
+                gap: 4px;
+            }
+            
+            .slot {
+                width: 38px;
+                height: 48px;
+            }
+            
+            .slot-count {
+                font-size: 18px;
+            }
+            
+            .slot-label {
+                font-size: 11px;
+            }
+        }
+        
+        @media (orientation: landscape) and (max-height: 600px) {
+            .title {
+                font-size: 20px;
+                top: 5px;
+            }
+            
+            .stats {
+                top: 30px;
+                padding: 6px;
+                font-size: 10px;
+                flex-direction: row;
+            }
+            
+            .stat-item {
+                flex: 1 1 auto;
+                min-width: 80px;
+            }
+            
+            .stat-value, .fps-counter {
+                font-size: 14px;
+            }
+            
+            .controls {
+                bottom: 5px;
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 6px 12px;
+                font-size: 10px;
+                min-height: 36px;
+            }
+            
+            .slots {
+                bottom: 42px;
+                gap: 3px;
+            }
+            
+            .slot {
+                width: 32px;
+                height: 38px;
+            }
+            
+            .slot-count {
+                font-size: 16px;
+            }
+            
+            .slot-label {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="ui-overlay">
+            <div class="title">✨ PLINKO 3D ✨</div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">⚡ FPS</div>
+                    <div class="fps-counter" id="fpsCounter">60</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">🎮 총 게임</div>
+                    <div class="stat-value" id="totalGames">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">🎈 진행 중</div>
+                    <div class="stat-value" id="activeBalls">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">🎪 투입구</div>
+                    <div style="height: 10px; background: rgba(255, 20, 147, 0.3); border-radius: 5px; margin-top: 5px; position: relative; overflow: hidden;">
+                        <div id="dropperIndicator" style="position: absolute; left: 50%; width: 4px; height: 100%; background: linear-gradient(90deg, #ff1493, #ff4081); transform: translateX(-50%); transition: left 0.05s linear; box-shadow: 0 0 10px rgba(255, 20, 147, 0.8);"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="slots" id="slotsContainer"></div>
+            
+            <div class="controls">
+                <button class="btn btn-primary" id="dropBtn">🎀 5개 떨어뜨리기</button>
+                <button class="btn btn-secondary" id="resetBtn">💫 초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // GPU 파티클 셰이더
+        const particleVertexShader = `
+            attribute float size;
+            attribute vec3 customColor;
+            attribute float alpha;
+            
+            varying vec3 vColor;
+            varying float vAlpha;
+            
+            void main() {
+                vColor = customColor;
+                vAlpha = alpha;
+                
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                gl_PointSize = size * (300.0 / -mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+        
+        const particleFragmentShader = `
+            varying vec3 vColor;
+            varying float vAlpha;
+            
+            void main() {
+                float r = distance(gl_PointCoord, vec2(0.5, 0.5));
+                if (r > 0.5) discard;
+                
+                float intensity = 1.0 - (r * 2.0);
+                gl_FragColor = vec4(vColor, vAlpha * intensity);
+            }
+        `;
+
+        class PlinkoGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                
+                // 모바일 감지
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+                
+                // 게임 설정
+                this.rows = 12;
+                this.slots = 9;
+                this.pinRadius = 0.15;
+                this.ballRadius = 0.2;
+                this.spacing = 1.2;
+                this.ballsPerDrop = this.isMobile ? 3 : 5; // 모바일에서는 3개
+                
+                // 투입구 설정
+                this.dropperX = 0;
+                this.dropperSpeed = 2;
+                this.dropperRange = (this.slots - 1) * this.spacing / 2 - 0.5;
+                
+                // 오브젝트 풀
+                this.ballPool = [];
+                this.maxBalls = 100;
+                
+                // 게임 상태
+                this.balls = [];
+                this.pins = [];
+                this.slotDividers = []; // 슬롯 분리벽
+                this.totalGames = 0;
+                this.slotCounts = new Array(this.slots).fill(0);
+                
+                // FPS 추적
+                this.fps = 60;
+                this.lastTime = performance.now();
+                this.frameCount = 0;
+                
+                // GPU 파티클
+                this.particleCount = 1200;
+                this.particleGeometry = null;
+                this.particleSystem = null;
+                this.activeParticles = 0;
+                
+                this.initThree();
+                this.createBoard();
+                this.setupLights();
+                this.initBallPool();
+                this.initParticleSystem();
+                this.setupEventListeners();
+                this.animate();
+            }
+            
+            initThree() {
+                // 씬 생성
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0xffe5f1); // 밝은 핑크
+                this.scene.fog = new THREE.Fog(0xffe5f1, 10, 50);
+                
+                // 카메라 생성
+                this.camera = new THREE.PerspectiveCamera(
+                    60,
+                    this.width / this.height,
+                    0.1,
+                    1000
+                );
+                // 모바일에서 카메라를 더 멀리 배치
+                if (this.isMobile) {
+                    this.camera.position.set(0, 8, 18);
+                } else {
+                    this.camera.position.set(0, 8, 15);
+                }
+                this.camera.lookAt(0, 0, 0);
+                
+                // 렌더러 생성 - GPU 최적화
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: this.canvas,
+                    antialias: true,
+                    powerPreference: "high-performance"
+                });
+                this.renderer.setSize(this.width, this.height);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = !this.isMobile; // 모바일에서 그림자 끄기
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            }
+            
+            setupLights() {
+                const ambientLight = new THREE.AmbientLight(0xffeeff, 0.5);
+                this.scene.add(ambientLight);
+                
+                const mainLight = new THREE.PointLight(0xff4081, 1.5, 100);
+                mainLight.position.set(0, 10, 10);
+                mainLight.castShadow = true;
+                mainLight.shadow.mapSize.width = 1024;
+                mainLight.shadow.mapSize.height = 1024;
+                this.scene.add(mainLight);
+                
+                const backLight = new THREE.PointLight(0x9c27b0, 1, 100);
+                backLight.position.set(0, 5, -10);
+                this.scene.add(backLight);
+                
+                const sideLight1 = new THREE.PointLight(0x2196f3, 0.8, 100);
+                sideLight1.position.set(-10, 5, 0);
+                this.scene.add(sideLight1);
+                
+                const sideLight2 = new THREE.PointLight(0xff1493, 0.8, 100);
+                sideLight2.position.set(10, 5, 0);
+                this.scene.add(sideLight2);
+            }
+            
+            createBoard() {
+                const panelGeometry = new THREE.PlaneGeometry(
+                    this.slots * this.spacing + 2,
+                    this.rows * this.spacing + 4
+                );
+                const panelMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xffc0e0,
+                    metalness: 0.3,
+                    roughness: 0.5,
+                    emissive: 0xffb3d9,
+                    emissiveIntensity: 0.3
+                });
+                const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+                panel.position.z = -0.5;
+                panel.receiveShadow = true;
+                this.scene.add(panel);
+                
+                // InstancedMesh로 핀 생성 - GPU 최적화
+                const startY = (this.rows - 1) * this.spacing / 2;
+                const startX = -(this.slots - 1) * this.spacing / 2;
+                
+                let totalPins = 0;
+                for (let row = 0; row < this.rows; row++) {
+                    totalPins += this.slots + (row % 2);
+                }
+                
+                const pinGeometry = new THREE.SphereGeometry(this.pinRadius, 16, 16);
+                const pinMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x42a5f5,
+                    metalness: 0.7,
+                    roughness: 0.3,
+                    emissive: 0x2196f3,
+                    emissiveIntensity: 0.5
+                });
+                
+                this.pinMesh = new THREE.InstancedMesh(pinGeometry, pinMaterial, totalPins);
+                this.pinMesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+                this.pinMesh.castShadow = true;
+                this.pinMesh.receiveShadow = true;
+                
+                const matrix = new THREE.Matrix4();
+                let index = 0;
+                
+                for (let row = 0; row < this.rows; row++) {
+                    const pinsInRow = this.slots + (row % 2);
+                    const offsetX = (row % 2) * this.spacing / 2;
+                    
+                    for (let col = 0; col < pinsInRow; col++) {
+                        const x = startX + col * this.spacing - offsetX;
+                        const y = startY - row * this.spacing;
+                        
+                        matrix.setPosition(x, y, 0);
+                        this.pinMesh.setMatrixAt(index, matrix);
+                        
+                        this.pins.push({
+                            x: x,
+                            y: y,
+                            radius: this.pinRadius,
+                            instanceId: index
+                        });
+                        
+                        index++;
+                    }
+                }
+                
+                this.scene.add(this.pinMesh);
+                
+                // 슬롯
+                const slotHeight = 1.5;
+                const slotGeometry = new THREE.BoxGeometry(
+                    this.spacing - 0.1,
+                    slotHeight,
+                    0.5
+                );
+                
+                const slotContainer = document.getElementById('slotsContainer');
+                slotContainer.innerHTML = '';
+                
+                for (let i = 0; i < this.slots; i++) {
+                    // 비비드한 그라데이션
+                    const vividColors = [
+                        0xff1493, // 딥 핑크
+                        0xff4081, // 핫 핑크
+                        0x9c27b0, // 퍼플
+                        0x2196f3, // 블루
+                        0xff69b4, // 핫핑크
+                        0xba68c8, // 라벤더
+                        0x42a5f5, // 스카이
+                        0xff3d7f, // 로즈
+                        0xd81b60  // 마젠타
+                    ];
+                    const color = new THREE.Color(vividColors[i % vividColors.length]);
+                    
+                    const slotMaterial = new THREE.MeshStandardMaterial({
+                        color: color,
+                        metalness: 0.4,
+                        roughness: 0.5,
+                        emissive: color,
+                        emissiveIntensity: 0.5,
+                        transparent: true,
+                        opacity: 0.85
+                    });
+                    
+                    const slot = new THREE.Mesh(slotGeometry, slotMaterial);
+                    slot.position.x = startX + i * this.spacing;
+                    slot.position.y = startY - this.rows * this.spacing - slotHeight / 2 - 0.3;
+                    slot.position.z = 0;
+                    slot.receiveShadow = true;
+                    this.scene.add(slot);
+                    
+                    const slotDiv = document.createElement('div');
+                    slotDiv.className = 'slot';
+                    const emojis = ['💖', '💗', '💝', '💓', '💕', '💞', '💘', '💜', '💙'];
+                    slotDiv.innerHTML = `
+                        <div class="slot-count" id="slot-${i}">0</div>
+                        <div class="slot-label">${emojis[i] || '✨'}</div>
+                    `;
+                    slotContainer.appendChild(slotDiv);
+                }
+                
+                // 슬롯 분리벽 추가
+                const dividerGeometry = new THREE.BoxGeometry(0.1, slotHeight, 0.5);
+                const dividerMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xff1493,
+                    metalness: 0.8,
+                    roughness: 0.2,
+                    emissive: 0xff4081,
+                    emissiveIntensity: 0.4
+                });
+                
+                for (let i = 0; i <= this.slots; i++) {
+                    const divider = new THREE.Mesh(dividerGeometry, dividerMaterial.clone());
+                    const dividerX = startX + i * this.spacing - this.spacing / 2;
+                    const dividerY = startY - this.rows * this.spacing - slotHeight / 2 - 0.3;
+                    divider.position.x = dividerX;
+                    divider.position.y = dividerY;
+                    divider.position.z = 0;
+                    this.scene.add(divider);
+                    
+                    // 충돌 정보 저장
+                    this.slotDividers.push({
+                        x: dividerX,
+                        yTop: dividerY + slotHeight / 2,
+                        yBottom: dividerY - slotHeight / 2,
+                        width: 0.1
+                    });
+                }
+                
+                // 벽
+                const wallMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x9c27b0,
+                    metalness: 0.6,
+                    roughness: 0.4,
+                    emissive: 0x7b1fa2,
+                    emissiveIntensity: 0.4,
+                    transparent: true,
+                    opacity: 0.75
+                });
+                
+                const wallGeometry = new THREE.BoxGeometry(0.2, this.rows * this.spacing + 4, 1);
+                
+                const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+                leftWall.position.x = startX - this.spacing / 2;
+                leftWall.position.y = 0;
+                this.scene.add(leftWall);
+                
+                const rightWall = new THREE.Mesh(wallGeometry, wallMaterial.clone());
+                rightWall.position.x = startX + (this.slots - 0.5) * this.spacing;
+                rightWall.position.y = 0;
+                this.scene.add(rightWall);
+                
+                this.createDropper();
+            }
+            
+            createDropper() {
+                const dropperGroup = new THREE.Group();
+                
+                const funnelGeometry = new THREE.ConeGeometry(0.4, 0.8, 8);
+                const funnelMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xff1493,
+                    metalness: 0.7,
+                    roughness: 0.3,
+                    emissive: 0xff4081,
+                    emissiveIntensity: 0.6
+                });
+                const funnel = new THREE.Mesh(funnelGeometry, funnelMaterial);
+                funnel.rotation.x = Math.PI;
+                funnel.castShadow = true;
+                dropperGroup.add(funnel);
+                
+                const tubeGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 8);
+                const tubeMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x9c27b0,
+                    metalness: 0.8,
+                    roughness: 0.2,
+                    emissive: 0xba68c8,
+                    emissiveIntensity: 0.6
+                });
+                const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+                tube.position.y = -0.55;
+                tube.castShadow = true;
+                dropperGroup.add(tube);
+                
+                const ringGeometry = new THREE.TorusGeometry(0.5, 0.05, 8, 16);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x2196f3,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = 0.4;
+                dropperGroup.add(ring);
+                
+                const startY = (this.rows - 1) * this.spacing / 2 + 2.5;
+                dropperGroup.position.set(this.dropperX, startY, 0);
+                
+                this.scene.add(dropperGroup);
+                this.dropper = dropperGroup;
+            }
+            
+            // 오브젝트 풀링으로 메모리 최적화
+            initBallPool() {
+                const ballGeometry = new THREE.SphereGeometry(this.ballRadius, 32, 32);
+                
+                for (let i = 0; i < this.maxBalls; i++) {
+                    // 비비드한 색상 팔레트
+                    const vividColors = [
+                        '#ff1493', '#ff4081', '#9c27b0', '#2196f3', 
+                        '#ff69b4', '#ba68c8', '#42a5f5', '#ff3d7f'
+                    ];
+                    const colorHex = vividColors[Math.floor(Math.random() * vividColors.length)];
+                    const color = new THREE.Color(colorHex);
+                    
+                    const ballMaterial = new THREE.MeshStandardMaterial({
+                        color: color,
+                        metalness: 0.9,
+                        roughness: 0.1,
+                        emissive: color,
+                        emissiveIntensity: 0.5
+                    });
+                    
+                    const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+                    ball.castShadow = true;
+                    ball.visible = false;
+                    this.scene.add(ball);
+                    
+                    this.ballPool.push({
+                        mesh: ball,
+                        active: false,
+                        x: 0,
+                        y: 0,
+                        vx: 0,
+                        vy: 0,
+                        radius: this.ballRadius,
+                        color: color
+                    });
+                }
+            }
+            
+            // GPU 기반 파티클 시스템
+            initParticleSystem() {
+                this.particleGeometry = new THREE.BufferGeometry();
+                
+                const positions = new Float32Array(this.particleCount * 3);
+                const colors = new Float32Array(this.particleCount * 3);
+                const sizes = new Float32Array(this.particleCount);
+                const alphas = new Float32Array(this.particleCount);
+                const velocities = new Float32Array(this.particleCount * 3);
+                const lifetimes = new Float32Array(this.particleCount);
+                
+                for (let i = 0; i < this.particleCount; i++) {
+                    positions[i * 3] = 0;
+                    positions[i * 3 + 1] = 0;
+                    positions[i * 3 + 2] = 0;
+                    
+                    colors[i * 3] = 1;
+                    colors[i * 3 + 1] = 1;
+                    colors[i * 3 + 2] = 1;
+                    
+                    sizes[i] = 10;
+                    alphas[i] = 0;
+                    lifetimes[i] = 0;
+                }
+                
+                this.particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                this.particleGeometry.setAttribute('customColor', new THREE.BufferAttribute(colors, 3));
+                this.particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+                this.particleGeometry.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+                
+                this.particleVelocities = velocities;
+                this.particleLifetimes = lifetimes;
+                
+                const particleMaterial = new THREE.ShaderMaterial({
+                    uniforms: {},
+                    vertexShader: particleVertexShader,
+                    fragmentShader: particleFragmentShader,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    transparent: true
+                });
+                
+                this.particleSystem = new THREE.Points(this.particleGeometry, particleMaterial);
+                this.scene.add(this.particleSystem);
+            }
+            
+            emitParticles(x, y, color, count = 4) {
+                const positions = this.particleGeometry.attributes.position.array;
+                const colors = this.particleGeometry.attributes.customColor.array;
+                const sizes = this.particleGeometry.attributes.size.array;
+                const alphas = this.particleGeometry.attributes.alpha.array;
+                
+                for (let i = 0; i < count; i++) {
+                    let index = this.activeParticles % this.particleCount;
+                    
+                    const angle = (Math.PI * 2 * i) / count;
+                    const speed = 1 + Math.random() * 1;
+                    
+                    positions[index * 3] = x;
+                    positions[index * 3 + 1] = y;
+                    positions[index * 3 + 2] = 0;
+                    
+                    colors[index * 3] = color.r;
+                    colors[index * 3 + 1] = color.g;
+                    colors[index * 3 + 2] = color.b;
+                    
+                    sizes[index] = 8 + Math.random() * 4;
+                    alphas[index] = 0.4; // 0.5 -> 0.4로 감소
+                    
+                    this.particleVelocities[index * 3] = Math.cos(angle) * speed;
+                    this.particleVelocities[index * 3 + 1] = Math.sin(angle) * speed;
+                    this.particleVelocities[index * 3 + 2] = 0;
+                    
+                    this.particleLifetimes[index] = 0.3; // 0.6 -> 0.3으로 감소
+                    
+                    this.activeParticles++;
+                }
+                
+                this.particleGeometry.attributes.position.needsUpdate = true;
+                this.particleGeometry.attributes.customColor.needsUpdate = true;
+                this.particleGeometry.attributes.size.needsUpdate = true;
+                this.particleGeometry.attributes.alpha.needsUpdate = true;
+            }
+            
+            emitGoalParticles(x, y, color) {
+                // LED 점등 효과 - 슬롯 주변에 부드러운 발광
+                const positions = this.particleGeometry.attributes.position.array;
+                const colors = this.particleGeometry.attributes.customColor.array;
+                const sizes = this.particleGeometry.attributes.size.array;
+                const alphas = this.particleGeometry.attributes.alpha.array;
+                
+                // 슬롯 내부에 부드럽게 퍼지는 LED 점
+                const count = 10; // 15 -> 10으로 감소
+                for (let i = 0; i < count; i++) {
+                    let index = this.activeParticles % this.particleCount;
+                    
+                    // 슬롯 영역 내부에 랜덤 배치
+                    const offsetX = (Math.random() - 0.5) * 0.8;
+                    const offsetY = (Math.random() - 0.5) * 0.4;
+                    
+                    positions[index * 3] = x + offsetX;
+                    positions[index * 3 + 1] = y + offsetY;
+                    positions[index * 3 + 2] = 0;
+                    
+                    colors[index * 3] = color.r;
+                    colors[index * 3 + 1] = color.g;
+                    colors[index * 3 + 2] = color.b;
+                    
+                    sizes[index] = 30 + Math.random() * 20; // 조금 더 큰 점
+                    alphas[index] = 0.7; // 0.9 -> 0.7
+                    
+                    // 거의 정지 상태로 천천히 페이드
+                    this.particleVelocities[index * 3] = (Math.random() - 0.5) * 0.2;
+                    this.particleVelocities[index * 3 + 1] = (Math.random() - 0.5) * 0.2;
+                    this.particleVelocities[index * 3 + 2] = 0;
+                    
+                    this.particleLifetimes[index] = 0.7; // 0.8 -> 0.7
+                    
+                    this.activeParticles++;
+                }
+                
+                this.particleGeometry.attributes.position.needsUpdate = true;
+                this.particleGeometry.attributes.customColor.needsUpdate = true;
+                this.particleGeometry.attributes.size.needsUpdate = true;
+                this.particleGeometry.attributes.alpha.needsUpdate = true;
+            }
+            
+            dropBall() {
+                for (let i = 0; i < this.ballsPerDrop; i++) {
+                    setTimeout(() => {
+                        const ball = this.ballPool.find(b => !b.active);
+                        if (!ball) return;
+                        
+                        const startX = this.dropperX + (Math.random() - 0.5) * 0.2;
+                        const startY = (this.rows - 1) * this.spacing / 2 + 1.5;
+                        
+                        ball.x = startX;
+                        ball.y = startY;
+                        ball.vx = 0;
+                        ball.vy = 0;
+                        ball.active = true;
+                        
+                        ball.mesh.position.set(startX, startY, 0);
+                        ball.mesh.visible = true;
+                        
+                        this.balls.push(ball);
+                        this.totalGames++;
+                        this.updateUI();
+                    }, i * 100);
+                }
+            }
+            
+            updatePhysics(deltaTime) {
+                const gravity = -45; // 중력 증가 (30 -> 45)
+                const damping = 0.98;
+                const bounciness = 0.6;
+                
+                for (let i = this.balls.length - 1; i >= 0; i--) {
+                    const ball = this.balls[i];
+                    if (!ball.active) continue;
+                    
+                    ball.vy += gravity * deltaTime;
+                    ball.x += ball.vx * deltaTime;
+                    ball.y += ball.vy * deltaTime;
+                    
+                    // 핀 충돌 - 최적화된 거리 계산
+                    for (let j = 0; j < this.pins.length; j++) {
+                        const pin = this.pins[j];
+                        const dx = ball.x - pin.x;
+                        const dy = ball.y - pin.y;
+                        const distSq = dx * dx + dy * dy;
+                        const minDist = ball.radius + pin.radius;
+                        
+                        if (distSq < minDist * minDist) {
+                            const dist = Math.sqrt(distSq);
+                            const angle = Math.atan2(dy, dx);
+                            
+                            ball.x = pin.x + Math.cos(angle) * minDist;
+                            ball.y = pin.y + Math.sin(angle) * minDist;
+                            
+                            const normalX = Math.cos(angle);
+                            const normalY = Math.sin(angle);
+                            const dotProduct = ball.vx * normalX + ball.vy * normalY;
+                            
+                            ball.vx = (ball.vx - 2 * dotProduct * normalX) * bounciness;
+                            ball.vy = (ball.vy - 2 * dotProduct * normalY) * bounciness;
+                            
+                            this.emitParticles(pin.x, pin.y, ball.color, 4);
+                        }
+                    }
+                    
+                    // 벽 충돌
+                    const startX = -(this.slots - 1) * this.spacing / 2;
+                    const leftWall = startX - this.spacing / 2 + ball.radius;
+                    const rightWall = startX + (this.slots - 0.5) * this.spacing - ball.radius;
+                    
+                    if (ball.x < leftWall) {
+                        ball.x = leftWall;
+                        ball.vx = Math.abs(ball.vx) * bounciness;
+                    }
+                    if (ball.x > rightWall) {
+                        ball.x = rightWall;
+                        ball.vx = -Math.abs(ball.vx) * bounciness;
+                    }
+                    
+                    // 슬롯 분리벽 충돌
+                    for (let d = 0; d < this.slotDividers.length; d++) {
+                        const divider = this.slotDividers[d];
+                        if (ball.y < divider.yTop && ball.y > divider.yBottom) {
+                            const distX = Math.abs(ball.x - divider.x);
+                            if (distX < ball.radius + divider.width / 2) {
+                                if (ball.x < divider.x) {
+                                    ball.x = divider.x - ball.radius - divider.width / 2;
+                                } else {
+                                    ball.x = divider.x + ball.radius + divider.width / 2;
+                                }
+                                ball.vx = -ball.vx * bounciness;
+                            }
+                        }
+                    }
+                    
+                    ball.vx *= damping;
+                    ball.vy *= damping;
+                    
+                    // 슬롯 도착
+                    const bottomY = -(this.rows - 1) * this.spacing / 2 - this.spacing;
+                    if (ball.y < bottomY) {
+                        const startX = -(this.slots - 1) * this.spacing / 2;
+                        const relativeX = ball.x - startX;
+                        const slotIndex = Math.floor(relativeX / this.spacing);
+                        const finalSlot = Math.max(0, Math.min(this.slots - 1, slotIndex));
+                        
+                        this.slotCounts[finalSlot]++;
+                        const slotElement = document.getElementById(`slot-${finalSlot}`);
+                        slotElement.textContent = this.slotCounts[finalSlot];
+                        
+                        // 슬롯 UI LED 점등 애니메이션
+                        const slotDiv = slotElement.parentElement;
+                        slotDiv.style.transform = 'scale(1.1)';
+                        slotDiv.style.backgroundColor = `${ball.color.getStyle()}40`; // 반투명
+                        slotDiv.style.boxShadow = `0 0 30px ${ball.color.getStyle()}, inset 0 0 20px ${ball.color.getStyle()}`;
+                        slotDiv.style.borderColor = ball.color.getStyle();
+                        setTimeout(() => {
+                            slotDiv.style.transform = 'scale(1)';
+                            slotDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                            slotDiv.style.boxShadow = '0 4px 20px rgba(255, 20, 147, 0.4)';
+                            slotDiv.style.borderColor = '#ff1493';
+                        }, 500);
+                        
+                        ball.active = false;
+                        ball.mesh.visible = false;
+                        this.balls.splice(i, 1);
+                        this.updateUI();
+                        continue;
+                    }
+                    
+                    ball.mesh.position.x = ball.x;
+                    ball.mesh.position.y = ball.y;
+                    ball.mesh.rotation.x += ball.vx * 0.1;
+                    ball.mesh.rotation.z += ball.vy * 0.1;
+                }
+                
+                // GPU 파티클 업데이트
+                const positions = this.particleGeometry.attributes.position.array;
+                const alphas = this.particleGeometry.attributes.alpha.array;
+                let needsUpdate = false;
+                
+                for (let i = 0; i < this.particleCount; i++) {
+                    if (this.particleLifetimes[i] > 0) {
+                        positions[i * 3] += this.particleVelocities[i * 3] * deltaTime;
+                        positions[i * 3 + 1] += this.particleVelocities[i * 3 + 1] * deltaTime;
+                        
+                        this.particleLifetimes[i] -= 5 * deltaTime; // 4 -> 5로 증가
+                        alphas[i] = Math.max(0, this.particleLifetimes[i]);
+                        
+                        needsUpdate = true;
+                    }
+                }
+                
+                if (needsUpdate) {
+                    this.particleGeometry.attributes.position.needsUpdate = true;
+                    this.particleGeometry.attributes.alpha.needsUpdate = true;
+                }
+            }
+            
+            updateUI() {
+                document.getElementById('totalGames').textContent = this.totalGames;
+                document.getElementById('activeBalls').textContent = this.balls.length;
+            }
+            
+            updateFPS() {
+                this.frameCount++;
+                const currentTime = performance.now();
+                
+                if (currentTime >= this.lastTime + 1000) {
+                    this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+                    document.getElementById('fpsCounter').textContent = this.fps;
+                    this.frameCount = 0;
+                    this.lastTime = currentTime;
+                }
+            }
+            
+            reset() {
+                this.balls.forEach(ball => {
+                    ball.active = false;
+                    ball.mesh.visible = false;
+                });
+                this.balls = [];
+                
+                this.totalGames = 0;
+                this.slotCounts.fill(0);
+                
+                for (let i = 0; i < this.slots; i++) {
+                    document.getElementById(`slot-${i}`).textContent = '0';
+                }
+                
+                const alphas = this.particleGeometry.attributes.alpha.array;
+                for (let i = 0; i < this.particleCount; i++) {
+                    alphas[i] = 0;
+                    this.particleLifetimes[i] = 0;
+                }
+                this.particleGeometry.attributes.alpha.needsUpdate = true;
+                this.activeParticles = 0;
+                
+                this.updateUI();
+            }
+            
+            setupEventListeners() {
+                const dropBtn = document.getElementById('dropBtn');
+                
+                // 모바일에서 버튼 텍스트 변경
+                if (this.isMobile) {
+                    dropBtn.innerHTML = '🎀 3개 떨어뜨리기';
+                }
+                
+                dropBtn.addEventListener('click', () => {
+                    this.dropBall();
+                });
+                
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.reset();
+                });
+                
+                window.addEventListener('resize', () => {
+                    this.width = window.innerWidth;
+                    this.height = window.innerHeight;
+                    this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+                    
+                    this.camera.aspect = this.width / this.height;
+                    this.camera.updateProjectionMatrix();
+                    
+                    // 모바일에서 카메라 위치 조정
+                    if (this.isMobile) {
+                        this.camera.position.z = 18;
+                    } else {
+                        this.camera.position.z = 15;
+                    }
+                    
+                    this.renderer.setSize(this.width, this.height);
+                });
+                
+                // 클릭/터치로 공 떨어뜨리기
+                const handleInteraction = (e) => {
+                    if (e.target === this.canvas) {
+                        e.preventDefault();
+                        this.dropBall();
+                    }
+                };
+                
+                this.canvas.addEventListener('click', handleInteraction);
+                this.canvas.addEventListener('touchstart', handleInteraction, { passive: false });
+                
+                // 모바일 스크롤 방지
+                if (this.isMobile) {
+                    document.body.addEventListener('touchmove', (e) => {
+                        e.preventDefault();
+                    }, { passive: false });
+                }
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                const deltaTime = 1 / 60;
+                this.updatePhysics(deltaTime);
+                this.updateFPS();
+                
+                const time = Date.now() * 0.001;
+                this.dropperX = Math.sin(time * this.dropperSpeed) * this.dropperRange;
+                if (this.dropper) {
+                    this.dropper.position.x = this.dropperX;
+                    this.dropper.rotation.z = Math.sin(time * this.dropperSpeed * 2) * 0.1;
+                    if (this.dropper.children[2]) {
+                        this.dropper.children[2].rotation.z = time * 2;
+                    }
+                }
+                
+                const indicator = document.getElementById('dropperIndicator');
+                if (indicator) {
+                    const percentage = ((this.dropperX / this.dropperRange) + 1) / 2 * 100;
+                    indicator.style.left = percentage + '%';
+                }
+                
+                this.camera.position.x = Math.sin(time * 0.1) * 0.5;
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+        
+        const game = new PlinkoGame();
+    </script>
+</body>
+</html>
