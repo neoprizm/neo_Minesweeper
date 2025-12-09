@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fractal Life - 완만한 프랙탈 생명 주기 60FPS</title>
+    <title>Infinite Cycle - 무한 순환 우주 60FPS</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght:400;700;900&family=Rajdhani:wght:300;600&display=swap');
         
@@ -60,16 +60,46 @@
         
         #controls {
             position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #00ffff;
-            text-align: center;
-            font-size: 18px;
-            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
-            opacity: 0.8;
-            font-weight: 600;
-            letter-spacing: 2px;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            pointer-events: all;
+        }
+        
+        .control-btn {
+            background: rgba(0, 255, 255, 0.8);
+            color: black;
+            border: 2px solid cyan;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .control-btn:hover {
+            background: rgba(0, 255, 255, 1);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .control-btn.paused {
+            background: rgba(255, 100, 0, 0.8);
+            border-color: #ff6400;
+            box-shadow: 0 0 10px rgba(255, 100, 0, 0.5);
+        }
+        
+        .control-btn.paused:hover {
+            background: rgba(255, 100, 0, 1);
+            box-shadow: 0 0 20px rgba(255, 100, 0, 0.8);
         }
         
         #startScreen {
@@ -122,8 +152,8 @@
             max-width: 800px;
             text-align: center;
             color: #ffffff;
-            font-size: 14px;
-            line-height: 2;
+            font-size: 12px;
+            line-height: 1.6;
             margin-bottom: 40px;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         }
@@ -159,15 +189,15 @@
     
     <div id="ui">
         <div id="fps">FPS: 60</div>
-        <div id="info">GPU Compute: Active<br>Cubes: 1,000,000<br>Rotation: ON 🌍<br>Separation: Dynamic 🌌<br>Fractal: Mandelbrot 🌀<br>Life Cycle: Active 🐝✨<br><span id="timer">Time: 0:00</span></div>
+        <div id="info">GPU Compute: Active<br>Cubes: 1,000,000<br>Rotation: ON 🌍<br>Separation: Dynamic 🌌<br>Fractal: Mandelbrot 🌀<br>Infection: Cellular 🦠<br>E=mc²: Active ⚡<br>Rebirth: Infinite ♾️<br>Life Cycle: Active 🐝✨<br><span id="timer">Time: 0:00</span></div>
         <div id="controls">
-            클릭: 레이저 발사 ⚡ | 드래그: 회전 | 휠: 줌 (큐브 내부 진입 가능!) 🔍
+            <button class="control-btn" id="pauseBtn">⏸ PAUSE</button>
         </div>
     </div>
     
     <div id="startScreen">
-        <div class="game-title">FRACTAL LIFE</div>
-        <div class="subtitle">완만한 프랙탈 생명 주기</div>
+        <div class="game-title">INFINITE CYCLE</div>
+        <div class="subtitle">무한 순환 우주</div>
         <div class="instructions">
             🚀 <strong>GPU Compute Shader 기술</strong> - 모든 계산을 GPU에서 병렬 처리! 🚀<br>
             100×100×100 = 1,000,000개 <strong>무지개 큐브</strong>를 <strong>완벽한 60FPS</strong>로 렌더링합니다.<br><br>
@@ -177,24 +207,24 @@
             🌍 <strong>지구 자전</strong>: 각 큐브가 3축 회전하며 자전합니다! 🔄<br>
             🌌 <strong>기하급수 분리</strong>: 30초마다 큐브 간 거리가 3배까지 서서히 증가! 📏<br>
             🌀 <strong>만델브로트 프랙탈</strong>: <span style="color:#ff00ff">10초 후</span> z²+c 수식으로 다차원 변형! 🔮<br>
+            ⚡ <strong>E=mc² 상대성이론</strong>: 각 큐브의 운동 에너지와 상대론적 질량 실시간 계산! 🔬<br>
             🔍 <strong>극한 줌인</strong>: 큐브 내부까지 들어가서 탐험 가능! 🎮<br>
             🐝 <strong>벌 군집 붕괴</strong>: <span style="color:#ff0000">70초 후</span> 완만하게 연쇄 붕괴! ⚠️<br>
             ✨ <strong>기하급수 복구</strong>: <span style="color:#00ff00">붕괴 완료 후</span> 하나씩 기하급수적으로 복구! 🌱<br>
+            🦠 <strong>세포 증식 감염</strong>: <span style="color:#000000; background:#ff0000; padding:2px 6px;">2:20 후</span> 검은 큐브가 자기복제하며 확산! 💀<br>
+            💀 <strong>완전 소멸</strong>: <span style="color:#000000; background:#ffffff; padding:2px 6px;">3:00 후</span> 모든 큐브가 3초 안에 소멸! ⚫<br>
+            ✨ <strong>황금 재생성</strong>: <span style="color:#FFD700">소멸 후</span> 1부터 순차적으로 100만개 황금색 큐브 재탄생! 🏆<br>
+            🔄 <strong>무한 순환</strong>: 재생성 완료 후 모든 루틴이 처음부터 다시 시작! ♾️<br>
             20초마다 모든 큐브가 부드럽게 폭발했다가 재결합합니다.<br><br>
-            <strong>프랙탈 효과:</strong><br>
-            ▪ 만델브로트 집합: z(n+1) = z(n)² + c<br>
-            ▪ 줄리아 집합: 시간에 따라 변화하는 파라미터<br>
-            ▪ 만델불브: 3D 공간의 멱승 프랙탈<br>
-            ▪ 8초 페이드 인 → 24초 유지 → 8초 페이드 아웃<br><br>
-            <strong>모든 변화가 부드럽고 완만하게 진행됩니다!</strong><br>
-            클릭하면 초고속 레이저가 발사되어 큐브를 파괴합니다! 💥<br>
-            <strong>생명 주기를 관찰하세요:</strong><br>
-            <strong style="color:#ff00ff">0:10</strong> 프랙탈 시작 → 
-            <strong style="color:#ffff00">1:05</strong> 경고 → 
-            <strong style="color:#ff0000">1:10</strong> 붕괴 시작 → 
-            <strong style="color:#00ff00">2:00</strong> 복구 시작! 🌀🐝✨
+            <strong>프랙탈 효과:</strong> 만델브로트 집합(z²+c), 줄리아 집합, 만델불브(3D 멱승), 8초 페이드 인 → 24초 유지 → 8초 페이드 아웃<br><br>
+            <strong>E=mc² 상대성이론:</strong> γ = 1/√(1-β²) 로렌츠 인자, m = γm₀ 상대론적 질량, E = (γ-1)mc² 운동 에너지<br>
+            ▪ 빠른 큐브: 청백색 체렌코프 글로우, 질량 증가 → 밝기 증가, 도플러 효과(파란색 이동)<br><br>
+            <strong>황금 재생성:</strong> 2초 동안 순차적 생성, 황금빛 강렬한 글로우, 펄스 효과, 상승 파티클<br>
+            ▪ 큐브 #1 → #1,000,000 순서대로, 재생성 전선 황금 파동, 완료 후 무지개색 복원<br><br>
+            <strong>모든 변화가 부드럽고 완만하게 진행됩니다!</strong> 클릭: 레이저 💥 | 우측 상단: 일시정지 ⏸<br>
+            <strong>생명 주기:</strong> <span style="color:#ff00ff">0:10</span> 프랙탈 → <span style="color:#ffff00">1:05</span> 경고 → <span style="color:#ff0000">1:10</span> 붕괴 → <span style="color:#00ff00">2:00</span> 복구 → <span style="color:#000000; background:#ff0000; padding:2px 6px;">2:20</span> 감염 → <span style="color:#000000; background:#ffffff; padding:2px 6px;">3:00</span> 소멸 → <span style="color:#FFD700">3:03</span> 재탄생! 🌀🐝🦠💀✨♾️
         </div>
-        <button class="start-btn" onclick="startGame()">GO!!</button>
+        <button class="start-btn" onclick="startGame()">시작</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -211,6 +241,11 @@
         let raycaster, mouse;
         let mouseMoved = false;
         let gameStartTime = 0;
+        
+        // 일시정지 시스템
+        let isPaused = false;
+        let pausedTime = 0;
+        let totalPausedDuration = 0;
         
         // 폭발 애니메이션 상태
         let explosionCycle = 0;
@@ -244,15 +279,45 @@
         const FRACTAL_FADE_IN = 8000; // 8초 페이드 인
         const FRACTAL_FADE_OUT = 8000; // 8초 페이드 아웃
         
+        // 세포 증식 감염 시스템
+        let infectionStartTime = -1;
+        let infectionTriggered = false;
+        let infectionOrigin = new THREE.Vector3(0, 0, 0);
+        const INFECTION_TRIGGER_TIME = 140000; // 140초 (2분 20초) 후 감염 시작
+        const INFECTION_DURATION = 40000; // 40초 동안 감염 확산
+        
+        // 재생성 시스템 (3분 후)
+        let extinctionStartTime = -1;
+        let extinctionTriggered = false;
+        let regenerationStartTime = -1;
+        let regenerationTriggered = false;
+        let regenerationProgress = 0;
+        const EXTINCTION_TRIGGER_TIME = 180000; // 180초 (3분) 후 소멸
+        const EXTINCTION_DURATION = 3000; // 3초 동안 소멸
+        const REGENERATION_DURATION = 2000; // 2초 동안 재생성 (빠르게)
+        
+        // 큐브 설정
+        const GRID_SIZE = 100;
+        const CUBE_SIZE = 0.9;
+        const CUBE_GAP = 1.2;
+        const TOTAL_CUBES = GRID_SIZE * GRID_SIZE * GRID_SIZE;
+        
         // FPS 측정
         let lastTime = performance.now();
         let frames = 0;
         let fps = 60;
         
-        const GRID_SIZE = 100;
-        const CUBE_SIZE = 0.9;
-        const CUBE_GAP = 1.2;
-        const TOTAL_CUBES = GRID_SIZE * GRID_SIZE * GRID_SIZE;
+        // 게임 시작 함수 (전역으로 즉시 노출)
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hide');
+            gameStarted = true;
+            gameStartTime = Date.now();
+            lastExplosionTime = Date.now();
+            lastSeparationTime = Date.now();
+        }
+        
+        // 전역 window 객체에 할당
+        window.startGame = startGame;
         
         // GPU Compute Shader용 Vertex Shader
         const vertexShader = `
@@ -273,6 +338,12 @@
             uniform float currentTime;
             uniform float fractalIntensity;
             uniform vec2 fractalCenter;
+            uniform float infectionStartTime;
+            uniform vec3 infectionOrigin;
+            uniform float infectionRadius;
+            uniform float extinctionStartTime;
+            uniform float regenerationStartTime;
+            uniform float regenerationProgress;
             
             // Fragment Shader로 전달
             varying vec3 vNormal;
@@ -283,6 +354,11 @@
             varying float vOpacity;
             varying float vCubeIndex;
             varying float vFractalDepth;
+            varying float vInfectionLevel;
+            varying float vKineticEnergy;
+            varying float vRelativisticMass;
+            varying vec3 vVelocity;
+            varying float vRegenerationGlow;
             
             // 회전 행렬 생성 함수
             mat3 rotateY(float angle) {
@@ -313,6 +389,114 @@
                     s, c, 0.0,
                     0.0, 0.0, 1.0
                 );
+            }
+            
+            // 소멸 계산
+            float calculateExtinction(float startTime, float currentT) {
+                if (startTime < 0.0) return 1.0; // 소멸 전 = 정상
+                
+                float timeSinceExtinction = currentT - startTime;
+                if (timeSinceExtinction < 0.0) return 1.0;
+                
+                // 3초 동안 빠르게 사라짐
+                float progress = timeSinceExtinction / 3.0;
+                progress = min(progress, 1.0);
+                
+                // 부드러운 페이드 아웃
+                return 1.0 - smoothstep(0.0, 1.0, progress);
+            }
+            
+            // 재생성 계산 (순차적)
+            float calculateRegeneration(float cubeIdx, float progress) {
+                if (progress <= 0.0) return 0.0;
+                if (progress >= 1.0) return 1.0;
+                
+                // 큐브 인덱스를 0~1로 정규화
+                float normalizedIndex = cubeIdx / 1000000.0;
+                
+                // 순차적 등장 (progress가 normalizedIndex를 지나가면 등장)
+                float appearThreshold = normalizedIndex;
+                
+                if (progress < appearThreshold) {
+                    return 0.0; // 아직 등장 안함
+                }
+                
+                // 등장 애니메이션 (0.01초 동안)
+                float localProgress = (progress - appearThreshold) / 0.01;
+                localProgress = clamp(localProgress, 0.0, 1.0);
+                
+                return smoothstep(0.0, 1.0, localProgress);
+            }
+            
+            // E=MC² 상대성이론 계산
+            // E = mc² (에너지 = 질량 × 광속²)
+            vec3 calculateRelativisticPhysics(
+                vec3 currentPos, 
+                vec3 previousPos, 
+                float deltaTime,
+                float restMass,
+                out float kineticEnergy,
+                out float relativisticMass
+            ) {
+                // 광속 (임의 단위, 시뮬레이션 스케일)
+                float c = 100.0;
+                float c2 = c * c;
+                
+                // 속도 계산 (v = Δx / Δt)
+                vec3 velocity = (currentPos - previousPos) / max(deltaTime, 0.001);
+                float v = length(velocity);
+                
+                // 속도 제한 (광속 이하)
+                v = min(v, c * 0.99);
+                
+                // 베타 (β = v/c)
+                float beta = v / c;
+                float beta2 = beta * beta;
+                
+                // 로렌츠 인자 (γ = 1 / √(1 - β²))
+                float lorentzFactor = 1.0 / sqrt(1.0 - beta2);
+                
+                // 상대론적 질량 (m = γm₀)
+                relativisticMass = lorentzFactor * restMass;
+                
+                // 운동 에너지 (E_k = (γ - 1)mc²)
+                kineticEnergy = (lorentzFactor - 1.0) * restMass * c2;
+                
+                // 정규화된 에너지 (시각화용)
+                kineticEnergy = kineticEnergy / (restMass * c2);
+                
+                return velocity;
+            }
+            
+            // 감염 계산 (세포 증식 시뮬레이션)
+            float calculateInfection(vec3 cubePos, vec3 origin, float startTime, float currentT, float radius) {
+                if (startTime < 0.0) return 0.0; // 감염 시작 전
+                
+                float timeSinceInfection = currentT - startTime;
+                if (timeSinceInfection < 0.0) return 0.0;
+                
+                // 감염원으로부터의 거리
+                float distance = length(cubePos - origin);
+                
+                // 감염 확산 속도 (초당 10 유닛)
+                float infectionSpeed = 10.0;
+                float currentRadius = timeSinceInfection * infectionSpeed;
+                
+                // 감염 전선의 두께
+                float infectionFrontWidth = 15.0;
+                
+                // 이미 감염된 영역인지 확인
+                if (distance < currentRadius - infectionFrontWidth) {
+                    return 1.0; // 완전 감염
+                }
+                
+                // 감염 전선 (부드러운 전환)
+                if (distance < currentRadius) {
+                    float frontPosition = (currentRadius - distance) / infectionFrontWidth;
+                    return smoothstep(0.0, 1.0, frontPosition);
+                }
+                
+                return 0.0; // 아직 감염 안됨
             }
             
             // 복소수 곱셈
@@ -460,6 +644,22 @@
             }
             
             void main() {
+                // 소멸 효과 계산
+                float extinctionFactor = calculateExtinction(extinctionStartTime, currentTime);
+                
+                // 재생성 효과 계산
+                float regenerationFactor = calculateRegeneration(cubeIndex, regenerationProgress);
+                
+                // 재생성 글로우
+                vRegenerationGlow = 0.0;
+                if (regenerationProgress > 0.0 && regenerationProgress < 1.0) {
+                    float normalizedIndex = cubeIndex / 1000000.0;
+                    float distance = abs(regenerationProgress - normalizedIndex);
+                    if (distance < 0.02) {
+                        vRegenerationGlow = (1.0 - distance / 0.02) * 2.0;
+                    }
+                }
+                
                 // 붕괴 투명도 계산
                 float collapseFactor = calculateCollapse(cubeIndex, collapseStartTime, currentTime);
                 
@@ -471,11 +671,36 @@
                 vOpacity = collapseFactor + recoveryFactor * (1.0 - collapseFactor);
                 vOpacity = clamp(vOpacity, 0.0, 1.0);
                 
+                // 소멸 효과 적용
+                vOpacity *= extinctionFactor;
+                
+                // 재생성 중이면 재생성 투명도만 사용
+                if (regenerationProgress > 0.0 && regenerationProgress < 1.0) {
+                    vOpacity = regenerationFactor;
+                } else if (regenerationProgress >= 1.0) {
+                    // 재생성 완료 후 정상 투명도
+                    vOpacity = 1.0;
+                }
+                
                 vCubeIndex = cubeIndex;
                 
                 // 기하급수적 거리 증가 (1 ~ 3배)
                 float distanceMultiplier = 1.0 + separationFactor * 2.0;
                 vec3 separatedPosition = basePosition * distanceMultiplier;
+                
+                // 감염 레벨 계산
+                vInfectionLevel = calculateInfection(
+                    basePosition, 
+                    infectionOrigin, 
+                    infectionStartTime, 
+                    currentTime, 
+                    infectionRadius
+                );
+                
+                // 감염된 큐브는 투명도 감소
+                if (vInfectionLevel > 0.1) {
+                    vOpacity *= (1.0 - vInfectionLevel * 0.9);
+                }
                 
                 // 폭발 오프셋 계산
                 vec3 offset = explosionDirection * explosionDistance * explosionCycle;
@@ -490,6 +715,33 @@
                 offset.y += recoveryRise;
                 
                 vec3 finalPosition = separatedPosition + offset;
+                
+                // E=MC² 상대성이론 적용
+                // 이전 프레임 위치 계산 (시간 역추적)
+                float prevTime = currentTime - 0.016; // 60fps 기준
+                vec3 prevOffset = explosionDirection * explosionDistance * explosionCycle;
+                vec3 prevPosition = separatedPosition + prevOffset;
+                
+                // 정지 질량 (각 큐브마다 고유)
+                float restMass = 1.0 + sin(cubeIndex * 0.01) * 0.2;
+                
+                // 상대론적 물리 계산
+                float kineticEnergy, relativisticMass;
+                vVelocity = calculateRelativisticPhysics(
+                    finalPosition,
+                    prevPosition,
+                    0.016,
+                    restMass,
+                    kineticEnergy,
+                    relativisticMass
+                );
+                
+                vKineticEnergy = kineticEnergy;
+                vRelativisticMass = relativisticMass / restMass; // 정규화
+                
+                // 에너지에 따른 위치 변형 (높은 에너지 = 더 큰 움직임)
+                float energyFactor = 1.0 + kineticEnergy * 0.1;
+                finalPosition *= energyFactor;
                 
                 // 프랙탈 변형 적용 (부드럽게)
                 if (fractalIntensity > 0.01) {
@@ -607,6 +859,11 @@
             varying float vOpacity;
             varying float vCubeIndex;
             varying float vFractalDepth;
+            varying float vInfectionLevel;
+            varying float vKineticEnergy;
+            varying float vRelativisticMass;
+            varying vec3 vVelocity;
+            varying float vRegenerationGlow;
             
             void main() {
                 // 붕괴 시 버리기 조건 완화 (거의 사라지지 않음)
@@ -652,6 +909,71 @@
                 
                 // 최종 색상
                 finalColor = (ambient + finalColor) * vColor;
+                
+                // 재생성 황금색 효과
+                if (vRegenerationGlow > 0.01) {
+                    // 황금색 (골드)
+                    vec3 goldenColor = vec3(1.0, 0.84, 0.0);
+                    
+                    // 강렬한 황금빛 글로우
+                    vec3 goldenGlow = goldenColor * vRegenerationGlow * 3.0;
+                    
+                    // 재생성 전선에서 빛남
+                    finalColor = mix(finalColor, goldenColor, vRegenerationGlow * 0.8);
+                    finalColor += goldenGlow;
+                    
+                    // 펄스 효과
+                    float pulse = sin(time * 10.0) * 0.3 + 0.7;
+                    finalColor *= pulse;
+                }
+                
+                // E=MC² 에너지 시각화
+                if (vKineticEnergy > 0.01) {
+                    // 높은 운동 에너지 = 밝은 글로우
+                    float energyGlow = vKineticEnergy * 2.0;
+                    
+                    // 청백색 글로우 (체렌코프 복사)
+                    vec3 cherenkovColor = vec3(0.3, 0.6, 1.0) * energyGlow;
+                    finalColor += cherenkovColor;
+                    
+                    // 속도 방향에 따른 색상 이동 (도플러 효과)
+                    float velocityFactor = length(vVelocity) / 100.0;
+                    if (velocityFactor > 0.1) {
+                        // 빠른 큐브는 파란색으로 이동
+                        finalColor.b += velocityFactor * 0.5;
+                        finalColor.r -= velocityFactor * 0.2;
+                    }
+                    
+                    // 질량 증가 효과 (밝기 증가)
+                    float massIncrease = (vRelativisticMass - 1.0);
+                    if (massIncrease > 0.01) {
+                        finalColor *= (1.0 + massIncrease * 0.5);
+                    }
+                }
+                
+                // 감염 효과 (검은 큐브로 변함)
+                if (vInfectionLevel > 0.01) {
+                    // 감염 전선 글로우 (붉은빛)
+                    float infectionFrontGlow = 0.0;
+                    if (vInfectionLevel > 0.05 && vInfectionLevel < 0.95) {
+                        // 전선 감지
+                        float frontStrength = sin(vInfectionLevel * 3.14159);
+                        infectionFrontGlow = frontStrength * 0.8;
+                        
+                        // 붉은 글로우 + 펄스 효과
+                        vec3 infectionGlow = vec3(1.0, 0.1, 0.0) * infectionFrontGlow;
+                        infectionGlow *= (1.0 + sin(time * 5.0) * 0.3);
+                        finalColor += infectionGlow;
+                    }
+                    
+                    // 감염된 부분은 검은색으로 (서서히)
+                    vec3 infectedColor = vec3(0.05, 0.05, 0.05); // 거의 검은색
+                    finalColor = mix(finalColor, infectedColor, vInfectionLevel);
+                    
+                    // 감염 진행에 따른 어두운 펄스
+                    float darkPulse = sin(time * 3.0 + vCubeIndex * 0.01) * 0.05;
+                    finalColor *= (1.0 - vInfectionLevel * 0.5 + darkPulse);
+                }
                 
                 // 프랙탈 색상 변조 (더 미묘하게)
                 if (fractalIntensity > 0.01) {
@@ -764,6 +1086,9 @@
             document.getElementById('gameCanvas').addEventListener('click', onClick);
             document.getElementById('gameCanvas').addEventListener('wheel', onWheel);
             
+            // 일시정지 버튼
+            document.getElementById('pauseBtn').addEventListener('click', togglePause);
+            
             // 터치 이벤트
             document.getElementById('gameCanvas').addEventListener('touchstart', onTouchStart, { passive: false });
             document.getElementById('gameCanvas').addEventListener('touchmove', onTouchMove, { passive: false });
@@ -796,7 +1121,13 @@
                     recoveryStartTime: { value: -1 },
                     currentTime: { value: 0 },
                     fractalIntensity: { value: 0 },
-                    fractalCenter: { value: new THREE.Vector2(0, 0) }
+                    fractalCenter: { value: new THREE.Vector2(0, 0) },
+                    infectionStartTime: { value: -1 },
+                    infectionOrigin: { value: new THREE.Vector3(0, 0, 0) },
+                    infectionRadius: { value: 0 },
+                    extinctionStartTime: { value: -1 },
+                    regenerationStartTime: { value: -1 },
+                    regenerationProgress: { value: 0 }
                 },
                 transparent: true,
                 side: THREE.DoubleSide
@@ -870,16 +1201,28 @@
             console.log('✅ GPU Compute setup complete! 1,000,000 cubes with rainbow colors ready.');
         }
         
-        // 게임 시작
-        function startGame() {
-            document.getElementById('startScreen').classList.add('hide');
-            gameStarted = true;
-            gameStartTime = Date.now();
-            lastExplosionTime = Date.now();
-            lastSeparationTime = Date.now();
+        // 일시정지/재개
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            
+            if (isPaused) {
+                pausedTime = Date.now();
+                btn.textContent = '▶ RESUME';
+                btn.classList.add('paused');
+            } else {
+                const pauseDuration = Date.now() - pausedTime;
+                totalPausedDuration += pauseDuration;
+                
+                // 모든 시간 기준점을 조정
+                gameStartTime += pauseDuration;
+                lastExplosionTime += pauseDuration;
+                lastSeparationTime += pauseDuration;
+                
+                btn.textContent = '⏸ PAUSE';
+                btn.classList.remove('paused');
+            }
         }
-        
-        window.startGame = startGame;
         
         // 붕괴 파티클 생성
         function createCollapseParticles() {
@@ -963,6 +1306,97 @@
                     scene.add(particle);
                     explosionParticles.push(particle);
                 }
+            }
+        }
+        
+        // 감염 파티클 생성
+        function createInfectionParticles() {
+            if (!infectionTriggered) return;
+            
+            // 감염 전선에서 파티클 생성
+            const timeSinceInfection = (Date.now() - gameStartTime - INFECTION_TRIGGER_TIME) / 1000;
+            const currentRadius = timeSinceInfection * 10; // 확산 속도
+            
+            // 구 표면에서 랜덤 위치
+            for (let i = 0; i < 12; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                const position = new THREE.Vector3(
+                    infectionOrigin.x + currentRadius * Math.sin(phi) * Math.cos(theta),
+                    infectionOrigin.y + currentRadius * Math.sin(phi) * Math.sin(theta),
+                    infectionOrigin.z + currentRadius * Math.cos(phi)
+                );
+                
+                // 검은 파티클들 (감염)
+                const geometry = new THREE.SphereGeometry(0.12, 4, 4);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: new THREE.Color(0.1, 0.0, 0.0), // 어두운 빨강
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                
+                particle.position.copy(position);
+                
+                // 바깥쪽으로 퍼져나감
+                const direction = position.clone().sub(infectionOrigin).normalize();
+                
+                particle.userData = {
+                    velocity: direction.multiplyScalar(0.3),
+                    life: 30,
+                    maxLife: 30
+                };
+                
+                scene.add(particle);
+                explosionParticles.push(particle);
+            }
+        }
+        
+        // 황금 재생성 파티클 생성
+        function createRegenerationParticles() {
+            if (!regenerationTriggered || regenerationProgress >= 1.0) return;
+            
+            // 재생성 전선에서 황금 파티클 생성
+            const regeneratedCubes = Math.floor(regenerationProgress * TOTAL_CUBES);
+            
+            // 랜덤하게 여러 위치에서 생성
+            for (let i = 0; i < 20; i++) {
+                const randomIndex = Math.floor(Math.random() * regeneratedCubes);
+                if (randomIndex >= cubeData.length) continue;
+                
+                const randomCube = cubeData[randomIndex];
+                if (!randomCube) continue;
+                
+                const position = randomCube.position.clone();
+                
+                // 황금색 파티클들
+                const geometry = new THREE.SphereGeometry(0.15, 6, 6);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: new THREE.Color(1.0, 0.84, 0.0), // 순금색
+                    transparent: true,
+                    opacity: 1.0
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                
+                particle.position.copy(position);
+                particle.position.x += (Math.random() - 0.5) * 2;
+                particle.position.y += (Math.random() - 0.5) * 2;
+                particle.position.z += (Math.random() - 0.5) * 2;
+                
+                particle.userData = {
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.5,
+                        Math.random() * 0.8 + 0.5, // 위로 상승
+                        (Math.random() - 0.5) * 0.5
+                    ),
+                    life: 40,
+                    maxLife: 40,
+                    isGolden: true
+                };
+                
+                scene.add(particle);
+                explosionParticles.push(particle);
             }
         }
         
@@ -1236,6 +1670,12 @@
         function animate() {
             requestAnimationFrame(animate);
             
+            // 일시정지 시 렌더링만 수행
+            if (isPaused) {
+                renderer.render(scene, camera);
+                return;
+            }
+            
             // FPS 측정
             frames++;
             const currentTime = performance.now();
@@ -1252,7 +1692,14 @@
                     const seconds = elapsedSeconds % 60;
                     const timerText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
                     
-                    if (recoveryTriggered) {
+                    if (regenerationTriggered) {
+                        const percent = Math.floor(regenerationProgress * 100);
+                        document.getElementById('timer').innerHTML = `<span style="color:#FFD700; background:#000000; padding:2px 8px;">✨ REBIRTH ${percent}%! ${timerText}</span>`;
+                    } else if (extinctionTriggered) {
+                        document.getElementById('timer').innerHTML = `<span style="color:#000000; background:#ffffff; padding:2px 8px;">💀 EXTINCTION! ${timerText}</span>`;
+                    } else if (infectionTriggered) {
+                        document.getElementById('timer').innerHTML = `<span style="color:#000000; background:#ff0000; padding:2px 8px;">🦠 INFECTION! ${timerText}</span>`;
+                    } else if (recoveryTriggered) {
                         document.getElementById('timer').innerHTML = `<span style="color:#00ff00">✨ RECOVERY! ${timerText}</span>`;
                     } else if (collapseTriggered) {
                         document.getElementById('timer').innerHTML = `<span style="color:#ff0000">⚠️ COLLAPSE! ${timerText}</span>`;
@@ -1316,6 +1763,79 @@
                     recoveryTriggered = true;
                     recoveryStartTime = time;
                     console.log('✨ 군집 복구 시작! Colony Recovery initiated!');
+                }
+            }
+            
+            // 140초 후 감염 시작
+            if (!infectionTriggered && gameStarted) {
+                const timeSinceStart = currentGameTime - gameStartTime;
+                if (timeSinceStart >= INFECTION_TRIGGER_TIME) {
+                    infectionTriggered = true;
+                    infectionStartTime = time;
+                    
+                    // 무작위 위치에서 감염 시작
+                    infectionOrigin.set(
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100
+                    );
+                    
+                    console.log('🦠 세포 증식 감염 시작! Cellular infection initiated!', infectionOrigin);
+                }
+            }
+            
+            // 180초 후 소멸 시작
+            if (!extinctionTriggered && gameStarted) {
+                const timeSinceStart = currentGameTime - gameStartTime;
+                if (timeSinceStart >= EXTINCTION_TRIGGER_TIME) {
+                    extinctionTriggered = true;
+                    extinctionStartTime = time;
+                    console.log('💀 완전 소멸 시작! Total extinction initiated!');
+                }
+            }
+            
+            // 소멸 완료 후 재생성 시작
+            if (extinctionTriggered && !regenerationTriggered && gameStarted) {
+                const timeSinceExtinction = currentGameTime - gameStartTime - EXTINCTION_TRIGGER_TIME;
+                if (timeSinceExtinction >= EXTINCTION_DURATION) {
+                    regenerationTriggered = true;
+                    regenerationStartTime = time;
+                    regenerationProgress = 0;
+                    console.log('✨ 황금 재생성 시작! Golden regeneration initiated!');
+                }
+            }
+            
+            // 재생성 진행도 업데이트
+            if (regenerationTriggered && gameStarted) {
+                const timeSinceRegeneration = currentGameTime - gameStartTime - EXTINCTION_TRIGGER_TIME - EXTINCTION_DURATION;
+                regenerationProgress = Math.min(timeSinceRegeneration / REGENERATION_DURATION, 1.0);
+                
+                // 재생성 완료 후 모든 상태 리셋
+                if (regenerationProgress >= 1.0 && timeSinceRegeneration >= REGENERATION_DURATION + 1000) {
+                    console.log('🔄 순환 완료! 새로운 사이클 시작! Cycle complete! New cycle starting!');
+                    
+                    // 모든 상태 초기화
+                    gameStartTime = Date.now();
+                    lastExplosionTime = Date.now();
+                    lastSeparationTime = Date.now();
+                    
+                    collapseTriggered = false;
+                    collapseStartTime = -1;
+                    recoveryTriggered = false;
+                    recoveryStartTime = -1;
+                    
+                    infectionTriggered = false;
+                    infectionStartTime = -1;
+                    
+                    extinctionTriggered = false;
+                    extinctionStartTime = -1;
+                    
+                    regenerationTriggered = false;
+                    regenerationStartTime = -1;
+                    regenerationProgress = 0;
+                    
+                    fractalTriggered = false;
+                    fractalIntensity = 0;
                 }
             }
             
@@ -1384,6 +1904,21 @@
                     Math.sin(time * 0.1) * 0.5,
                     Math.cos(time * 0.15) * 0.5
                 );
+                
+                // 감염 시스템 업데이트
+                cubeMesh.material.uniforms.infectionStartTime.value = infectionStartTime;
+                cubeMesh.material.uniforms.infectionOrigin.value.copy(infectionOrigin);
+                
+                // 감염 반경 계산
+                if (infectionTriggered) {
+                    const timeSinceInfection = currentGameTime - gameStartTime - INFECTION_TRIGGER_TIME;
+                    cubeMesh.material.uniforms.infectionRadius.value = timeSinceInfection / 100; // 확산 속도
+                }
+                
+                // 소멸/재생성 시스템 업데이트
+                cubeMesh.material.uniforms.extinctionStartTime.value = extinctionStartTime;
+                cubeMesh.material.uniforms.regenerationStartTime.value = regenerationStartTime;
+                cubeMesh.material.uniforms.regenerationProgress.value = regenerationProgress;
                 
                 // 조명 정보 업데이트
                 const lightPos = [];
@@ -1475,6 +2010,16 @@
             // 복구 파티클 생성 (0.5초에 한 번)
             if (recoveryTriggered && frames % 30 === 0) {
                 createRecoveryParticles();
+            }
+            
+            // 감염 파티클 생성 (0.3초에 한 번)
+            if (infectionTriggered && frames % 18 === 0) {
+                createInfectionParticles();
+            }
+            
+            // 황금 재생성 파티클 생성 (0.1초에 한 번, 매우 빠르게)
+            if (regenerationTriggered && regenerationProgress < 1.0 && frames % 6 === 0) {
+                createRegenerationParticles();
             }
             
             // 레이저 빔 업데이트
