@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Life - 완만한 프랙탈 생명 주기 60FPS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght:400;700;900&family=Rajdhani:wght:300;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: #000000;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 50%, #0a0520, #000000);
+        }
+        
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        #fps {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff00;
+            font-size: 28px;
+            font-weight: 700;
+            text-shadow: 0 0 10px #00ff00;
+            font-family: 'Orbitron', monospace;
+        }
+        
+        #info {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            color: #00ffff;
+            font-size: 18px;
+            text-shadow: 0 0 10px #00ffff;
+            font-family: 'Orbitron', monospace;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ffff;
+            text-align: center;
+            font-size: 18px;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+            opacity: 0.8;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            pointer-events: all;
+        }
+        
+        #startScreen.hide {
+            display: none;
+        }
+        
+        .game-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 96px;
+            font-weight: 900;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ff00ff);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient 3s ease infinite;
+            margin-bottom: 30px;
+        }
+        
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .subtitle {
+            font-size: 32px;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+            margin-bottom: 50px;
+            letter-spacing: 8px;
+            font-weight: 600;
+        }
+        
+        .instructions {
+            max-width: 800px;
+            text-align: center;
+            color: #ffffff;
+            font-size: 14px;
+            line-height: 2;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .start-btn {
+            font-family: 'Orbitron', monospace;
+            font-size: 32px;
+            font-weight: 700;
+            padding: 20px 60px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: 4px solid #ffffff;
+            color: #000000;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            box-shadow: 0 0 40px #ff00ff, 0 0 80px #00ffff;
+            transition: all 0.3s;
+            animation: glow 2s infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 40px #ff00ff, 0 0 80px #00ffff; }
+            50% { box-shadow: 0 0 60px #ff00ff, 0 0 120px #00ffff; }
+        }
+        
+        .start-btn:hover {
+            transform: scale(1.1) rotate(2deg);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div id="fps">FPS: 60</div>
+        <div id="info">GPU Compute: Active<br>Cubes: 1,000,000<br>Rotation: ON 🌍<br>Separation: Dynamic 🌌<br>Fractal: Mandelbrot 🌀<br>Life Cycle: Active 🐝✨<br><span id="timer">Time: 0:00</span></div>
+        <div id="controls">
+            클릭: 레이저 발사 ⚡ | 드래그: 회전 | 휠: 줌 (큐브 내부 진입 가능!) 🔍
+        </div>
+    </div>
+    
+    <div id="startScreen">
+        <div class="game-title">FRACTAL LIFE</div>
+        <div class="subtitle">완만한 프랙탈 생명 주기</div>
+        <div class="instructions">
+            🚀 <strong>GPU Compute Shader 기술</strong> - 모든 계산을 GPU에서 병렬 처리! 🚀<br>
+            100×100×100 = 1,000,000개 <strong>무지개 큐브</strong>를 <strong>완벽한 60FPS</strong>로 렌더링합니다.<br><br>
+            🌈 <strong>다양한 색상</strong>: 각 큐브마다 고유한 무지개 색상! 💎<br>
+            ⬛ <strong>검은색 외곽선</strong>: Fresnel 효과로 큐브 경계가 선명하게! ✨<br>
+            💡 <strong>실시간 광원</strong>: 7개 포인트 라이트가 큐브를 비추며 궤도 회전! ✨<br>
+            🌍 <strong>지구 자전</strong>: 각 큐브가 3축 회전하며 자전합니다! 🔄<br>
+            🌌 <strong>기하급수 분리</strong>: 30초마다 큐브 간 거리가 3배까지 서서히 증가! 📏<br>
+            🌀 <strong>만델브로트 프랙탈</strong>: <span style="color:#ff00ff">10초 후</span> z²+c 수식으로 다차원 변형! 🔮<br>
+            🔍 <strong>극한 줌인</strong>: 큐브 내부까지 들어가서 탐험 가능! 🎮<br>
+            🐝 <strong>벌 군집 붕괴</strong>: <span style="color:#ff0000">70초 후</span> 완만하게 연쇄 붕괴! ⚠️<br>
+            ✨ <strong>기하급수 복구</strong>: <span style="color:#00ff00">붕괴 완료 후</span> 하나씩 기하급수적으로 복구! 🌱<br>
+            20초마다 모든 큐브가 부드럽게 폭발했다가 재결합합니다.<br><br>
+            <strong>프랙탈 효과:</strong><br>
+            ▪ 만델브로트 집합: z(n+1) = z(n)² + c<br>
+            ▪ 줄리아 집합: 시간에 따라 변화하는 파라미터<br>
+            ▪ 만델불브: 3D 공간의 멱승 프랙탈<br>
+            ▪ 8초 페이드 인 → 24초 유지 → 8초 페이드 아웃<br><br>
+            <strong>모든 변화가 부드럽고 완만하게 진행됩니다!</strong><br>
+            클릭하면 초고속 레이저가 발사되어 큐브를 파괴합니다! 💥<br>
+            <strong>생명 주기를 관찰하세요:</strong><br>
+            <strong style="color:#ff00ff">0:10</strong> 프랙탈 시작 → 
+            <strong style="color:#ffff00">1:05</strong> 경고 → 
+            <strong style="color:#ff0000">1:10</strong> 붕괴 시작 → 
+            <strong style="color:#00ff00">2:00</strong> 복구 시작! 🌀🐝✨
+        </div>
+        <button class="start-btn" onclick="startGame()">GO!!</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer;
+        let cubeMesh;
+        let cubeData = [];
+        let explosionParticles = [];
+        let laserBeams = [];
+        let lights = [];
+        let gameStarted = false;
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let raycaster, mouse;
+        let mouseMoved = false;
+        let gameStartTime = 0;
+        
+        // 폭발 애니메이션 상태
+        let explosionCycle = 0;
+        let lastExplosionTime = 0;
+        const EXPLOSION_INTERVAL = 20000; // 20초
+        const EXPLOSION_DURATION = 5000; // 5초
+        
+        // 회전 및 분리 애니메이션
+        let rotationTime = 0;
+        let separationCycle = 0;
+        let lastSeparationTime = 0;
+        const SEPARATION_INTERVAL = 30000; // 30초마다 분리/재결합
+        const SEPARATION_DURATION = 10000; // 10초 동안 분리
+        
+        // 벌 군집 붕괴
+        let collapseStartTime = -1;
+        let collapseTriggered = false;
+        const COLLAPSE_TRIGGER_TIME = 70000; // 70초로 변경 (더 늦게)
+        const COLLAPSE_DURATION = 50000; // 50초 동안 붕괴 (더 길게)
+        
+        // 군집 복구
+        let recoveryStartTime = -1;
+        let recoveryTriggered = false;
+        const RECOVERY_DURATION = 40000; // 40초 동안 복구 (더 길게)
+        
+        // 프랙탈 변형
+        let fractalIntensity = 0;
+        let fractalTriggered = false;
+        const FRACTAL_TRIGGER_TIME = 10000; // 10초 후 프랙탈 시작
+        const FRACTAL_CYCLE_DURATION = 40000; // 40초 프랙탈 사이클 (더 길게)
+        const FRACTAL_FADE_IN = 8000; // 8초 페이드 인
+        const FRACTAL_FADE_OUT = 8000; // 8초 페이드 아웃
+        
+        // FPS 측정
+        let lastTime = performance.now();
+        let frames = 0;
+        let fps = 60;
+        
+        const GRID_SIZE = 100;
+        const CUBE_SIZE = 0.9;
+        const CUBE_GAP = 1.2;
+        const TOTAL_CUBES = GRID_SIZE * GRID_SIZE * GRID_SIZE;
+        
+        // GPU Compute Shader용 Vertex Shader
+        const vertexShader = `
+            // 인스턴스별 속성
+            attribute vec3 basePosition;
+            attribute vec3 explosionDirection;
+            attribute float cubeIndex;
+            attribute vec3 cubeColor;
+            
+            // 유니폼 변수
+            uniform float time;
+            uniform float explosionCycle;
+            uniform float explosionDistance;
+            uniform float rotationTime;
+            uniform float separationFactor;
+            uniform float collapseStartTime;
+            uniform float recoveryStartTime;
+            uniform float currentTime;
+            uniform float fractalIntensity;
+            uniform vec2 fractalCenter;
+            
+            // Fragment Shader로 전달
+            varying vec3 vNormal;
+            varying vec3 vPosition;
+            varying float vExplosion;
+            varying vec3 vColor;
+            varying vec3 vViewPosition;
+            varying float vOpacity;
+            varying float vCubeIndex;
+            varying float vFractalDepth;
+            
+            // 회전 행렬 생성 함수
+            mat3 rotateY(float angle) {
+                float s = sin(angle);
+                float c = cos(angle);
+                return mat3(
+                    c, 0.0, s,
+                    0.0, 1.0, 0.0,
+                    -s, 0.0, c
+                );
+            }
+            
+            mat3 rotateX(float angle) {
+                float s = sin(angle);
+                float c = cos(angle);
+                return mat3(
+                    1.0, 0.0, 0.0,
+                    0.0, c, -s,
+                    0.0, s, c
+                );
+            }
+            
+            mat3 rotateZ(float angle) {
+                float s = sin(angle);
+                float c = cos(angle);
+                return mat3(
+                    c, -s, 0.0,
+                    s, c, 0.0,
+                    0.0, 0.0, 1.0
+                );
+            }
+            
+            // 복소수 곱셈
+            vec2 complexMul(vec2 a, vec2 b) {
+                return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+            }
+            
+            // 만델브로트 집합 계산
+            // z(n+1) = z(n)^2 + c
+            float mandelbrot(vec2 c, int maxIter) {
+                vec2 z = vec2(0.0, 0.0);
+                float iter = 0.0;
+                
+                for (int i = 0; i < 20; i++) {
+                    if (i >= maxIter) break;
+                    
+                    // z^2
+                    z = complexMul(z, z);
+                    // z^2 + c
+                    z += c;
+                    
+                    // 탈출 조건
+                    if (length(z) > 2.0) {
+                        return iter / float(maxIter);
+                    }
+                    
+                    iter += 1.0;
+                }
+                
+                return 1.0; // 집합 내부
+            }
+            
+            // 4D 만델브로트 변형 (쿼터니언)
+            vec4 quaternionMul(vec4 a, vec4 b) {
+                return vec4(
+                    a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+                    a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+                    a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+                    a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z
+                );
+            }
+            
+            // 4D 만델브로트 (만델불브)
+            float mandelbulb(vec3 pos, float power) {
+                vec3 z = pos;
+                float dr = 1.0;
+                float r = 0.0;
+                
+                for (int i = 0; i < 8; i++) {
+                    r = length(z);
+                    
+                    if (r > 2.0) break;
+                    
+                    // 구면 좌표로 변환
+                    float theta = acos(z.z / r);
+                    float phi = atan(z.y, z.x);
+                    dr = pow(r, power - 1.0) * power * dr + 1.0;
+                    
+                    // 멱승 적용
+                    float zr = pow(r, power);
+                    theta = theta * power;
+                    phi = phi * power;
+                    
+                    // 데카르트 좌표로 복귀
+                    z = zr * vec3(
+                        sin(theta) * cos(phi),
+                        sin(theta) * sin(phi),
+                        cos(theta)
+                    );
+                    z += pos;
+                }
+                
+                return 0.5 * log(r) * r / dr;
+            }
+            
+            // 줄리아 집합 계산
+            float julia(vec2 z, vec2 c, int maxIter) {
+                float iter = 0.0;
+                
+                for (int i = 0; i < 20; i++) {
+                    if (i >= maxIter) break;
+                    
+                    z = complexMul(z, z) + c;
+                    
+                    if (length(z) > 2.0) {
+                        return iter / float(maxIter);
+                    }
+                    
+                    iter += 1.0;
+                }
+                
+                return 1.0;
+            }
+            
+            // 붕괴 계산 (도미노 효과 - 더 완만하게)
+            float calculateCollapse(float cubeIdx, float collapseStart, float currentT) {
+                if (collapseStart < 0.0) return 1.0; // 붕괴 시작 전
+                
+                float timeSinceCollapse = currentT - collapseStart;
+                if (timeSinceCollapse < 0.0) return 1.0;
+                
+                // 파동처럼 퍼지는 붕괴 (중심에서 외곽으로) - 더 느리게
+                float wave1 = sin(cubeIdx * 0.00008 + timeSinceCollapse * 0.3) * 0.5 + 0.5;
+                float wave2 = sin(cubeIdx * 0.00012 - timeSinceCollapse * 0.2) * 0.5 + 0.5;
+                float wave3 = sin(cubeIdx * 0.0001 + timeSinceCollapse * 0.4) * 0.5 + 0.5;
+                
+                // 복합 파동
+                float wavePattern = (wave1 + wave2 + wave3) / 3.0;
+                
+                // 시간에 따른 전체적 감소 - 더 완만하게
+                float globalDecay = 1.0 - smoothstep(0.0, 50.0, timeSinceCollapse);
+                
+                // 무작위성 추가 (벌 군집 붕괴처럼) - 더 부드럽게
+                float randomFactor = fract(sin(cubeIdx * 12.9898) * 43758.5453);
+                float randomDecay = smoothstep(randomFactor * 35.0, randomFactor * 35.0 + 10.0, timeSinceCollapse);
+                
+                // 최소값 보장 (완전히 사라지지 않음)
+                float minOpacity = 0.05;
+                return max(minOpacity, globalDecay * (1.0 - randomDecay * 0.95) * wavePattern);
+            }
+            
+            // 복구 계산 (기하급수적 재생 - 더 완만하게)
+            float calculateRecovery(float cubeIdx, float recoveryStart, float currentT) {
+                if (recoveryStart < 0.0) return 0.0; // 복구 시작 전
+                
+                float timeSinceRecovery = currentT - recoveryStart;
+                if (timeSinceRecovery < 0.0) return 0.0;
+                
+                // 기하급수적 증가 (exponential growth) - 더 느리게
+                float baseGrowth = 1.0 - exp(-timeSinceRecovery * 0.05);
+                
+                // 파동 패턴 (붕괴와 반대 방향) - 더 부드럽게
+                float wave1 = sin(cubeIdx * 0.00008 - timeSinceRecovery * 0.4) * 0.5 + 0.5;
+                float wave2 = sin(cubeIdx * 0.00012 + timeSinceRecovery * 0.3) * 0.5 + 0.5;
+                float wave3 = sin(cubeIdx * 0.0001 - timeSinceRecovery * 0.5) * 0.5 + 0.5;
+                
+                float wavePattern = (wave1 + wave2 + wave3) / 3.0;
+                
+                // 무작위 복구 타이밍 - 더 빠르게 시작
+                float randomFactor = fract(sin(cubeIdx * 78.233) * 43758.5453);
+                float randomStart = randomFactor * 20.0; // 0~20초 사이 무작위 시작
+                float randomGrowth = smoothstep(randomStart, randomStart + 12.0, timeSinceRecovery);
+                
+                return baseGrowth * randomGrowth * wavePattern;
+            }
+            
+            void main() {
+                // 붕괴 투명도 계산
+                float collapseFactor = calculateCollapse(cubeIndex, collapseStartTime, currentTime);
+                
+                // 복구 투명도 계산
+                float recoveryFactor = calculateRecovery(cubeIndex, recoveryStartTime, currentTime);
+                
+                // 최종 투명도: 붕괴 후 복구
+                // 복구가 시작되면 collapseFactor는 거의 0, recoveryFactor가 증가
+                vOpacity = collapseFactor + recoveryFactor * (1.0 - collapseFactor);
+                vOpacity = clamp(vOpacity, 0.0, 1.0);
+                
+                vCubeIndex = cubeIndex;
+                
+                // 기하급수적 거리 증가 (1 ~ 3배)
+                float distanceMultiplier = 1.0 + separationFactor * 2.0;
+                vec3 separatedPosition = basePosition * distanceMultiplier;
+                
+                // 폭발 오프셋 계산
+                vec3 offset = explosionDirection * explosionDistance * explosionCycle;
+                
+                // 붕괴 시 아래로 떨어지는 효과 - 더 완만하게
+                float collapseFall = (1.0 - collapseFactor) * 30.0;
+                
+                // 복구 시 아래에서 위로 올라오는 효과 - 더 완만하게
+                float recoveryRise = recoveryFactor * 30.0 * (1.0 - collapseFactor);
+                
+                offset.y -= collapseFall;
+                offset.y += recoveryRise;
+                
+                vec3 finalPosition = separatedPosition + offset;
+                
+                // 프랙탈 변형 적용 (부드럽게)
+                if (fractalIntensity > 0.01) {
+                    // 3D 위치를 복소 평면에 매핑
+                    vec2 complexPos = vec2(
+                        finalPosition.x * 0.008 + fractalCenter.x,
+                        finalPosition.z * 0.008 + fractalCenter.y
+                    );
+                    
+                    // 시간에 따라 변화하는 줄리아 집합 파라미터
+                    vec2 juliaC = vec2(
+                        -0.7 + sin(currentTime * 0.2) * 0.2,
+                        0.27015 + cos(currentTime * 0.15) * 0.15
+                    );
+                    
+                    // 만델브로트 계산
+                    float mandel = mandelbrot(complexPos, 12);
+                    
+                    // 줄리아 계산
+                    float juliaValue = julia(complexPos, juliaC, 12);
+                    
+                    // 3D 만델불브 계산
+                    vec3 bulbPos = finalPosition * 0.015;
+                    float bulbPower = 3.0 + sin(currentTime * 0.3) * 3.0;
+                    float bulb = mandelbulb(bulbPos, bulbPower);
+                    
+                    // 프랙탈 깊이 저장
+                    vFractalDepth = mandel * juliaValue;
+                    
+                    // 프랙탈에 따른 위치 변형 - 더 부드럽게
+                    float warp = (1.0 - mandel) * 8.0 * fractalIntensity;
+                    float juliaWarp = (1.0 - juliaValue) * 6.0 * fractalIntensity;
+                    float bulbWarp = bulb * 3.0 * fractalIntensity;
+                    
+                    // 다차원적 변형 - 진폭 감소
+                    finalPosition.x += sin(warp + currentTime * 0.5) * (warp + juliaWarp) * 0.8;
+                    finalPosition.y += cos(warp * 1.2 - currentTime * 0.4) * (warp + bulbWarp) * 0.8;
+                    finalPosition.z += sin(warp * 0.8 + currentTime * 0.3) * (juliaWarp + bulbWarp) * 0.8;
+                    
+                    // 회전 효과 추가 - 더 느리게
+                    float angle = mandel * 3.14159 * fractalIntensity * 0.5;
+                    float c = cos(angle);
+                    float s = sin(angle);
+                    float x = finalPosition.x;
+                    float z = finalPosition.z;
+                    finalPosition.x = x * c - z * s;
+                    finalPosition.z = x * s + z * c;
+                    
+                    // 스케일 변형 - 더 미묘하게
+                    float scale = 1.0 + (1.0 - mandel) * 0.3 * fractalIntensity;
+                    finalPosition *= scale;
+                } else {
+                    vFractalDepth = 0.5;
+                }
+                
+                // 지구 자전처럼 회전 (각 큐브마다 다른 속도)
+                float rotationSpeed = 1.0 + sin(cubeIndex * 0.001) * 0.5;
+                
+                // 붕괴 시 회전 가속 - 더 완만하게
+                float collapseRotationBoost = (1.0 - collapseFactor) * 2.0;
+                
+                // 복구 시 회전 감속 (부드럽게 정상으로) - 더 완만하게
+                float recoveryRotationDamping = recoveryFactor * 1.0;
+                
+                rotationSpeed *= (1.0 + collapseRotationBoost - recoveryRotationDamping);
+                rotationSpeed = max(rotationSpeed, 0.3); // 최소 속도 보장
+                
+                float angleY = rotationTime * rotationSpeed;
+                float angleX = rotationTime * rotationSpeed * 0.7;
+                float angleZ = rotationTime * rotationSpeed * 0.3;
+                
+                // 회전 행렬 적용
+                mat3 rotation = rotateY(angleY) * rotateX(angleX) * rotateZ(angleZ);
+                vec3 rotatedPosition = rotation * position;
+                
+                // 최종 변환
+                vec3 transformed = rotatedPosition + finalPosition;
+                
+                // 월드 좌표
+                vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
+                vPosition = worldPosition.xyz;
+                
+                // 뷰 좌표 (카메라 기준)
+                vec4 viewPosition = viewMatrix * worldPosition;
+                vViewPosition = viewPosition.xyz;
+                
+                // 회전된 법선
+                vNormal = normalize(normalMatrix * rotation * normal);
+                
+                // 폭발 강도
+                vExplosion = explosionCycle;
+                
+                // 색상 전달
+                vColor = cubeColor;
+                
+                // 최종 위치
+                gl_Position = projectionMatrix * viewPosition;
+            }
+        `;
+        
+        // Fragment Shader - 실제 조명 계산 + 외곽선 + 붕괴
+        const fragmentShader = `
+            uniform vec3 baseColor;
+            uniform float time;
+            uniform vec3 lightPositions[7];
+            uniform vec3 lightColors[7];
+            uniform float lightIntensities[7];
+            uniform float fractalIntensity;
+            
+            varying vec3 vNormal;
+            varying vec3 vPosition;
+            varying float vExplosion;
+            varying vec3 vColor;
+            varying vec3 vViewPosition;
+            varying float vOpacity;
+            varying float vCubeIndex;
+            varying float vFractalDepth;
+            
+            void main() {
+                // 붕괴 시 버리기 조건 완화 (거의 사라지지 않음)
+                if (vOpacity < 0.02) discard;
+                
+                vec3 finalColor = vec3(0.0);
+                
+                // Ambient 기본 조명
+                vec3 ambient = vColor * 0.3;
+                
+                // 각 포인트 라이트 계산
+                for (int i = 0; i < 7; i++) {
+                    vec3 lightDir = normalize(lightPositions[i] - vPosition);
+                    float distance = length(lightPositions[i] - vPosition);
+                    
+                    // Diffuse
+                    float diff = max(dot(vNormal, lightDir), 0.0);
+                    
+                    // Attenuation (거리 감쇠)
+                    float attenuation = 1.0 / (1.0 + 0.001 * distance + 0.0001 * distance * distance);
+                    
+                    // 라이트 기여도
+                    vec3 diffuse = lightColors[i] * diff * lightIntensities[i] * attenuation;
+                    finalColor += diffuse;
+                }
+                
+                // 폭발 시 글로우 효과
+                float glow = vExplosion * 0.5;
+                finalColor += vec3(0.0, glow, glow);
+                
+                // 붕괴 시 글로우 (사라지는 빛 - 시안)
+                float collapseFactor = 1.0 - vOpacity;
+                if (vOpacity < 0.5) {
+                    float collapseGlow = collapseFactor * 0.8;
+                    finalColor += vec3(collapseGlow * 0.5, collapseGlow * 0.8, collapseGlow);
+                }
+                
+                // 복구 시 글로우 (생성되는 빛 - 초록)
+                if (vOpacity > 0.1 && vOpacity < 0.8) {
+                    float recoveryGlow = vOpacity * 0.6;
+                    finalColor += vec3(recoveryGlow * 0.3, recoveryGlow, recoveryGlow * 0.3);
+                }
+                
+                // 최종 색상
+                finalColor = (ambient + finalColor) * vColor;
+                
+                // 프랙탈 색상 변조 (더 미묘하게)
+                if (fractalIntensity > 0.01) {
+                    // 프랙탈 깊이에 따른 색상 변화
+                    float hueShift = vFractalDepth * 0.2;
+                    vec3 fractalColor = vec3(
+                        0.5 + 0.5 * sin(vFractalDepth * 6.28 + time * 0.5),
+                        0.5 + 0.5 * sin(vFractalDepth * 6.28 + time * 0.5 + 2.09),
+                        0.5 + 0.5 * sin(vFractalDepth * 6.28 + time * 0.5 + 4.18)
+                    );
+                    
+                    // 프랙탈 글로우 - 더 미묘하게
+                    float fractalGlow = (1.0 - vFractalDepth) * fractalIntensity * 0.4;
+                    finalColor += fractalColor * fractalGlow;
+                    
+                    // 가장자리 강조 - 더 부드럽게
+                    if (vFractalDepth < 0.3) {
+                        float edgeGlow = (0.3 - vFractalDepth) * 2.0 * fractalIntensity;
+                        finalColor += vec3(1.0, 0.5, 1.0) * edgeGlow;
+                    }
+                    
+                    // 색상 혼합 - 더 미묘하게
+                    finalColor = mix(finalColor, fractalColor, fractalIntensity * 0.15);
+                }
+                
+                // 외곽선 효과 (Fresnel/Rim Lighting)
+                vec3 viewDir = normalize(-vViewPosition);
+                float rimFactor = 1.0 - max(dot(vNormal, viewDir), 0.0);
+                rimFactor = pow(rimFactor, 3.0);
+                
+                // 가장자리를 검은색으로
+                vec3 edgeColor = vec3(0.0, 0.0, 0.0);
+                float edgeWidth = 0.3;
+                
+                if (rimFactor > (1.0 - edgeWidth)) {
+                    float edgeStrength = (rimFactor - (1.0 - edgeWidth)) / edgeWidth;
+                    finalColor = mix(finalColor, edgeColor, edgeStrength);
+                }
+                
+                gl_FragColor = vec4(finalColor, vOpacity);
+            }
+        `;
+        
+        // Three.js 초기화
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.001); // 안개 농도 감소
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 2000);
+            camera.position.set(120, 120, 120); // 더 멀리서 시작
+            camera.lookAt(0, 0, 0);
+            
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('gameCanvas'),
+                antialias: false, // 성능을 위해 안티앨리어싱 끔
+                alpha: false,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.setClearColor(0x000000, 1);
+            
+            // 레이캐스터 초기화
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            // 조명
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            // 6개 포인트 라이트
+            const lightColors = [0xff00ff, 0x00ffff, 0xffff00, 0xff0080, 0x00ff80, 0xff8000];
+            const lightPositions = [
+                [80, 80, 80], [-80, -80, -80], [80, -80, -80], 
+                [-80, 80, 80], [0, 100, 0], [0, -100, 0]
+            ];
+            
+            for (let i = 0; i < 6; i++) {
+                const light = new THREE.PointLight(lightColors[i], 5, 500); // 300 -> 500
+                light.position.set(...lightPositions[i]);
+                light.userData = {
+                    baseIntensity: 5,
+                    basePosition: new THREE.Vector3(...lightPositions[i]),
+                    orbitSpeed: 0.2 + Math.random() * 0.3,
+                    orbitRadius: 15,
+                    orbitPhase: Math.random() * Math.PI * 2
+                };
+                scene.add(light);
+                lights.push(light);
+            }
+            
+            // 중앙 글로우
+            const centerLight = new THREE.PointLight(0x00ffff, 5, 300); // 200 -> 300
+            centerLight.position.set(0, 0, 0);
+            centerLight.userData = {
+                baseIntensity: 5,
+                isCenterGlow: true
+            };
+            scene.add(centerLight);
+            lights.push(centerLight);
+            
+            // GPU 기반 InstancedMesh 생성
+            createGPUInstancedCubes();
+            
+            // 이벤트 리스너
+            window.addEventListener('resize', onWindowResize);
+            document.getElementById('gameCanvas').addEventListener('mousedown', onMouseDown);
+            document.getElementById('gameCanvas').addEventListener('mousemove', onMouseMove);
+            document.getElementById('gameCanvas').addEventListener('mouseup', onMouseUp);
+            document.getElementById('gameCanvas').addEventListener('click', onClick);
+            document.getElementById('gameCanvas').addEventListener('wheel', onWheel);
+            
+            // 터치 이벤트
+            document.getElementById('gameCanvas').addEventListener('touchstart', onTouchStart, { passive: false });
+            document.getElementById('gameCanvas').addEventListener('touchmove', onTouchMove, { passive: false });
+            document.getElementById('gameCanvas').addEventListener('touchend', onTouchEnd, { passive: false });
+            
+            animate();
+        }
+        
+        // GPU 기반 InstancedMesh 생성
+        function createGPUInstancedCubes() {
+            console.log('Creating 1,000,000 cubes with GPU Compute...');
+            
+            const geometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+            
+            // Custom Shader Material
+            const material = new THREE.ShaderMaterial({
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                uniforms: {
+                    time: { value: 0 },
+                    explosionCycle: { value: 0 },
+                    explosionDistance: { value: 80.0 },
+                    baseColor: { value: new THREE.Color(0x00ffff) },
+                    lightPositions: { value: [] },
+                    lightColors: { value: [] },
+                    lightIntensities: { value: [] },
+                    rotationTime: { value: 0 },
+                    separationFactor: { value: 0 },
+                    collapseStartTime: { value: -1 },
+                    recoveryStartTime: { value: -1 },
+                    currentTime: { value: 0 },
+                    fractalIntensity: { value: 0 },
+                    fractalCenter: { value: new THREE.Vector2(0, 0) }
+                },
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+            
+            cubeMesh = new THREE.InstancedMesh(geometry, material, TOTAL_CUBES);
+            
+            // 인스턴스별 속성 준비
+            const basePositions = new Float32Array(TOTAL_CUBES * 3);
+            const explosionDirections = new Float32Array(TOTAL_CUBES * 3);
+            const cubeIndices = new Float32Array(TOTAL_CUBES);
+            const cubeColors = new Float32Array(TOTAL_CUBES * 3);
+            
+            let index = 0;
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    for (let z = 0; z < GRID_SIZE; z++) {
+                        const posX = (x - GRID_SIZE / 2) * CUBE_GAP;
+                        const posY = (y - GRID_SIZE / 2) * CUBE_GAP;
+                        const posZ = (z - GRID_SIZE / 2) * CUBE_GAP;
+                        
+                        // 기본 위치
+                        basePositions[index * 3] = posX;
+                        basePositions[index * 3 + 1] = posY;
+                        basePositions[index * 3 + 2] = posZ;
+                        
+                        // 폭발 방향 (정규화)
+                        const length = Math.sqrt(posX * posX + posY * posY + posZ * posZ);
+                        if (length > 0) {
+                            explosionDirections[index * 3] = posX / length;
+                            explosionDirections[index * 3 + 1] = posY / length;
+                            explosionDirections[index * 3 + 2] = posZ / length;
+                        }
+                        
+                        cubeIndices[index] = index;
+                        
+                        // 다양한 색상 (무지개 그라데이션)
+                        const hue = (x / GRID_SIZE + y / GRID_SIZE * 0.5 + z / GRID_SIZE * 0.3) % 1.0;
+                        const color = new THREE.Color().setHSL(hue, 0.8, 0.6);
+                        cubeColors[index * 3] = color.r;
+                        cubeColors[index * 3 + 1] = color.g;
+                        cubeColors[index * 3 + 2] = color.b;
+                        
+                        // 모든 큐브 위치 저장 (정확한 충돌 감지용)
+                        cubeData.push({
+                            x, y, z,
+                            index: index,
+                            position: new THREE.Vector3(posX, posY, posZ),
+                            basePosition: new THREE.Vector3(posX, posY, posZ),
+                            explosionDirection: new THREE.Vector3(
+                                length > 0 ? posX / length : 0,
+                                length > 0 ? posY / length : 0,
+                                length > 0 ? posZ / length : 0
+                            ),
+                            active: true
+                        });
+                        
+                        index++;
+                    }
+                }
+            }
+            
+            // BufferAttribute로 GPU에 전송
+            geometry.setAttribute('basePosition', new THREE.InstancedBufferAttribute(basePositions, 3));
+            geometry.setAttribute('explosionDirection', new THREE.InstancedBufferAttribute(explosionDirections, 3));
+            geometry.setAttribute('cubeIndex', new THREE.InstancedBufferAttribute(cubeIndices, 1));
+            geometry.setAttribute('cubeColor', new THREE.InstancedBufferAttribute(cubeColors, 3));
+            
+            scene.add(cubeMesh);
+            
+            console.log('✅ GPU Compute setup complete! 1,000,000 cubes with rainbow colors ready.');
+        }
+        
+        // 게임 시작
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hide');
+            gameStarted = true;
+            gameStartTime = Date.now();
+            lastExplosionTime = Date.now();
+            lastSeparationTime = Date.now();
+        }
+        
+        window.startGame = startGame;
+        
+        // 붕괴 파티클 생성
+        function createCollapseParticles() {
+            if (!collapseTriggered || recoveryTriggered) return;
+            
+            // 랜덤하게 몇 개 위치에서 파티클 생성
+            for (let i = 0; i < 5; i++) {
+                const randomCube = cubeData[Math.floor(Math.random() * cubeData.length)];
+                if (!randomCube) continue;
+                
+                const position = randomCube.position.clone();
+                
+                // 작은 파티클들
+                for (let j = 0; j < 3; j++) {
+                    const geometry = new THREE.SphereGeometry(0.08, 3, 3);
+                    const material = new THREE.MeshBasicMaterial({ 
+                        color: new THREE.Color().setHSL(0.15, 0.8, 0.5), // 주황색 (경고)
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const particle = new THREE.Mesh(geometry, material);
+                    
+                    particle.position.copy(position);
+                    particle.position.x += (Math.random() - 0.5) * 2;
+                    particle.position.y += (Math.random() - 0.5) * 2;
+                    particle.position.z += (Math.random() - 0.5) * 2;
+                    
+                    particle.userData = {
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.3,
+                            Math.random() * 0.5 - 0.8, // 주로 아래로
+                            (Math.random() - 0.5) * 0.3
+                        ),
+                        life: 40,
+                        maxLife: 40
+                    };
+                    
+                    scene.add(particle);
+                    explosionParticles.push(particle);
+                }
+            }
+        }
+        
+        // 복구 파티클 생성
+        function createRecoveryParticles() {
+            if (!recoveryTriggered) return;
+            
+            // 랜덤하게 몇 개 위치에서 파티클 생성
+            for (let i = 0; i < 8; i++) {
+                const randomCube = cubeData[Math.floor(Math.random() * cubeData.length)];
+                if (!randomCube) continue;
+                
+                const position = randomCube.position.clone();
+                
+                // 초록색 생명 파티클들
+                for (let j = 0; j < 4; j++) {
+                    const geometry = new THREE.SphereGeometry(0.1, 4, 4);
+                    const material = new THREE.MeshBasicMaterial({ 
+                        color: new THREE.Color().setHSL(0.35, 0.9, 0.6), // 초록색 (생명)
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const particle = new THREE.Mesh(geometry, material);
+                    
+                    particle.position.copy(position);
+                    particle.position.x += (Math.random() - 0.5) * 3;
+                    particle.position.y += (Math.random() - 0.5) * 3 - 10; // 아래에서 시작
+                    particle.position.z += (Math.random() - 0.5) * 3;
+                    
+                    particle.userData = {
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.2,
+                            Math.random() * 0.5 + 0.6, // 주로 위로
+                            (Math.random() - 0.5) * 0.2
+                        ),
+                        life: 50,
+                        maxLife: 50,
+                        hue: 0.35
+                    };
+                    
+                    scene.add(particle);
+                    explosionParticles.push(particle);
+                }
+            }
+        }
+        
+        // 폭발 이펙트 강화 - 화려한 효과
+        function createFastExplosion(position) {
+            const particleCount = 20; // 15에서 20으로 증가
+            
+            for (let i = 0; i < particleCount; i++) {
+                const geometry = new THREE.SphereGeometry(0.15, 4, 4);
+                
+                // 다양한 색상 (시안, 마젠타, 옐로우)
+                const hue = 0.5 + Math.random() * 0.3; // 시안~마젠타 범위
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: new THREE.Color().setHSL(hue, 1.0, 0.7),
+                    transparent: true,
+                    opacity: 1
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                
+                particle.position.copy(position);
+                
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const speed = 1.0 + Math.random() * 0.6;
+                
+                particle.userData = {
+                    velocity: new THREE.Vector3(
+                        Math.sin(phi) * Math.cos(theta) * speed,
+                        Math.sin(phi) * Math.sin(theta) * speed,
+                        Math.cos(phi) * speed
+                    ),
+                    life: 35,
+                    maxLife: 35,
+                    hue: hue
+                };
+                
+                scene.add(particle);
+                explosionParticles.push(particle);
+            }
+            
+            // 폭발 플래시 라이트 - 더 밝고 화려하게
+            const colors = [0x00ffff, 0xff00ff, 0xffff00];
+            colors.forEach((color, idx) => {
+                setTimeout(() => {
+                    const explosionLight = new THREE.PointLight(color, 25, 60);
+                    explosionLight.position.copy(position);
+                    scene.add(explosionLight);
+                    
+                    let lightLife = 8;
+                    const lightInterval = setInterval(() => {
+                        lightLife--;
+                        explosionLight.intensity = (lightLife / 8) * 25;
+                        if (lightLife <= 0) {
+                            clearInterval(lightInterval);
+                            scene.remove(explosionLight);
+                        }
+                    }, 20);
+                }, idx * 30);
+            });
+        }
+        
+        // 레이저 발사 - 충돌 감지 개선
+        function fireLaser(clickPoint) {
+            const origin = camera.position.clone();
+            const direction = clickPoint.clone().sub(origin).normalize();
+            
+            // 레이저 빔 - 더 굵고 밝게
+            const laserGeometry = new THREE.CylinderGeometry(0.4, 0.4, 200, 8);
+            const laserMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.95
+            });
+            const laser = new THREE.Mesh(laserGeometry, laserMaterial);
+            
+            laser.position.copy(origin).add(direction.clone().multiplyScalar(100));
+            laser.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+            
+            laser.userData = { life: 20 };
+            scene.add(laser);
+            laserBeams.push(laser);
+            
+            // 레이저 발사 플래시 라이트
+            const flashLight = new THREE.PointLight(0x00ffff, 30, 150);
+            flashLight.position.copy(origin).add(direction.clone().multiplyScalar(50));
+            scene.add(flashLight);
+            
+            setTimeout(() => scene.remove(flashLight), 150);
+            
+            // 충돌 검사 - 레이 기반 정확한 검사
+            raycaster.set(origin, direction);
+            
+            const hitCubes = [];
+            const checkDistance = 200; // 검사 거리
+            const hitRadius = 3.0; // 히트 반경
+            
+            // 샘플링으로 성능 최적화 (10개 중 1개만 검사)
+            for (let i = 0; i < cubeData.length; i += 10) {
+                const cube = cubeData[i];
+                if (!cube.active) continue;
+                
+                // 레이와 큐브 중심의 거리 계산
+                const distance = raycaster.ray.distanceToPoint(cube.position);
+                const distanceFromCamera = origin.distanceTo(cube.position);
+                
+                if (distance < hitRadius && distanceFromCamera < checkDistance) {
+                    hitCubes.push(cube);
+                }
+            }
+            
+            // 거리순 정렬
+            hitCubes.sort((a, b) => {
+                return origin.distanceTo(a.position) - origin.distanceTo(b.position);
+            });
+            
+            // 최대 100개만 폭발
+            const explosionCount = Math.min(hitCubes.length, 100);
+            
+            // 폭발 효과
+            for (let i = 0; i < explosionCount; i++) {
+                const cube = hitCubes[i];
+                createFastExplosion(cube.position.clone());
+                cube.active = false;
+            }
+            
+            // 히트 수 표시
+            console.log(`🎯 레이저 히트: ${explosionCount}개 큐브 파괴! (검사: ${Math.floor(cubeData.length / 10)}개)`);
+        }
+        
+        // 클릭 이벤트
+        function onClick(event) {
+            if (!gameStarted || mouseMoved) return;
+            
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            const clickPoint = new THREE.Vector3();
+            raycaster.ray.at(20, clickPoint);
+            
+            fireLaser(clickPoint);
+        }
+        
+        // 마우스 이벤트
+        function onMouseDown(event) {
+            isDragging = true;
+            mouseMoved = false;
+            previousMousePosition = { x: event.clientX, y: event.clientY };
+        }
+        
+        function onMouseMove(event) {
+            if (isDragging) {
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+                
+                if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+                    mouseMoved = true;
+                }
+                
+                camera.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaX * 0.005);
+                
+                const axis = new THREE.Vector3(1, 0, 0);
+                axis.applyQuaternion(camera.quaternion);
+                camera.position.applyAxisAngle(axis, deltaY * 0.005);
+                
+                camera.lookAt(0, 0, 0);
+                
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            }
+        }
+        
+        function onMouseUp() {
+            isDragging = false;
+        }
+        
+        function onWheel(event) {
+            event.preventDefault();
+            const delta = event.deltaY * 0.02;
+            const direction = camera.position.clone().normalize();
+            camera.position.add(direction.multiplyScalar(delta));
+            
+            const distance = camera.position.length();
+            // 최소 거리 0.5로 설정 (큐브 내부 진입 가능)
+            // 최대 거리 400으로 확장 (분리 시 전체 조망)
+            if (distance < 0.5) camera.position.normalize().multiplyScalar(0.5);
+            else if (distance > 400) camera.position.normalize().multiplyScalar(400);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // 터치 이벤트
+        let touchStartPos = { x: 0, y: 0 };
+        let touchStartDistance = 0;
+        let touchMoved = false;
+        
+        function onTouchStart(event) {
+            touchMoved = false;
+            if (event.touches.length === 1) {
+                touchStartPos = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+                isDragging = false;
+            } else if (event.touches.length === 2) {
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        }
+        
+        function onTouchMove(event) {
+            event.preventDefault();
+            touchMoved = true;
+            
+            if (event.touches.length === 1) {
+                isDragging = true;
+                const deltaX = event.touches[0].clientX - touchStartPos.x;
+                const deltaY = event.touches[0].clientY - touchStartPos.y;
+                
+                camera.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaX * 0.005);
+                
+                const axis = new THREE.Vector3(1, 0, 0);
+                axis.applyQuaternion(camera.quaternion);
+                camera.position.applyAxisAngle(axis, deltaY * 0.005);
+                
+                camera.lookAt(0, 0, 0);
+                
+                touchStartPos = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+            } else if (event.touches.length === 2) {
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const delta = (distance - touchStartDistance) * 0.05;
+                
+                const direction = camera.position.clone().normalize();
+                camera.position.add(direction.multiplyScalar(-delta));
+                
+                const cameraDistance = camera.position.length();
+                // 터치 줌도 동일하게 0.5 ~ 400
+                if (cameraDistance < 0.5) camera.position.normalize().multiplyScalar(0.5);
+                else if (cameraDistance > 400) camera.position.normalize().multiplyScalar(400);
+                
+                touchStartDistance = distance;
+            }
+        }
+        
+        function onTouchEnd(event) {
+            if (event.touches.length === 0) isDragging = false;
+            
+            if (event.changedTouches.length === 1 && gameStarted && !touchMoved) {
+                const touch = event.changedTouches[0];
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                
+                const clickPoint = new THREE.Vector3();
+                raycaster.ray.at(20, clickPoint);
+                
+                fireLaser(clickPoint);
+            }
+            
+            touchMoved = false;
+        }
+        
+        // 애니메이션 루프
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // FPS 측정
+            frames++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frames * 1000) / (currentTime - lastTime));
+                document.getElementById('fps').textContent = `FPS: ${fps}`;
+                frames = 0;
+                lastTime = currentTime;
+                
+                // 타이머 업데이트
+                if (gameStarted) {
+                    const elapsedSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const minutes = Math.floor(elapsedSeconds / 60);
+                    const seconds = elapsedSeconds % 60;
+                    const timerText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    if (recoveryTriggered) {
+                        document.getElementById('timer').innerHTML = `<span style="color:#00ff00">✨ RECOVERY! ${timerText}</span>`;
+                    } else if (collapseTriggered) {
+                        document.getElementById('timer').innerHTML = `<span style="color:#ff0000">⚠️ COLLAPSE! ${timerText}</span>`;
+                    } else if (fractalTriggered && fractalIntensity > 0.1) {
+                        document.getElementById('timer').innerHTML = `<span style="color:#ff00ff">🌀 FRACTAL! ${timerText}</span>`;
+                    } else if (elapsedSeconds >= 65) {
+                        document.getElementById('timer').innerHTML = `<span style="color:#ffff00">⚠️ ${timerText}</span>`;
+                    } else {
+                        document.getElementById('timer').textContent = timerText;
+                    }
+                }
+            }
+            
+            const time = Date.now() * 0.001;
+            const currentGameTime = Date.now();
+            
+            // 10초 후 프랙탈 시작
+            if (!fractalTriggered && gameStarted) {
+                const timeSinceStart = currentGameTime - gameStartTime;
+                if (timeSinceStart >= FRACTAL_TRIGGER_TIME) {
+                    fractalTriggered = true;
+                    console.log('🌀 프랙탈 변형 시작! Fractal transformation initiated!');
+                }
+            }
+            
+            // 프랙탈 강도 계산 (부드러운 페이드 인/아웃)
+            if (fractalTriggered) {
+                const timeSinceFractal = currentGameTime - gameStartTime - FRACTAL_TRIGGER_TIME;
+                const cycleDuration = FRACTAL_CYCLE_DURATION;
+                const cycleTime = timeSinceFractal % cycleDuration;
+                
+                if (cycleTime < FRACTAL_FADE_IN) {
+                    // 페이드 인 (0 -> 1)
+                    const progress = cycleTime / FRACTAL_FADE_IN;
+                    fractalIntensity = progress * progress * (3 - 2 * progress); // smoothstep
+                } else if (cycleTime < cycleDuration - FRACTAL_FADE_OUT) {
+                    // 최대 유지
+                    fractalIntensity = 1.0;
+                } else {
+                    // 페이드 아웃 (1 -> 0)
+                    const fadeOutStart = cycleDuration - FRACTAL_FADE_OUT;
+                    const progress = (cycleTime - fadeOutStart) / FRACTAL_FADE_OUT;
+                    fractalIntensity = 1.0 - progress * progress * (3 - 2 * progress); // smoothstep
+                }
+            }
+            
+            // 50초 후 붕괴 시작
+            if (!collapseTriggered && gameStarted) {
+                const timeSinceStart = currentGameTime - gameStartTime;
+                if (timeSinceStart >= COLLAPSE_TRIGGER_TIME) {
+                    collapseTriggered = true;
+                    collapseStartTime = time;
+                    console.log('🐝 벌 군집 붕괴 시작! Colony Collapse Disorder triggered!');
+                }
+            }
+            
+            // 붕괴 완료 후 복구 시작 (붕괴 시작 60초 후)
+            if (collapseTriggered && !recoveryTriggered && gameStarted) {
+                const timeSinceCollapse = currentGameTime - gameStartTime - COLLAPSE_TRIGGER_TIME;
+                if (timeSinceCollapse >= COLLAPSE_DURATION) {
+                    recoveryTriggered = true;
+                    recoveryStartTime = time;
+                    console.log('✨ 군집 복구 시작! Colony Recovery initiated!');
+                }
+            }
+            
+            // 회전 시간 (계속 증가)
+            rotationTime += 0.01;
+            
+            // 분리 사이클 계산 (30초마다)
+            const separationCurrentTime = Date.now();
+            const timeSinceLastSeparation = separationCurrentTime - lastSeparationTime;
+            
+            if (timeSinceLastSeparation >= SEPARATION_INTERVAL) {
+                lastSeparationTime = separationCurrentTime;
+            }
+            
+            const separationCycleTime = timeSinceLastSeparation % SEPARATION_INTERVAL;
+            
+            if (separationCycleTime < SEPARATION_DURATION) {
+                // 분리 중 (0 -> 1) - smoothstep
+                const progress = separationCycleTime / SEPARATION_DURATION;
+                separationCycle = progress * progress * (3 - 2 * progress);
+            } else if (separationCycleTime < SEPARATION_DURATION * 2) {
+                // 재결합 중 (1 -> 0) - smoothstep
+                const progress = (separationCycleTime - SEPARATION_DURATION) / SEPARATION_DURATION;
+                separationCycle = 1.0 - progress * progress * (3 - 2 * progress);
+            } else {
+                separationCycle = 0;
+            }
+            
+            // 폭발 사이클 계산
+            const explosionCurrentTime = Date.now();
+            const timeSinceLastExplosion = explosionCurrentTime - lastExplosionTime;
+            
+            if (timeSinceLastExplosion >= EXPLOSION_INTERVAL) {
+                lastExplosionTime = explosionCurrentTime;
+            }
+            
+            const cycleTime = timeSinceLastExplosion % EXPLOSION_INTERVAL;
+            
+            if (cycleTime < EXPLOSION_DURATION) {
+                const progress = cycleTime / EXPLOSION_DURATION;
+                // smoothstep으로 부드러운 증가/감소
+                if (progress < 0.5) {
+                    const t = progress * 2;
+                    explosionCycle = t * t * (3 - 2 * t);
+                } else {
+                    const t = (progress - 0.5) * 2;
+                    explosionCycle = 1.0 - t * t * (3 - 2 * t);
+                }
+            } else {
+                explosionCycle = 0;
+            }
+            
+            // GPU Uniform 업데이트
+            if (cubeMesh && cubeMesh.material.uniforms) {
+                cubeMesh.material.uniforms.time.value = time;
+                cubeMesh.material.uniforms.explosionCycle.value = explosionCycle;
+                cubeMesh.material.uniforms.rotationTime.value = rotationTime;
+                cubeMesh.material.uniforms.separationFactor.value = separationCycle;
+                cubeMesh.material.uniforms.collapseStartTime.value = collapseStartTime;
+                cubeMesh.material.uniforms.recoveryStartTime.value = recoveryStartTime;
+                cubeMesh.material.uniforms.currentTime.value = time;
+                cubeMesh.material.uniforms.fractalIntensity.value = fractalIntensity;
+                
+                // 프랙탈 중심을 시간에 따라 이동
+                cubeMesh.material.uniforms.fractalCenter.value.set(
+                    Math.sin(time * 0.1) * 0.5,
+                    Math.cos(time * 0.15) * 0.5
+                );
+                
+                // 조명 정보 업데이트
+                const lightPos = [];
+                const lightCol = [];
+                const lightInt = [];
+                
+                for (let i = 0; i < lights.length; i++) {
+                    lightPos.push(lights[i].position);
+                    lightCol.push(new THREE.Vector3(
+                        lights[i].color.r,
+                        lights[i].color.g,
+                        lights[i].color.b
+                    ));
+                    lightInt.push(lights[i].intensity);
+                }
+                
+                cubeMesh.material.uniforms.lightPositions.value = lightPos;
+                cubeMesh.material.uniforms.lightColors.value = lightCol;
+                cubeMesh.material.uniforms.lightIntensities.value = lightInt;
+            }
+            
+            // 큐브 위치 동기화 (충돌 감지용)
+            const explosionDistance = 80;
+            const distanceMultiplier = 1.0 + separationCycle * 2.0;
+            
+            for (let i = 0; i < cubeData.length; i++) {
+                const cube = cubeData[i];
+                if (!cube.active) continue;
+                
+                // 분리 적용
+                const separatedBase = cube.basePosition.clone().multiplyScalar(distanceMultiplier);
+                
+                // 폭발 오프셋
+                const offset = cube.explosionDirection.clone().multiplyScalar(explosionDistance * explosionCycle);
+                
+                cube.position.copy(separatedBase).add(offset);
+            }
+            
+            // 조명 애니메이션
+            for (let i = 0; i < lights.length; i++) {
+                const light = lights[i];
+                
+                if (light.userData.isCenterGlow) {
+                    // 중앙 글로우 - 폭발 시 강하게
+                    light.intensity = light.userData.baseIntensity + explosionCycle * 15;
+                } else if (light.userData.basePosition) {
+                    // 궤도 회전 라이트
+                    const orbitAngle = time * light.userData.orbitSpeed + light.userData.orbitPhase;
+                    const orbitX = Math.cos(orbitAngle) * light.userData.orbitRadius;
+                    const orbitZ = Math.sin(orbitAngle) * light.userData.orbitRadius;
+                    
+                    light.position.x = light.userData.basePosition.x + orbitX;
+                    light.position.z = light.userData.basePosition.z + orbitZ;
+                    
+                    // 폭발 시 강도 증가
+                    light.intensity = light.userData.baseIntensity * (1 + explosionCycle * 2);
+                }
+            }
+            
+            // 폭발 파티클 업데이트
+            for (let i = explosionParticles.length - 1; i >= 0; i--) {
+                const particle = explosionParticles[i];
+                
+                particle.userData.life--;
+                
+                if (particle.userData.life <= 0) {
+                    scene.remove(particle);
+                    explosionParticles.splice(i, 1);
+                    continue;
+                }
+                
+                particle.position.add(particle.userData.velocity);
+                
+                const lifeRatio = particle.userData.life / particle.userData.maxLife;
+                particle.material.opacity = lifeRatio;
+                
+                // 색상 변화 - 시간에 따라 변함
+                if (particle.userData.hue !== undefined) {
+                    particle.userData.hue = (particle.userData.hue + 0.01) % 1.0;
+                    particle.material.color.setHSL(particle.userData.hue, 1.0, 0.7);
+                }
+            }
+            
+            // 붕괴 파티클 생성 (1초에 한 번)
+            if (collapseTriggered && !recoveryTriggered && frames % 60 === 0) {
+                createCollapseParticles();
+            }
+            
+            // 복구 파티클 생성 (0.5초에 한 번)
+            if (recoveryTriggered && frames % 30 === 0) {
+                createRecoveryParticles();
+            }
+            
+            // 레이저 빔 업데이트
+            for (let i = laserBeams.length - 1; i >= 0; i--) {
+                const laser = laserBeams[i];
+                laser.userData.life--;
+                
+                if (laser.userData.life <= 0) {
+                    scene.remove(laser);
+                    laserBeams.splice(i, 1);
+                } else {
+                    laser.material.opacity = laser.userData.life / 20;
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // 초기화
+        init();
+    </script>
+</body>
+</html>
