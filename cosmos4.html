@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COSMOS: DYNAMIC PHYSICS SIMULATION</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Georgia', serif; user-select: none; }
+        
+        /* --- INTRO SCREEN --- */
+        #intro-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #050510 0%, #000000 100%);
+            z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1.5s ease-in-out;
+            cursor: pointer;
+        }
+
+        #intro-title {
+            font-size: 6vw;
+            letter-spacing: 0.15em;
+            font-weight: 300;
+            color: #ffffff;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.6), 0 0 60px rgba(100, 200, 255, 0.4);
+            margin: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        #intro-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 1.8vw;
+            color: #d4aaff; 
+            letter-spacing: 0.1em;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        #intro-hint {
+            margin-top: 60px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 1px;
+            animation: pulse 2s infinite;
+        }
+
+        /* --- UI CONTAINER --- */
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            display: flex; flex-direction: column; padding: 30px; box-sizing: border-box;
+            opacity: 0; transition: opacity 2s; 
+        }
+
+        /* --- INFO PANEL --- */
+        #info-panel {
+            color: #aaddff; text-shadow: 0 0 10px #0055ff; z-index: 10; pointer-events: auto;
+            max-width: 60%;
+        }
+        h1.ui-title { 
+            margin: 0; font-size: 28px; letter-spacing: 3px; font-weight: normal; 
+            background: linear-gradient(90deg, #ffffff, #aaddff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .stat { font-size: 13px; margin-top: 10px; color: #8899aa; font-family: 'Courier New', monospace; }
+        
+        #stage-display { 
+            font-size: 2.0em; font-weight: bold; color: #ffffff; margin-top: 20px; 
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            transition: color 1.0s, text-shadow 1.0s;
+        }
+        #sub-display {
+            font-size: 1.1em; color: #aaccff; margin-top: 5px; font-style: italic; opacity: 0.9; line-height: 1.4;
+        }
+        #progress-container {
+            width: 100%; max-width: 350px; height: 3px; background: #112233; margin-top: 15px; position: relative;
+        }
+        #progress-fill {
+            width: 0%; height: 100%; background: #aaddff; box-shadow: 0 0 15px #aaddff; transition: width 0.1s;
+        }
+
+        #quote-overlay {
+            position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+            text-align: center; color: rgba(255,255,255,0.9); font-size: 18px; font-style: italic;
+            text-shadow: 0 0 10px black; width: 80%; opacity: 0; transition: opacity 1.5s;
+        }
+
+        /* --- SETTINGS & CONTROLS --- */
+        #btn-settings-toggle {
+            position: absolute; top: 30px; right: 30px; z-index: 30; pointer-events: auto;
+            background: rgba(10, 15, 30, 0.8); border: 1px solid #556677; color: #ccaaff;
+            font-size: 22px; width: 44px; height: 44px; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.3s, background 0.3s, box-shadow 0.3s;
+        }
+        #btn-settings-toggle:hover { background: #556677; transform: rotate(90deg); box-shadow: 0 0 15px #556677; }
+
+        #control-panel {
+            position: absolute; top: 85px; right: 30px;
+            display: flex; flex-direction: column; gap: 8px;
+            align-items: flex-end; pointer-events: auto;
+            z-index: 20;
+            background: rgba(5, 8, 15, 0.95);
+            padding: 15px; border: 1px solid #556677; border-radius: 8px;
+            transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        #control-panel.visible { transform: translateX(0); }
+
+        .btn-group {
+            display: flex; gap: 5px; padding: 2px; 
+            align-items: center; justify-content: flex-end; width: 100%;
+        }
+
+        button.ctrl-btn {
+            background: transparent; border: 1px solid #556677; color: #aaddff;
+            font-family: 'Courier New', sans-serif; font-size: 12px;
+            padding: 8px 14px; cursor: pointer; transition: all 0.3s;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        button.ctrl-btn:hover { background: #556677; color: #fff; box-shadow: 0 0 10px #aaddff; }
+        .active { background: #556677; color: #fff; border-color: #aaddff; }
+        #btn-voice.active { background: #443366; color: #fff; border-color: #ccaaff; }
+
+        input[type=range] {
+            -webkit-appearance: none; width: 100px; height: 4px; background: #334455; outline: none; margin: 0 10px; border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 14px; height: 14px; background: #aaddff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px #aaddff;
+        }
+        .vol-label { font-size: 14px; color: #aaddff; margin-left: 5px; }
+
+        #speed-display {
+            color: #fff; font-size: 12px; align-self: center; margin: 0 8px; min-width: 35px; text-align: center; font-family: 'Courier New';
+        }
+
+        #controls-hint {
+            position: absolute; bottom: 30px; width: 100%;
+            color: #667788; text-align: center; font-size: 12px; letter-spacing: 2px;
+            pointer-events: none;
+        }
+
+        canvas { display: block; }
+        .hidden { opacity: 0 !important; pointer-events: none !important; }
+
+        /* --- MOBILE RESPONSIVE CSS (2x Smaller) --- */
+        @media (max-width: 768px) {
+            #intro-title { font-size: 9vw; letter-spacing: 0.1em; padding-bottom: 10px; margin-bottom: 15px; }
+            #intro-subtitle { font-size: 3.5vw; }
+            #intro-hint { font-size: 10px; margin-top: 30px; }
+
+            #btn-settings-toggle { top: 15px; right: 15px; width: 28px; height: 28px; font-size: 14px; }
+            #control-panel { top: 50px; right: 15px; padding: 8px; gap: 4px; }
+            .btn-group { gap: 3px; }
+            
+            button.ctrl-btn { padding: 5px 8px; font-size: 8px; border-width: 0.5px; }
+            input[type=range] { width: 50px; height: 2px; margin: 0 5px; }
+            input[type=range]::-webkit-slider-thumb { width: 8px; height: 8px; }
+            .vol-label { font-size: 9px; margin-left: 3px; }
+            #speed-display { font-size: 8px; min-width: 20px; margin: 0 3px; }
+
+            #ui { padding: 15px; }
+            h1.ui-title { font-size: 14px; letter-spacing: 1px; margin-bottom: 5px;}
+            .stat { font-size: 8px; margin-top: 3px; }
+            #stage-display { font-size: 1.1em; margin-top: 10px; }
+            #sub-display { font-size: 0.7em; margin-top: 3px; line-height: 1.2; }
+            #progress-container { height: 2px; margin-top: 8px; max-width: 120px; }
+            
+            #quote-overlay { font-size: 10px; bottom: 40px; width: 90%; }
+            #controls-hint { display: none; } 
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.8; } 100% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+    <div id="intro-screen">
+        <div class="title-container">
+            <h1 id="intro-title">COSMOS</h1>
+            <div id="intro-subtitle">A Personal Voyage</div>
+        </div>
+        <div id="intro-hint">Touch to Start</div>
+    </div>
+
+    <div id="ui">
+        <button id="btn-settings-toggle">⚙</button>
+
+        <div id="control-panel">
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-toggle-ui">HIDE</button>
+            </div>
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-voice">VOICE: OFF</button>
+            </div>
+            <div class="btn-group">
+                <span class="vol-label">♫</span>
+                <input type="range" id="bgm-volume" min="0" max="1" step="0.05" value="0.3">
+            </div>
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-slower"> &lt;&lt; </button>
+                <span id="speed-display">x1.0</span>
+                <button class="ctrl-btn" id="btn-faster"> &gt;&gt; </button>
+            </div>
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-pause">PAUSE</button>
+                <button class="ctrl-btn" id="btn-reset">RESET</button>
+            </div>
+        </div>
+
+        <div id="info-panel">
+            <h1 class="ui-title">COSMOS</h1>
+            <div class="stat">
+                Year: <span id="year-disp">0</span> | 
+                Cycle: <span id="loop-count">1</span> | 
+                System: 80-Layer Bio-Sphere
+            </div>
+            <div id="stage-display">S0: THE SHORES OF THE COSMIC OCEAN</div>
+            <div id="sub-display">"The cosmos is all that is or ever was or ever will be."</div>
+            <div id="progress-container"><div id="progress-fill"></div></div>
+            <div class="stat" style="margin-top:5px;">Seed: <span id="seed-val">0.00</span></div>
+        </div>
+
+        <div id="quote-overlay"></div>
+
+        <div id="controls-hint">
+            [Double Click] Reset View &nbsp;•&nbsp; [Wheel] Deep Zoom &nbsp;•&nbsp; [L-Click] Gravity
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- AUDIO MANAGER (Fly Me to the Moon: Hybrid Synthesis) ---
+        class CosmosAudio {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.isInitialized = false;
+                this.isPlaying = false;
+                this.isNarrationEnabled = false; 
+                this.bgmVolume = 0.3; 
+                this.currentTempo = 1.0;
+                this.nextChordTime = 0;
+                this.scoreIndex = 0;
+                this.timerID = null;
+
+                // Fly Me to the Moon Chords (Pads)
+                this.progression = [
+                    { chords: ['A2', 'C3', 'E3', 'G3'], bass: 'A1', d: 4 }, 
+                    { chords: ['D3', 'F3', 'A3', 'C4'], bass: 'D2', d: 4 }, 
+                    { chords: ['G2', 'B2', 'D3', 'F3'], bass: 'G1', d: 4 }, 
+                    { chords: ['C3', 'E3', 'G3', 'B3'], bass: 'C2', d: 4 }, 
+                    { chords: ['F2', 'A2', 'C3', 'E3'], bass: 'F1', d: 4 }, 
+                    { chords: ['B2', 'D3', 'F3', 'A3'], bass: 'B1', d: 4 }, 
+                    { chords: ['E3', 'G#3', 'B3', 'D4'], bass: 'E2', d: 4 }, 
+                    { chords: ['A2', 'C3', 'E3', 'G3'], bass: 'A1', d: 4 }, 
+                    { chords: ['D3', 'F3', 'A3', 'C4'], bass: 'D2', d: 4 }, 
+                    { chords: ['G2', 'B2', 'D3', 'F3'], bass: 'G1', d: 4 }, 
+                    { chords: ['C3', 'E3', 'G3', 'B3'], bass: 'C2', d: 4 }, 
+                    { chords: ['E3', 'G#3', 'B3', 'D4'], bass: 'E2', d: 4 }, 
+                ];
+
+                this.noteFreqs = {
+                    'F1': 43.65, 'G1': 49.00, 'A1': 55.00, 'B1': 61.74,
+                    'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'F2': 87.31, 'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'B2': 123.47,
+                    'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00, 'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'B3': 246.94,
+                    'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23
+                };
+
+                this.maleVoice = null;
+                if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                    window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
+                }
+            }
+
+            loadVoices() {
+                const voices = window.speechSynthesis.getVoices();
+                this.maleVoice = 
+                    voices.find(v => v.name.includes('Google US English')) || 
+                    voices.find(v => v.name.includes('David')) || 
+                    voices.find(v => v.name.includes('Daniel')) || 
+                    voices.find(v => v.name.includes('Male')) || 
+                    voices.find(v => v.lang === 'en-US');
+            }
+
+            toggleNarration() {
+                this.isNarrationEnabled = !this.isNarrationEnabled;
+                if(!this.isNarrationEnabled) window.speechSynthesis.cancel();
+                return this.isNarrationEnabled;
+            }
+
+            setBGMVolume(val) {
+                this.bgmVolume = parseFloat(val);
+            }
+
+            createReverb(duration, decay) {
+                const rate = this.ctx.sampleRate;
+                const length = rate * duration;
+                const impulse = this.ctx.createBuffer(2, length, rate);
+                const left = impulse.getChannelData(0);
+                const right = impulse.getChannelData(1);
+                for (let i = 0; i < length; i++) {
+                    const e = Math.pow(1 - i / length, decay);
+                    left[i] = (Math.random() * 2 - 1) * e;
+                    right[i] = (Math.random() * 2 - 1) * e;
+                }
+                return impulse;
+            }
+
+            init() {
+                if (this.isInitialized) return;
+                if (!this.maleVoice) this.loadVoices();
+
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 1.0; 
+
+                const convolver = this.ctx.createConvolver();
+                convolver.buffer = this.createReverb(4.0, 3.0); 
+                const reverbGain = this.ctx.createGain();
+                reverbGain.gain.value = 0.5; 
+
+                this.masterGain.connect(this.ctx.destination);
+                this.masterGain.connect(convolver);
+                convolver.connect(reverbGain);
+                reverbGain.connect(this.ctx.destination);
+
+                this.isInitialized = true;
+                this.isPlaying = true;
+                this.nextChordTime = this.ctx.currentTime + 0.5;
+                this.scheduler();
+            }
+
+            playHybridChord(chordObj, duration, time) {
+                const t = time;
+                const attack = 2.0; 
+                const totalDur = duration * 2.5; 
+
+                chordObj.chords.forEach((note, i) => {
+                    const freq = this.noteFreqs[note];
+                    if(!freq) return;
+
+                    const osc = this.ctx.createOscillator();
+                    const oscDetune = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const filter = this.ctx.createBiquadFilter();
+
+                    osc.type = 'sawtooth'; 
+                    osc.frequency.value = freq;
+                    oscDetune.type = 'triangle';
+                    oscDetune.frequency.value = freq;
+                    oscDetune.detune.value = i % 2 === 0 ? 5 : -5; 
+
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 800 + i*200; 
+                    filter.Q.value = 1;
+
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.08 * this.bgmVolume, t + attack);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + totalDur);
+
+                    osc.connect(filter);
+                    oscDetune.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+
+                    osc.start(t);
+                    oscDetune.start(t);
+                    osc.stop(t + totalDur);
+                    oscDetune.stop(t + totalDur);
+                });
+
+                if(chordObj.bass) {
+                    const bassFreq = this.noteFreqs[chordObj.bass];
+                    if(bassFreq) {
+                        const oscBass = this.ctx.createOscillator();
+                        const filterBass = this.ctx.createBiquadFilter();
+                        const gainBass = this.ctx.createGain();
+
+                        oscBass.type = 'square'; 
+                        oscBass.frequency.value = bassFreq;
+
+                        filterBass.type = 'lowpass';
+                        filterBass.Q.value = 5;
+                        filterBass.frequency.setValueAtTime(bassFreq * 4, t);
+                        filterBass.frequency.exponentialRampToValueAtTime(bassFreq, t + duration);
+
+                        gainBass.gain.setValueAtTime(0, t);
+                        gainBass.gain.linearRampToValueAtTime(0.2 * this.bgmVolume, t + 0.5);
+                        gainBass.gain.exponentialRampToValueAtTime(0.001, t + totalDur);
+
+                        oscBass.connect(filterBass);
+                        filterBass.connect(gainBass);
+                        gainBass.connect(this.masterGain);
+
+                        oscBass.start(t);
+                        oscBass.stop(t + totalDur);
+                    }
+                }
+            }
+
+            scheduler() {
+                if (this.isPlaying) {
+                    while (this.nextChordTime < this.ctx.currentTime + 0.1) {
+                        this.scheduleChord(this.nextChordTime);
+                    }
+                    this.timerID = setTimeout(() => this.scheduler(), 50);
+                }
+            }
+
+            scheduleChord(time) {
+                const chordInfo = this.progression[this.scoreIndex % this.progression.length];
+                const beatLen = 1.2 / this.currentTempo; 
+                const dur = chordInfo.d * beatLen;
+                this.playHybridChord(chordInfo, dur, time);
+                this.nextChordTime += dur;
+                this.scoreIndex++;
+            }
+
+            setSpeed(speedMultiplier) {
+                this.currentTempo = Math.max(0.5, Math.min(speedMultiplier, 3.0));
+            }
+
+            pause() {
+                if(this.ctx) this.ctx.suspend();
+                this.isPlaying = false;
+                clearTimeout(this.timerID);
+            }
+
+            resume() {
+                if(this.ctx) {
+                    this.ctx.resume();
+                    this.nextChordTime = this.ctx.currentTime;
+                    this.isPlaying = true;
+                    this.scheduler();
+                }
+            }
+
+            triggerStageSFX(index, textToSpeech) {
+                if(!this.isInitialized || !this.isPlaying) return;
+
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+
+                switch(index) {
+                    case 0: // Ocean
+                        osc.type = 'sine'; osc.frequency.setValueAtTime(60, t); gain.gain.setValueAtTime(0.05, t);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 4); osc.start(); osc.stop(t + 4); break;
+                    case 1: // Rumble
+                         osc.type = 'sawtooth'; osc.frequency.setValueAtTime(40, t); gain.gain.setValueAtTime(0.03, t);
+                         gain.gain.linearRampToValueAtTime(0, t+3); osc.start(); osc.stop(t+3); break;
+                }
+
+                if(this.isNarrationEnabled && textToSpeech && window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(textToSpeech);
+                    utterance.lang = 'en-US';
+                    if (this.maleVoice) utterance.voice = this.maleVoice;
+                    utterance.pitch = 0.6; utterance.rate = 0.85; utterance.volume = 0.5; 
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+        }
+
+        const audioManager = new CosmosAudio();
+
+
+        // --- CONFIGURATION ---
+        const GRID_SIZE = 100; 
+        const COUNT = GRID_SIZE * GRID_SIZE * GRID_SIZE;
+        const DEFAULT_CYCLE_DURATION = 180.0; 
+
+        // --- SHADERS (GLSL) ---
+        const vertexShader = `
+            precision highp float;
+            uniform float uTime;        
+            uniform float uLoopProgress; 
+            uniform float uSeed;        
+            uniform vec3 uLaserPos;
+            uniform float uLaserActive;
+            attribute vec3 aOffset;   
+            attribute float aId; 
+            attribute vec3 aBaseColor; 
+            varying vec3 vColor;
+            varying float vOpacity;
+            varying float vSize;
+
+            float hash11(float n){ return fract(sin(n*43758.5453123+uSeed)*653.289); }
+            float rand(vec3 p){ return hash11(dot(p,vec3(7.0,113.0,47.0))); }
+            
+            // Curl Noise for Organic Fluid Motion
+            vec3 curlNoise(vec3 p) {
+                const float e = 0.1;
+                float n1 = sin(dot(p, vec3(12.9898, 78.233, 45.543)));
+                float n2 = sin(dot(p + vec3(e, 0, 0), vec3(12.9898, 78.233, 45.543)));
+                float n3 = sin(dot(p + vec3(0, e, 0), vec3(12.9898, 78.233, 45.543)));
+                float n4 = sin(dot(p + vec3(0, 0, e), vec3(12.9898, 78.233, 45.543)));
+                return vec3(n2-n1, n3-n1, n4-n1) * 2.0;
+            }
+
+            float noise(vec3 p) {
+                return fract(sin(dot(p, vec3(12.9898, 78.233, 45.152))) * 43758.5453);
+            }
+
+            mat2 rot2(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+            
+            // --- PHYSICS & GEOMETRY HELPERS ---
+            
+            vec3 DNAStrand(vec3 p, float t) {
+                float twist = p.y * 0.1 + t;
+                float strand = sign(cos(aId)); // Two strands
+                // Helix equation: x = r cos(t), z = r sin(t)
+                vec3 dna = vec3(cos(twist)*20.0 + strand*5.0, p.y, sin(twist)*20.0);
+                // Organic jitter
+                dna += curlNoise(p * 0.05 + t) * 5.0;
+                return dna;
+            }
+
+            vec3 GalaxySpiral(vec3 p, float t) {
+                // Logarithmic spiral: r = a * e^(b*theta)
+                float r = length(p.xz);
+                float angle = atan(p.z, p.x) + r * 0.05 + t * 0.5; // Rotate
+                
+                // Density Wave
+                float density = sin(angle * 2.0 - r * 0.2); // 2 arms
+                
+                vec3 gal = vec3(cos(angle)*r, p.y * 0.2 + noise(p)*5.0, sin(angle)*r);
+                
+                // Compress into disk
+                if(abs(density) > 0.5) gal.y += noise(p)*10.0;
+                
+                return gal;
+            }
+
+            vec3 BlackHoleAccretion(vec3 p, float t) {
+                float r = length(p);
+                float Schwarzschild = 20.0;
+                
+                // Kerr Metric Frame Dragging (Simulated)
+                float twist = 800.0 / (r + 1.0);
+                float angle = t * 2.0 + twist;
+                
+                vec3 q = p;
+                q.xz = rot2(angle) * q.xz;
+                
+                // Event Horizon Suck
+                if(r < Schwarzschild * 2.0) {
+                    q *= 0.1 * (r / Schwarzschild);
+                }
+                
+                // Relativistic Jet
+                if(abs(p.y) > r * 0.5) {
+                    q.y += sign(p.y) * 100.0 * noise(p + t);
+                }
+                
+                return q;
+            }
+
+            vec3 HyperCube(vec3 p, float t) {
+                // 4D Projection (Tesseract shadow)
+                // Project 4D (x,y,z,w) to 3D
+                float w = sin(t + aId * 0.01) * 50.0;
+                vec3 q = floor(p / 30.0 + 0.5) * 30.0; // Voxelize
+                q += curlNoise(q * 0.01 + t) * 5.0; // Data flow
+                return q;
+            }
+
+            // --- MAIN MORPHING LOGIC (12 STAGES) ---
+            vec3 applyCosmosScenario(vec3 p0, float t) {
+                // Smooth transition windows
+                float t0 = smoothstep(0.00, 0.04, t);
+                float t1 = smoothstep(0.08, 0.12, t);
+                float t2 = smoothstep(0.16, 0.20, t);
+                float t3 = smoothstep(0.24, 0.28, t);
+                float t4 = smoothstep(0.32, 0.36, t);
+                float t5 = smoothstep(0.40, 0.44, t);
+                float t6 = smoothstep(0.50, 0.54, t);
+                float t7 = smoothstep(0.60, 0.64, t);
+                float t8 = smoothstep(0.72, 0.76, t);
+                float t9 = smoothstep(0.82, 0.86, t);
+                float t10 = smoothstep(0.92, 0.96, t);
+
+                vec3 pos = vec3(0.0); 
+                
+                // S0: Cosmic Ocean (Mist)
+                // Organic Fluid Motion
+                vec3 p_mist = p0 + curlNoise(p0 * 0.02 + uTime * 0.2) * 30.0;
+                pos = mix(pos, p_mist, t0);
+
+                // S1: Calendar (Inflation)
+                vec3 p_exp = p0 * exp(4.0);
+                pos = mix(pos, p_exp, t1);
+
+                // S2: Harmony (Orbits) - Kepler
+                float r = length(p0) + 1.0;
+                float speed = 20.0 / sqrt(r); 
+                vec3 p_orb = vec3(r * cos(uTime*speed + aId), p0.y, r * sin(uTime*speed + aId));
+                p_orb.xz = rot2(p0.y * 0.01) * p_orb.xz; // Golden Tilt
+                pos = mix(pos, p_orb, t2);
+
+                // S3: Heaven & Hell (Volcanic Chaos)
+                vec3 p_hell = p_orb + curlNoise(p_orb * 0.1 + uTime) * 40.0;
+                if(rand(vec3(aId)) < 0.1) p_hell += normalize(p_orb) * 100.0 * sin(uTime*10.0); // Eruptions
+                pos = mix(pos, p_hell, t3);
+
+                // S4: Edge (Hubble Expansion)
+                vec3 p_hub = p_exp * (1.0 + sin(uTime)*0.1);
+                pos = mix(pos, p_hub, t4);
+
+                // S5: DNA (Biology)
+                vec3 p_dna = DNAStrand(p0 * 2.0, uTime);
+                pos = mix(pos, p_dna, t5);
+
+                // S6: Fugue (Life Explosion)
+                vec3 p_life = p0 + curlNoise(p0 * 0.05 + uTime) * 50.0; // Swarm behavior
+                pos = mix(pos, p_life, t6);
+
+                // S7: Travelers (Gravity Assist)
+                vec3 p_voy = p_life;
+                if(mod(aId, 100.0) < 5.0) p_voy += normalize(vec3(1.0, 0.5, 0.0)) * (t - 0.52) * 8000.0;
+                pos = mix(pos, p_voy, t7);
+
+                // S8: Backbone (Galaxy Spiral)
+                vec3 p_gal = GalaxySpiral(p0 * 1.5, uTime);
+                pos = mix(pos, p_gal, t8);
+
+                // S9: Encyclopaedia (Matrix/Hypercube)
+                vec3 p_lib = HyperCube(p0 * 2.0, uTime);
+                pos = mix(pos, p_lib, t9);
+
+                // S10: Ghosts (Black Hole)
+                vec3 p_ghost = BlackHoleAccretion(p0 * 3.0, uTime);
+                pos = mix(pos, p_ghost, t10);
+
+                // S11: Pale Blue Dot (Implosion)
+                vec3 p_end = p0 * 0.05 + curlNoise(p0 * 0.5) * 2.0; 
+                pos = mix(pos, p_end, smoothstep(0.96, 1.0, t));
+
+                return pos;
+            }
+
+            void main() {
+                vec3 basePos = aOffset * 1.5; 
+                vec3 finalPos = applyCosmosScenario(basePos, uLoopProgress);
+
+                if (uLaserActive > 0.0) {
+                    float d = distance(finalPos, uLaserPos);
+                    if (d < 80.0) finalPos += normalize(finalPos - uLaserPos) * 100.0;
+                }
+
+                vec4 mvPosition = viewMatrix * modelMatrix * vec4(finalPos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+
+                float dist = -mvPosition.z;
+                if(dist < 1.0) dist = 1.0;
+                vSize = 2500.0 / dist; 
+                
+                // Organic breathing size
+                vSize *= (0.7 + 0.3 * sin(uTime * 5.0 + aId));
+
+                // Fade in/out
+                vOpacity = 1.0;
+                if(uLoopProgress < 0.04) vOpacity = smoothstep(0.0, 0.04, uLoopProgress);
+                if(uLoopProgress > 0.96) vOpacity = 1.0 - smoothstep(0.96, 1.0, uLoopProgress);
+                
+                gl_PointSize = vSize;
+                
+                // --- DYNAMIC COLOR TEMPERATURE SYSTEM ---
+                vec3 c_base = aBaseColor;
+                
+                // Stage Colors
+                vec3 c_ocean = vec3(0.0, 0.5, 1.0);
+                vec3 c_hell = vec3(1.0, 0.2, 0.0); // Magma
+                vec3 c_bio = vec3(0.2, 1.0, 0.5); // Life
+                vec3 c_galaxy = vec3(0.8, 0.6, 1.0); // Cosmic
+                vec3 c_matrix = vec3(0.0, 1.0, 0.8); // Data
+                vec3 c_void = vec3(0.1, 0.0, 0.2); // UV/BlackHole
+
+                if(uLoopProgress < 0.18) vColor = mix(c_ocean, c_base, uLoopProgress*2.0);
+                else if(uLoopProgress < 0.26) vColor = mix(c_base, c_hell, 0.7); // S3 Hell
+                else if(uLoopProgress < 0.42) vColor = c_base;
+                else if(uLoopProgress < 0.52) vColor = mix(c_base, c_bio, 0.6); // S5 DNA
+                else if(uLoopProgress < 0.74) vColor = mix(c_base, c_galaxy, 0.5); // Galaxy
+                else if(uLoopProgress < 0.84) vColor = c_matrix; // S9 Matrix
+                else if(uLoopProgress < 0.94) vColor = mix(c_galaxy, c_void, 0.8); // S10 BlackHole
+                else vColor = vec3(0.5, 0.7, 1.0); // S11 Pale Dot
+            }
+        `;
+
+        const fragmentShader = `
+            precision highp float;
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+                vec2 coord = gl_PointCoord - vec2(0.5);
+                float r = length(coord);
+                if(r > 0.5) discard;
+                
+                // Soft Bloom / Glow
+                float glow = 1.0 - smoothstep(0.1, 0.5, r);
+                float core = 1.0 - smoothstep(0.0, 0.15, r);
+                
+                vec3 finalColor = vColor * glow + vec3(1.0) * core * 0.5;
+                
+                gl_FragColor = vec4(finalColor, glow * vOpacity);
+            }
+        `;
+
+        // --- MAIN INITIALIZATION ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020408); 
+        scene.fog = new THREE.FogExp2(0x020408, 0.0003);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 100, 400);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5; 
+
+        const sunLight = new THREE.PointLight(0xffffff, 2, 5000);
+        scene.add(sunLight);
+        scene.add(new THREE.AmbientLight(0x111122));
+
+        // --- PARTICLES (80-LAYER FIBONACCI SPHERE LATTICE) ---
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(COUNT * 3);
+        const baseColors = new Float32Array(COUNT * 3);
+        const ids = new Float32Array(COUNT);
+        const colorHelper = new THREE.Color();
+        
+        const LAYERS = 80;
+        const ptsPerLayer = Math.floor(COUNT / LAYERS);
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+        let idx = 0;
+        for (let l = 0; l < LAYERS; l++) {
+            const layerR = 20 + (l / (LAYERS - 1)) * 180; 
+            for (let i = 0; i < ptsPerLayer; i++) {
+                if (idx >= COUNT) break;
+                const y = 1 - (i / (ptsPerLayer - 1)) * 2;
+                const radiusAtY = Math.sqrt(1 - y * y);
+                const theta = goldenAngle * i;
+                const x = Math.cos(theta) * radiusAtY;
+                const z = Math.sin(theta) * radiusAtY;
+
+                positions[idx * 3 + 0] = x * layerR;
+                positions[idx * 3 + 1] = y * layerR;
+                positions[idx * 3 + 2] = z * layerR;
+                ids[idx] = idx;
+
+                const layerNorm = l / LAYERS;
+                const hue = 0.6 + layerNorm * 0.2; 
+                const light = 0.8 - layerNorm * 0.4; 
+                colorHelper.setHSL(hue, 0.9, light);
+                baseColors[idx * 3 + 0] = colorHelper.r;
+                baseColors[idx * 3 + 1] = colorHelper.g;
+                baseColors[idx * 3 + 2] = colorHelper.b;
+                idx++;
+            }
+        }
+
+        geometry.setAttribute('aOffset', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('aId', new THREE.BufferAttribute(ids, 1));
+        geometry.setAttribute('aBaseColor', new THREE.BufferAttribute(baseColors, 3));
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); 
+
+        const uniforms = {
+            uTime: { value: 0 },
+            uLoopProgress: { value: 0 },
+            uSeed: { value: Math.random() * 100 },
+            uLaserPos: { value: new THREE.Vector3() },
+            uLaserActive: { value: 0 }
+        };
+
+        const material = new THREE.ShaderMaterial({
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            uniforms: uniforms,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+
+        const points = new THREE.Points(geometry, material);
+        scene.add(points);
+
+        // --- EVENTS ---
+        window.addEventListener('dblclick', () => {
+            camera.position.set(0, 100, 400);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function startSimulation() {
+            const introScreen = document.getElementById('intro-screen');
+            if(introScreen && introScreen.style.display !== 'none') {
+                audioManager.init();
+                introScreen.style.opacity = '0';
+                document.getElementById('ui').style.opacity = '1';
+                setTimeout(()=>{ introScreen.style.display = 'none'; }, 1500);
+            }
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            startSimulation();
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const target = new THREE.Vector3();
+            raycaster.ray.at(200, target);
+            uniforms.uLaserPos.value.copy(target);
+            uniforms.uLaserActive.value = 1.0;
+            setTimeout(() => { uniforms.uLaserActive.value = 0.0; }, 400);
+        });
+        
+        window.addEventListener('touchstart', (e) => {
+             startSimulation();
+        }, {passive: true});
+        
+        // --- UI & LOGIC ---
+        const cosmosStages = [
+            { t: 0.04, name: "S0: THE SHORES OF THE COSMIC OCEAN", sub: "The cosmos is all that is or ever was or ever will be." },
+            { t: 0.10, name: "S1: COSMIC CALENDAR IGNITION", sub: "15 billion years compressed into one year." },
+            { t: 0.18, name: "S2: HARMONY OF THE WORLDS", sub: "The music of the spheres." },
+            { t: 0.26, name: "S3: HEAVEN AND HELL", sub: "A planet of fire and rain." },
+            { t: 0.34, name: "S4: THE EDGE OF FOREVER", sub: "Expanding into the unknown." },
+            { t: 0.42, name: "S5: THE PERSISTENCE OF MEMORY", sub: "The code of life begins." },
+            { t: 0.52, name: "S6: ONE VOICE IN THE COSMIC FUGUE", sub: "The diversity of life sings." },
+            { t: 0.62, name: "S7: TRAVELERS' TALES", sub: "Voyagers carrying our golden hello." },
+            { t: 0.74, name: "S8: THE BACKBONE OF NIGHT", sub: "What are the stars?" },
+            { t: 0.84, name: "S9: ENCYCLOPAEDIA GALACTICA", sub: "A library of alien civilizations." },
+            { t: 0.94, name: "S10: GHOSTS OF THE MILKY WAY", sub: "The life and death of stars." },
+            { t: 1.00, name: "S11: WHO SPEAKS FOR EARTH?", sub: "A pale blue dot, a lonely speck." }
+        ];
+
+        const ui = {
+            stage: document.getElementById('stage-display'),
+            sub: document.getElementById('sub-display'),
+            fill: document.getElementById('progress-fill'),
+            seed: document.getElementById('seed-val'),
+            year: document.getElementById('year-disp'),
+            loop: document.getElementById('loop-count'),
+            quote: document.getElementById('quote-overlay'),
+            panel: document.getElementById('info-panel'),
+            ctrlPanel: document.getElementById('control-panel'),
+            btnVoice: document.getElementById('btn-voice')
+        };
+
+        const clock = new THREE.Clock();
+        let loopCounter = 1;
+        let timeScale = 1.0;
+        let isPaused = false;
+        let cycleTime = 0;
+        let currentStageIndex = -1;
+
+        function updateUI(t) {
+            let activeStage = cosmosStages[0];
+            let index = 0;
+            for(let i=0; i<cosmosStages.length; i++) {
+                if(t < cosmosStages[i].t) {
+                    activeStage = cosmosStages[i];
+                    index = i;
+                    break;
+                }
+            }
+
+            ui.stage.innerText = activeStage.name;
+            ui.sub.innerText = activeStage.sub;
+            
+            // UI Color theme sync with Shader Stage
+            if(index === 3) { ui.stage.style.color = "#ff4422"; ui.stage.style.textShadow = "0 0 20px #ff0000"; }
+            else if(index === 5) { ui.stage.style.color = "#44ff88"; ui.stage.style.textShadow = "0 0 20px #00ff00"; }
+            else if(index === 11) { ui.stage.style.color = "#4488ff"; ui.stage.style.textShadow = "0 0 20px #0044ff"; }
+            else { ui.stage.style.color = "#ffffff"; ui.stage.style.textShadow = "0 0 20px rgba(255,255,255,0.5)"; }
+
+            if(currentStageIndex !== index) {
+                audioManager.triggerStageSFX(index, activeStage.sub);
+                ui.quote.innerText = activeStage.sub; 
+                ui.quote.style.opacity = 1;
+                setTimeout(() => { ui.quote.style.opacity = 0; }, 4000);
+                currentStageIndex = index;
+            }
+        }
+
+        document.getElementById('btn-voice').addEventListener('click', function() {
+            const enabled = audioManager.toggleNarration();
+            this.innerText = enabled ? "VOICE: ON" : "VOICE: OFF";
+            this.classList.toggle('active', enabled);
+        });
+
+        document.getElementById('bgm-volume').addEventListener('input', function(e) {
+            audioManager.setBGMVolume(e.target.value);
+        });
+
+        document.getElementById('btn-pause').addEventListener('click', function() { 
+            isPaused = !isPaused; 
+            this.innerText = isPaused ? "RESUME" : "PAUSE"; 
+            if(isPaused) audioManager.pause();
+            else audioManager.resume();
+        });
+        document.getElementById('btn-reset').addEventListener('click', function() { 
+            cycleTime = 0; uniforms.uSeed.value = Math.random()*100; loopCounter++; 
+        });
+        document.getElementById('btn-faster').addEventListener('click', () => { 
+            timeScale = Math.min(timeScale + 0.5, 5.0); 
+            document.getElementById('speed-display').innerText = "x" + timeScale.toFixed(1);
+            audioManager.setSpeed(timeScale);
+        });
+        document.getElementById('btn-slower').addEventListener('click', () => { 
+            timeScale = Math.max(timeScale - 0.5, 0.5); 
+            document.getElementById('speed-display').innerText = "x" + timeScale.toFixed(1);
+            audioManager.setSpeed(timeScale);
+        });
+        
+        document.getElementById('btn-settings-toggle').addEventListener('click', function() {
+            ui.ctrlPanel.classList.toggle('visible');
+        });
+        document.getElementById('btn-toggle-ui').addEventListener('click', function() { 
+            ui.ctrlPanel.classList.remove('visible');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+            if(!isPaused) {
+                cycleTime += dt * timeScale;
+                if (cycleTime >= DEFAULT_CYCLE_DURATION) {
+                    cycleTime = 0;
+                    loopCounter++;
+                    ui.loop.innerText = loopCounter;
+                    uniforms.uSeed.value = Math.random() * 1000.0;
+                    ui.seed.innerText = uniforms.uSeed.value.toFixed(2);
+                }
+            }
+            const normalizedTime = cycleTime / DEFAULT_CYCLE_DURATION;
+            uniforms.uTime.value += dt * timeScale;
+            uniforms.uLoopProgress.value = normalizedTime;
+
+            // Lighting color dynamic change
+            if(normalizedTime > 0.18 && normalizedTime < 0.26) sunLight.color.setHex(0xff4422); // Hell
+            else if(normalizedTime > 0.84 && normalizedTime < 0.94) sunLight.color.setHex(0xaa00ff); // Blackhole
+            else sunLight.color.setHex(0xffffff);
+
+            ui.fill.style.width = (normalizedTime * 100) + "%";
+            ui.year.innerText = Math.floor(normalizedTime * 13800000000).toLocaleString();
+            
+            updateUI(normalizedTime);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
