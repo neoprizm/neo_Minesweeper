@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COSMOS: GEODESIC STRUCTURE</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Georgia', serif; user-select: none; }
+        
+        /* --- INTRO SCREEN --- */
+        #intro-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #0a1122 0%, #000000 100%);
+            z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1.5s ease-in-out;
+            cursor: pointer;
+        }
+
+        #intro-title {
+            font-size: 5vw;
+            letter-spacing: 0.2em;
+            font-weight: 300;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(100, 200, 255, 0.3);
+            margin: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        #intro-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5vw;
+            color: #ffcc88;
+            letter-spacing: 0.1em;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        #intro-hint {
+            margin-top: 50px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 1px;
+            animation: pulse 2s infinite;
+        }
+
+        /* --- UI CONTAINER --- */
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            display: flex; flex-direction: column; padding: 30px; box-sizing: border-box;
+            opacity: 0; transition: opacity 2s; 
+        }
+
+        /* --- INFO PANEL --- */
+        #info-panel {
+            color: #aaddff; text-shadow: 0 0 10px #0055ff; z-index: 10; pointer-events: auto;
+            max-width: 60%;
+        }
+        h1.ui-title { 
+            margin: 0; font-size: 24px; letter-spacing: 2px; font-weight: normal; 
+            background: linear-gradient(90deg, #ffffff, #88ccff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .stat { font-size: 12px; margin-top: 10px; color: #6688aa; font-family: 'Courier New', monospace; }
+        
+        #stage-display { 
+            font-size: 1.8em; font-weight: normal; color: #ffffff; margin-top: 20px; 
+            text-shadow: 0 0 20px rgba(100, 200, 255, 0.6);
+            transition: color 1.0s;
+        }
+        #sub-display {
+            font-size: 1em; color: #88aacc; margin-top: 5px; font-style: italic; opacity: 0.8;
+        }
+        #progress-container {
+            width: 100%; max-width: 300px; height: 2px; background: #112233; margin-top: 15px; position: relative;
+        }
+        #progress-fill {
+            width: 0%; height: 100%; background: #4488ff; box-shadow: 0 0 10px #4488ff; transition: width 0.1s;
+        }
+
+        #quote-overlay {
+            position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+            text-align: center; color: rgba(255,255,255,0.9); font-size: 16px; font-style: italic;
+            text-shadow: 0 0 5px black; width: 90%; opacity: 0; transition: opacity 1.5s;
+        }
+
+        /* --- SETTINGS & CONTROLS --- */
+        
+        #btn-settings-toggle {
+            position: absolute; top: 30px; right: 30px; z-index: 30; pointer-events: auto;
+            background: rgba(0, 10, 20, 0.8); border: 1px solid #335577; color: #00ffcc;
+            font-size: 20px; width: 40px; height: 40px; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.3s, background 0.3s;
+        }
+        #btn-settings-toggle:hover { background: #335577; transform: rotate(90deg); }
+
+        #control-panel {
+            position: absolute; top: 80px; right: 30px;
+            display: flex; flex-direction: column; gap: 8px;
+            align-items: flex-end; pointer-events: auto;
+            z-index: 20;
+            background: rgba(0, 5, 10, 0.9);
+            padding: 15px; border: 1px solid #335577; border-radius: 8px;
+            transform: translateX(150%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #control-panel.visible { transform: translateX(0); }
+
+        .btn-group {
+            display: flex; gap: 4px; padding: 4px; 
+            align-items: center; justify-content: flex-end; width: 100%;
+        }
+
+        button.ctrl-btn {
+            background: transparent; border: 1px solid #335577; color: #88ccff;
+            font-family: 'Courier New', sans-serif; font-size: 11px;
+            padding: 8px 12px; cursor: pointer; transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        button.ctrl-btn:hover { background: #335577; color: #fff; box-shadow: 0 0 10px #335577; }
+        .active { background: #335577; color: #fff; border-color: #00ffcc; }
+        #btn-voice.active { background: #0055aa; color: #fff; }
+
+        input[type=range] {
+            -webkit-appearance: none; width: 80px; height: 4px; background: #335577; outline: none; margin: 0 8px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 12px; height: 12px; background: #00ffcc; border-radius: 50%; cursor: pointer;
+        }
+        .vol-label { font-size: 14px; color: #88ccff; margin-left: 5px; }
+
+        #speed-display {
+            color: #fff; font-size: 11px; align-self: center; margin: 0 6px; min-width: 30px; text-align: center;
+        }
+
+        #controls-hint {
+            position: absolute; bottom: 20px; width: 100%;
+            color: #557799; text-align: center; font-size: 11px; letter-spacing: 1px;
+            pointer-events: none;
+        }
+
+        canvas { display: block; }
+        .hidden { opacity: 0 !important; pointer-events: none !important; }
+
+        /* --- MOBILE RESPONSIVE CSS (2x Smaller Logic) --- */
+        @media (max-width: 768px) {
+            /* Intro Reduction */
+            #intro-title { font-size: 8vw; letter-spacing: 0.1em; padding-bottom: 5px; margin-bottom: 10px; }
+            #intro-subtitle { font-size: 3vw; }
+            #intro-hint { font-size: 9px; margin-top: 20px; }
+
+            /* Settings Button */
+            #btn-settings-toggle { 
+                top: 15px; right: 15px; width: 24px; height: 24px; font-size: 12px; 
+            }
+            
+            /* Control Panel - Significantly smaller */
+            #control-panel { 
+                top: 45px; right: 15px; padding: 6px; gap: 3px; border-radius: 4px;
+            }
+            .btn-group { padding: 1px; gap: 2px; }
+            
+            /* Button & Text Reduction */
+            button.ctrl-btn { padding: 4px 6px; font-size: 7px; border-width: 0.5px; }
+            input[type=range] { width: 40px; height: 2px; margin: 0 4px; }
+            input[type=range]::-webkit-slider-thumb { width: 8px; height: 8px; }
+            .vol-label { font-size: 8px; margin-left: 2px; }
+            #speed-display { font-size: 7px; min-width: 15px; margin: 0 2px; }
+
+            /* Info Panel Reduction */
+            #ui { padding: 10px; }
+            h1.ui-title { font-size: 12px; letter-spacing: 1px; }
+            .stat { font-size: 7px; margin-top: 3px; }
+            #stage-display { font-size: 0.9em; margin-top: 8px; text-shadow: 0 0 10px rgba(100, 200, 255, 0.4); }
+            #sub-display { font-size: 0.6em; margin-top: 2px; }
+            #progress-container { height: 1px; margin-top: 5px; max-width: 100px; }
+            
+            /* Quote Overlay */
+            #quote-overlay { font-size: 9px; bottom: 30px; width: 95%; }
+            
+            /* Hint - Hidden on mobile */
+            #controls-hint { display: none; } 
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.8; } 100% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+    <div id="intro-screen">
+        <div class="title-container">
+            <h1 id="intro-title">COSMOS</h1>
+            <div id="intro-subtitle">Fly Me to the Moon</div>
+        </div>
+        <div id="intro-hint">Touch to Start</div>
+    </div>
+
+    <div id="ui">
+        <button id="btn-settings-toggle">⚙</button>
+
+        <div id="control-panel">
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-toggle-ui">HIDE</button>
+            </div>
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-voice">VOICE: OFF</button>
+            </div>
+            <div class="btn-group">
+                <span class="vol-label">♫</span>
+                <input type="range" id="bgm-volume" min="0" max="1" step="0.05" value="0.3">
+            </div>
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-slower"> &lt;&lt; </button>
+                <span id="speed-display">x1.0</span>
+                <button class="ctrl-btn" id="btn-faster"> &gt;&gt; </button>
+            </div>
+            <div class="btn-group">
+                <button class="ctrl-btn" id="btn-pause">PAUSE</button>
+                <button class="ctrl-btn" id="btn-reset">RESET</button>
+            </div>
+        </div>
+
+        <div id="info-panel">
+            <h1 class="ui-title">COSMOS</h1>
+            <div class="stat">Objects: 1,000,000 | Year: <span id="year-disp">0</span> | Cycle: <span id="loop-count">1</span></div>
+            <div id="stage-display">S0: THE SHORES OF THE COSMIC OCEAN</div>
+            <div id="sub-display">"The cosmos is all that is or ever was or ever will be."</div>
+            <div id="progress-container"><div id="progress-fill"></div></div>
+            <div class="stat" style="margin-top:5px;">Seed: <span id="seed-val">0.00</span></div>
+        </div>
+
+        <div id="quote-overlay"></div>
+
+        <div id="controls-hint">
+            [Double Click] Reset View &nbsp;•&nbsp; [Wheel] Deep Zoom &nbsp;•&nbsp; [L-Click] Interaction
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- AUDIO MANAGER ---
+        class CosmosAudio {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.convolver = null; 
+                this.isInitialized = false;
+                this.isPlaying = false;
+                this.isNarrationEnabled = false; 
+                this.bgmVolume = 0.3; 
+                
+                this.currentTempo = 1.0;
+                this.nextChordTime = 0;
+                this.scoreIndex = 0;
+                this.timerID = null;
+
+                this.progression = [
+                    { chords: ['A2', 'C3', 'E3', 'G3'], bass: 'A1', d: 4 }, 
+                    { chords: ['D3', 'F3', 'A3', 'C4'], bass: 'D2', d: 4 }, 
+                    { chords: ['G2', 'B2', 'D3', 'F3'], bass: 'G1', d: 4 }, 
+                    { chords: ['C3', 'E3', 'G3', 'B3'], bass: 'C2', d: 4 }, 
+                    { chords: ['F2', 'A2', 'C3', 'E3'], bass: 'F1', d: 4 }, 
+                    { chords: ['B2', 'D3', 'F3', 'A3'], bass: 'B1', d: 4 }, 
+                    { chords: ['E3', 'G#3', 'B3', 'D4'], bass: 'E2', d: 4 }, 
+                    { chords: ['A2', 'C3', 'E3', 'G3'], bass: 'A1', d: 4 }, 
+                    { chords: ['D3', 'F3', 'A3', 'C4'], bass: 'D2', d: 4 }, 
+                    { chords: ['G2', 'B2', 'D3', 'F3'], bass: 'G1', d: 4 }, 
+                    { chords: ['C3', 'E3', 'G3', 'B3'], bass: 'C2', d: 4 }, 
+                    { chords: ['E3', 'G#3', 'B3', 'D4'], bass: 'E2', d: 4 }, 
+                ];
+
+                this.noteFreqs = {
+                    'F1': 43.65, 'G1': 49.00, 'A1': 55.00, 'B1': 61.74,
+                    'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'F2': 87.31, 'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'B2': 123.47,
+                    'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00, 'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'B3': 246.94,
+                    'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23
+                };
+
+                this.maleVoice = null;
+                if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                    window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
+                }
+            }
+
+            loadVoices() {
+                const voices = window.speechSynthesis.getVoices();
+                this.maleVoice = 
+                    voices.find(v => v.name.includes('Google US English')) || 
+                    voices.find(v => v.name.includes('David')) || 
+                    voices.find(v => v.name.includes('Daniel')) || 
+                    voices.find(v => v.name.includes('Male')) || 
+                    voices.find(v => v.lang === 'en-US');
+            }
+
+            toggleNarration() {
+                this.isNarrationEnabled = !this.isNarrationEnabled;
+                if(!this.isNarrationEnabled) window.speechSynthesis.cancel();
+                return this.isNarrationEnabled;
+            }
+
+            setBGMVolume(val) {
+                this.bgmVolume = parseFloat(val);
+            }
+
+            createReverb(duration, decay) {
+                const rate = this.ctx.sampleRate;
+                const length = rate * duration;
+                const impulse = this.ctx.createBuffer(2, length, rate);
+                const left = impulse.getChannelData(0);
+                const right = impulse.getChannelData(1);
+                for (let i = 0; i < length; i++) {
+                    const e = Math.pow(1 - i / length, decay);
+                    left[i] = (Math.random() * 2 - 1) * e;
+                    right[i] = (Math.random() * 2 - 1) * e;
+                }
+                return impulse;
+            }
+
+            init() {
+                if (this.isInitialized) return;
+                if (!this.maleVoice) this.loadVoices();
+
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 1.0; 
+
+                this.convolver = this.ctx.createConvolver();
+                this.convolver.buffer = this.createReverb(4.0, 3.0); 
+                const reverbGain = this.ctx.createGain();
+                reverbGain.gain.value = 0.5; 
+
+                this.masterGain.connect(this.ctx.destination);
+                this.masterGain.connect(this.convolver);
+                this.convolver.connect(reverbGain);
+                reverbGain.connect(this.ctx.destination);
+
+                this.isInitialized = true;
+                this.isPlaying = true;
+                this.nextChordTime = this.ctx.currentTime + 0.5;
+                this.scheduler();
+            }
+
+            playHybridChord(chordObj, duration, time) {
+                const t = time;
+                const attack = 2.0; 
+                const totalDur = duration * 2.5; 
+
+                chordObj.chords.forEach((note, i) => {
+                    const freq = this.noteFreqs[note];
+                    if(!freq) return;
+
+                    const osc = this.ctx.createOscillator();
+                    const oscDetune = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const filter = this.ctx.createBiquadFilter();
+
+                    osc.type = 'sawtooth'; 
+                    osc.frequency.value = freq;
+                    oscDetune.type = 'triangle';
+                    oscDetune.frequency.value = freq;
+                    oscDetune.detune.value = i % 2 === 0 ? 5 : -5; 
+
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 800 + i*200; 
+                    filter.Q.value = 1;
+
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.08 * this.bgmVolume, t + attack);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + totalDur);
+
+                    osc.connect(filter);
+                    oscDetune.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+
+                    osc.start(t);
+                    oscDetune.start(t);
+                    osc.stop(t + totalDur);
+                    oscDetune.stop(t + totalDur);
+                });
+
+                if(chordObj.bass) {
+                    const bassFreq = this.noteFreqs[chordObj.bass];
+                    if(bassFreq) {
+                        const oscBass = this.ctx.createOscillator();
+                        const filterBass = this.ctx.createBiquadFilter();
+                        const gainBass = this.ctx.createGain();
+
+                        oscBass.type = 'square'; 
+                        oscBass.frequency.value = bassFreq;
+
+                        filterBass.type = 'lowpass';
+                        filterBass.Q.value = 5;
+                        filterBass.frequency.setValueAtTime(bassFreq * 4, t);
+                        filterBass.frequency.exponentialRampToValueAtTime(bassFreq, t + duration);
+
+                        gainBass.gain.setValueAtTime(0, t);
+                        gainBass.gain.linearRampToValueAtTime(0.2 * this.bgmVolume, t + 0.5);
+                        gainBass.gain.exponentialRampToValueAtTime(0.001, t + totalDur);
+
+                        oscBass.connect(filterBass);
+                        filterBass.connect(gainBass);
+                        gainBass.connect(this.masterGain);
+
+                        oscBass.start(t);
+                        oscBass.stop(t + totalDur);
+                    }
+                }
+            }
+
+            scheduler() {
+                if (this.isPlaying) {
+                    while (this.nextChordTime < this.ctx.currentTime + 0.1) {
+                        this.scheduleChord(this.nextChordTime);
+                    }
+                    this.timerID = setTimeout(() => this.scheduler(), 50);
+                }
+            }
+
+            scheduleChord(time) {
+                const chordInfo = this.progression[this.scoreIndex % this.progression.length];
+                const beatLen = 1.2 / this.currentTempo; 
+                const dur = chordInfo.d * beatLen;
+                this.playHybridChord(chordInfo, dur, time);
+                this.nextChordTime += dur;
+                this.scoreIndex++;
+            }
+
+            setSpeed(speedMultiplier) {
+                this.currentTempo = Math.max(0.5, Math.min(speedMultiplier, 3.0));
+            }
+
+            pause() {
+                if(this.ctx) this.ctx.suspend();
+                this.isPlaying = false;
+                clearTimeout(this.timerID);
+            }
+
+            resume() {
+                if(this.ctx) {
+                    this.ctx.resume();
+                    this.nextChordTime = this.ctx.currentTime;
+                    this.isPlaying = true;
+                    this.scheduler();
+                }
+            }
+
+            triggerStageSFX(index, textToSpeech) {
+                if(!this.isInitialized || !this.isPlaying) return;
+
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+
+                switch(index) {
+                    case 0: 
+                        osc.type = 'sine'; osc.frequency.setValueAtTime(60, t); gain.gain.setValueAtTime(0.05, t);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 4); osc.start(); osc.stop(t + 4); break;
+                    case 1: 
+                         osc.type = 'sawtooth'; osc.frequency.setValueAtTime(40, t); gain.gain.setValueAtTime(0.03, t);
+                         gain.gain.linearRampToValueAtTime(0, t+3); osc.start(); osc.stop(t+3); break;
+                }
+
+                if(this.isNarrationEnabled && textToSpeech && window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(textToSpeech);
+                    utterance.lang = 'en-US';
+                    if (this.maleVoice) utterance.voice = this.maleVoice;
+                    
+                    utterance.pitch = 0.6; 
+                    utterance.rate = 0.85; 
+                    utterance.volume = 0.5; 
+
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+        }
+
+        const audioManager = new CosmosAudio();
+
+
+        // --- CONFIGURATION ---
+        const GRID_SIZE = 100; 
+        const COUNT = GRID_SIZE * GRID_SIZE * GRID_SIZE;
+        const DEFAULT_CYCLE_DURATION = 180.0; 
+
+        // --- SHADERS (GLSL) ---
+        const vertexShader = `
+            precision highp float;
+            uniform float uTime;        
+            uniform float uLoopProgress; 
+            uniform float uSeed;        
+            uniform vec3 uLaserPos;
+            uniform float uLaserActive;
+            attribute vec3 aOffset;   
+            attribute float aId; 
+            attribute vec3 aBaseColor; 
+            varying vec3 vColor;
+            varying float vOpacity;
+            varying float vSize;
+
+            float hash11(float n){ return fract(sin(n*43758.5453123+uSeed)*653.289); }
+            float rand(vec3 p){ return hash11(dot(p,vec3(7.0,113.0,47.0))); }
+            
+            float noise(vec3 p) {
+                const vec3 step = vec3(110.0, 241.0, 171.0); 
+                vec3 i = floor(p);
+                vec3 f = fract(p);
+                float n = dot(i, step);
+                vec3 u = f * f * (3.0 - 2.0 * f);
+                return mix(mix(mix( hash11(n + dot(step, vec3(0.0, 0.0, 0.0))), hash11(n + dot(step, vec3(1.0, 0.0, 0.0))), u.x),
+                               mix( hash11(n + dot(step, vec3(0.0, 1.0, 0.0))), hash11(n + dot(step, vec3(1.0, 1.0, 0.0))), u.x), u.y),
+                           mix(mix( hash11(n + dot(step, vec3(0.0, 0.0, 1.0))), hash11(n + dot(step, vec3(1.0, 0.0, 1.0))), u.x),
+                               mix( hash11(n + dot(step, vec3(0.0, 1.0, 1.0))), hash11(n + dot(step, vec3(1.0, 1.0, 1.0))), u.x), u.y), u.z);
+            }
+
+            mat2 rot2(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+            
+            vec3 orbitShell(vec3 p, float t) {
+                float r = length(p) + 1.0;
+                float angle = t * (10.0/r) + aId;
+                vec3 orbit = vec3(r * cos(angle), p.y, r * sin(angle));
+                orbit.xz = rot2(p.y * 0.01) * orbit.xz; 
+                return orbit;
+            }
+
+            vec3 kerrSwirl(vec3 p, float t) {
+                float r = length(p);
+                float twist = 500.0 / (r + 1.0);
+                vec3 q = p;
+                q.xz = rot2(t * 2.0 + twist) * q.xz;
+                return q;
+            }
+
+            vec3 applyCosmosScenario(vec3 p0, float t) {
+                float t0 = smoothstep(0.00, 0.04, t);
+                float t1 = smoothstep(0.08, 0.12, t);
+                float t2 = smoothstep(0.16, 0.20, t);
+                float t3 = smoothstep(0.24, 0.28, t);
+                float t4 = smoothstep(0.32, 0.36, t);
+                float t5 = smoothstep(0.40, 0.44, t);
+                float t6 = smoothstep(0.50, 0.54, t);
+                float t7 = smoothstep(0.60, 0.64, t);
+                float t8 = smoothstep(0.72, 0.76, t);
+                float t9 = smoothstep(0.82, 0.86, t);
+                float t10 = smoothstep(0.92, 0.96, t);
+
+                vec3 pos = vec3(0.0); 
+                vec3 p_exp = p0 * exp(4.0);
+                pos = mix(pos, p_exp, t0);
+                vec3 p_orb = orbitShell(p0 * 5.0, uTime);
+                pos = mix(pos, p_orb, t1);
+                vec3 p_hell = p_orb;
+                if(t > 0.18 && t < 0.26 && rand(vec3(aId)) < 0.08) p_hell += normalize(p_orb) * sin(uTime * 20.0) * 50.0;
+                pos = mix(pos, p_hell, t2);
+                vec3 p_hub = p_exp * 2.0 + vec3(sin(uTime), cos(uTime), 0.0)*50.0;
+                pos = mix(pos, p_hub, t3);
+                vec3 p_dna = p0 * 4.0;
+                p_dna.x += (mod(aId, 2.0) - 0.5) * 20.0 * sin(uTime);
+                pos = mix(pos, p_dna, t4);
+                vec3 p_fugue = p0 * 5.0 + noise(p0 * 0.1 + uTime) * 30.0;
+                pos = mix(pos, p_fugue, t5);
+                vec3 p_voy = p_fugue;
+                if(mod(aId, 100.0) < 5.0) p_voy += normalize(vec3(1.0, 0.5, 0.0)) * (t - 0.52) * 5000.0;
+                pos = mix(pos, p_voy, t6);
+                float r = length(p0.xz) * 0.2;
+                float ang = atan(p0.z, p0.x) + r * 3.0 + uTime * 0.5;
+                vec3 p_gal = vec3(r * 200.0 * cos(ang), p0.y + noise(p0)*10.0, r * 200.0 * sin(ang));
+                pos = mix(pos, p_gal, t7);
+                vec3 q = floor(p0 * 8.0 / 20.0 + 0.5) * 20.0; 
+                vec3 p_lib = q + (p0*8.0 - q) * 0.1;
+                pos = mix(pos, p_lib, t8);
+                vec3 p_ghost = kerrSwirl(p0 * 5.0, uTime);
+                pos = mix(pos, p_ghost, t9);
+                vec3 p_end = p0 * 0.1; 
+                pos = mix(pos, p_end, t10);
+                return pos;
+            }
+
+            void main() {
+                vec3 basePos = aOffset * 2.5; 
+                vec3 finalPos = applyCosmosScenario(basePos, uLoopProgress);
+                if (uLaserActive > 0.0) {
+                    float d = distance(finalPos, uLaserPos);
+                    if (d < 60.0) finalPos += normalize(finalPos - uLaserPos) * 50.0;
+                }
+                vec4 mvPosition = viewMatrix * modelMatrix * vec4(finalPos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+                float dist = -mvPosition.z;
+                if(dist < 1.0) dist = 1.0;
+                vSize = 2000.0 / dist; 
+                if(uLoopProgress > 0.94) vSize *= (1.0 + 0.5 * sin(uTime * 5.0));
+                if(uLoopProgress > 0.62 && uLoopProgress < 0.74) vSize *= (0.8 + 0.4 * rand(vec3(aId, uTime, 1.0)));
+                vOpacity = 1.0;
+                if(uLoopProgress < 0.04) vOpacity = smoothstep(0.0, 0.04, uLoopProgress) * 0.3;
+                if(uLoopProgress > 0.84 && uLoopProgress < 0.94) vOpacity = 0.6 + 0.4 * sin(40.0 * uTime + aId);
+                gl_PointSize = vSize;
+                
+                vec3 c_mist = vec3(0.5, 0.6, 0.7);
+                vec3 c_cal = vec3(uLoopProgress*5.0, 0.3, 1.0);
+                vec3 c_gold = vec3(1.0, 0.8, 0.4); 
+                vec3 c_hell = vec3(1.0, 0.2, 0.0); 
+                vec3 c_blue = vec3(0.0, 0.5, 1.0); 
+                vec3 c_lib = vec3(0.2, 0.8, 0.6); 
+                vColor = aBaseColor; 
+                if(uLoopProgress < 0.04) vColor = c_mist;
+                else if(uLoopProgress < 0.10) vColor = mix(c_mist, c_cal, (uLoopProgress-0.04)/0.06);
+                else if(uLoopProgress < 0.18) vColor = mix(aBaseColor, c_gold, 0.5);
+                else if(uLoopProgress < 0.26) { if(rand(vec3(aId)) < 0.08) vColor = c_hell; }
+                else if(uLoopProgress < 0.42) vColor = aBaseColor; 
+                else if(uLoopProgress < 0.52) vColor = aBaseColor * 1.2; 
+                else if(uLoopProgress < 0.62) vColor = mix(aBaseColor, vec3(1.0, 0.9, 0.2), 0.3); 
+                else if(uLoopProgress < 0.74) vColor = mix(aBaseColor, vec3(0.8, 0.9, 1.0), 0.5); 
+                else if(uLoopProgress < 0.84) vColor = c_lib * (0.5 + 0.5*sin(uTime*10.0+aId)); 
+                else if(uLoopProgress < 0.94) vColor = mix(vec3(0.1, 0.0, 0.2), vec3(1.0, 0.5, 0.0), rand(vec3(aId))); 
+                else if(uLoopProgress >= 0.94) vColor = c_blue; 
+            }
+        `;
+
+        const fragmentShader = `
+            precision highp float;
+            varying vec3 vColor;
+            varying float vOpacity;
+            void main() {
+                vec2 coord = gl_PointCoord - vec2(0.5);
+                if(length(coord) > 0.5) discard;
+                float alpha = (1.0 - smoothstep(0.1, 0.5, length(coord))) * vOpacity;
+                gl_FragColor = vec4(vColor * 1.5, alpha);
+            }
+        `;
+
+        // --- MAIN INITIALIZATION ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020408); 
+        scene.fog = new THREE.FogExp2(0x020408, 0.0003);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 100, 400);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.3; 
+
+        const sunLight = new THREE.PointLight(0xffffff, 2, 5000);
+        scene.add(sunLight);
+        scene.add(new THREE.AmbientLight(0x111122));
+
+        // --- PARTICLES (FIBONACCI SPHERE LAYERS) ---
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(COUNT * 3);
+        const baseColors = new Float32Array(COUNT * 3);
+        const ids = new Float32Array(COUNT);
+        const colorHelper = new THREE.Color();
+        
+        // 80 Layers of Fibonacci Spheres
+        const LAYERS = 80;
+        const ptsPerLayer = Math.floor(COUNT / LAYERS);
+        const phi = Math.PI * (3 - Math.sqrt(5)); // Golden Angle
+
+        let idx = 0;
+        for (let l = 0; l < LAYERS; l++) {
+            // Layer radius (Linear or Exponential)
+            // 0.2 to 1.0 normalized radius
+            const layerRadius = 50 + (l / (LAYERS - 1)) * 250; 
+            
+            for (let i = 0; i < ptsPerLayer; i++) {
+                if (idx >= COUNT) break;
+
+                const y = 1 - (i / (ptsPerLayer - 1)) * 2; // -1 to 1
+                const r = Math.sqrt(1 - y * y); // Radius at y
+                const theta = phi * i;
+
+                const x = Math.cos(theta) * r;
+                const z = Math.sin(theta) * r;
+
+                // Scale by layer radius
+                positions[idx * 3 + 0] = x * layerRadius;
+                positions[idx * 3 + 1] = y * layerRadius;
+                positions[idx * 3 + 2] = z * layerRadius;
+                
+                ids[idx] = idx;
+
+                // Color based on layer and position
+                const hue = 0.6 + (l / LAYERS) * 0.2; // Blue to Purple
+                colorHelper.setHSL(hue, 0.8, 0.5 + Math.random()*0.2);
+                baseColors[idx * 3 + 0] = colorHelper.r;
+                baseColors[idx * 3 + 1] = colorHelper.g;
+                baseColors[idx * 3 + 2] = colorHelper.b;
+
+                idx++;
+            }
+        }
+
+        geometry.setAttribute('aOffset', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('aId', new THREE.BufferAttribute(ids, 1));
+        geometry.setAttribute('aBaseColor', new THREE.BufferAttribute(baseColors, 3));
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); 
+
+        const uniforms = {
+            uTime: { value: 0 },
+            uLoopProgress: { value: 0 },
+            uSeed: { value: Math.random() * 100 },
+            uLaserPos: { value: new THREE.Vector3() },
+            uLaserActive: { value: 0 }
+        };
+
+        const material = new THREE.ShaderMaterial({
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            uniforms: uniforms,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+
+        const points = new THREE.Points(geometry, material);
+        scene.add(points);
+
+        // --- EVENTS ---
+        window.addEventListener('dblclick', () => {
+            camera.position.set(0, 100, 400);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function startSimulation() {
+            const introScreen = document.getElementById('intro-screen');
+            if(introScreen && introScreen.style.display !== 'none') {
+                audioManager.init();
+                introScreen.style.opacity = '0';
+                document.getElementById('ui').style.opacity = '1';
+                setTimeout(()=>{ introScreen.style.display = 'none'; }, 1500);
+            }
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            startSimulation();
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const target = new THREE.Vector3();
+            raycaster.ray.at(200, target);
+            uniforms.uLaserPos.value.copy(target);
+            uniforms.uLaserActive.value = 1.0;
+            setTimeout(() => { uniforms.uLaserActive.value = 0.0; }, 400);
+        });
+        
+        window.addEventListener('touchstart', (e) => {
+             startSimulation();
+        }, {passive: true});
+        
+        // --- UI & LOGIC ---
+        const cosmosStages = [
+            { t: 0.04, name: "S0: THE SHORES OF THE COSMIC OCEAN", sub: "The cosmos is all that is or ever was or ever will be." },
+            { t: 0.10, name: "S1: COSMIC CALENDAR IGNITION", sub: "15 billion years compressed into one year." },
+            { t: 0.18, name: "S2: HARMONY OF THE WORLDS", sub: "The music of the spheres." },
+            { t: 0.26, name: "S3: HEAVEN AND HELL", sub: "A planet of fire and rain." },
+            { t: 0.34, name: "S4: THE EDGE OF FOREVER", sub: "Expanding into the unknown." },
+            { t: 0.42, name: "S5: THE PERSISTENCE OF MEMORY", sub: "The code of life begins." },
+            { t: 0.52, name: "S6: ONE VOICE IN THE COSMIC FUGUE", sub: "The diversity of life sings." },
+            { t: 0.62, name: "S7: TRAVELERS' TALES", sub: "Voyagers carrying our golden hello." },
+            { t: 0.74, name: "S8: THE BACKBONE OF NIGHT", sub: "What are the stars?" },
+            { t: 0.84, name: "S9: ENCYCLOPAEDIA GALACTICA", sub: "A library of alien civilizations." },
+            { t: 0.94, name: "S10: GHOSTS OF THE MILKY WAY", sub: "The life and death of stars." },
+            { t: 1.00, name: "S11: WHO SPEAKS FOR EARTH?", sub: "A pale blue dot, a lonely speck." }
+        ];
+
+        const ui = {
+            stage: document.getElementById('stage-display'),
+            sub: document.getElementById('sub-display'),
+            fill: document.getElementById('progress-fill'),
+            seed: document.getElementById('seed-val'),
+            year: document.getElementById('year-disp'),
+            quote: document.getElementById('quote-overlay'),
+            panel: document.getElementById('info-panel'),
+            ctrlPanel: document.getElementById('control-panel'),
+            btnVoice: document.getElementById('btn-voice')
+        };
+
+        const clock = new THREE.Clock();
+        let loopCounter = 1;
+        let timeScale = 1.0;
+        let isPaused = false;
+        let cycleTime = 0;
+        let currentStageIndex = -1;
+
+        function updateUI(t) {
+            let activeStage = cosmosStages[0];
+            let index = 0;
+            for(let i=0; i<cosmosStages.length; i++) {
+                if(t < cosmosStages[i].t) {
+                    activeStage = cosmosStages[i];
+                    index = i;
+                    break;
+                }
+            }
+
+            ui.stage.innerText = activeStage.name;
+            ui.sub.innerText = activeStage.sub;
+            
+            if(index === 3) ui.stage.style.color = "#ff4422"; 
+            else if(index === 11) ui.stage.style.color = "#4488ff"; 
+            else ui.stage.style.color = "#ffffff";
+
+            if(currentStageIndex !== index) {
+                audioManager.triggerStageSFX(index, activeStage.sub);
+                ui.quote.innerText = activeStage.sub; 
+                ui.quote.style.opacity = 1;
+                setTimeout(() => { ui.quote.style.opacity = 0; }, 4000);
+                currentStageIndex = index;
+            }
+        }
+
+        document.getElementById('btn-voice').addEventListener('click', function() {
+            const enabled = audioManager.toggleNarration();
+            this.innerText = enabled ? "VOICE: ON" : "VOICE: OFF";
+            this.classList.toggle('active', enabled);
+        });
+
+        document.getElementById('bgm-volume').addEventListener('input', function(e) {
+            audioManager.setBGMVolume(e.target.value);
+        });
+
+        document.getElementById('btn-pause').addEventListener('click', function() { 
+            isPaused = !isPaused; 
+            this.innerText = isPaused ? "RESUME" : "PAUSE"; 
+            if(isPaused) audioManager.pause();
+            else audioManager.resume();
+        });
+        document.getElementById('btn-reset').addEventListener('click', function() { 
+            cycleTime = 0; uniforms.uSeed.value = Math.random()*100; loopCounter++; 
+        });
+        document.getElementById('btn-faster').addEventListener('click', () => { 
+            timeScale = Math.min(timeScale + 0.5, 5.0); 
+            document.getElementById('speed-display').innerText = "x" + timeScale.toFixed(1);
+            audioManager.setSpeed(timeScale);
+        });
+        document.getElementById('btn-slower').addEventListener('click', () => { 
+            timeScale = Math.max(timeScale - 0.5, 0.5); 
+            document.getElementById('speed-display').innerText = "x" + timeScale.toFixed(1);
+            audioManager.setSpeed(timeScale);
+        });
+        
+        // SETTINGS TOGGLE LOGIC
+        document.getElementById('btn-settings-toggle').addEventListener('click', function() {
+            ui.ctrlPanel.classList.toggle('visible');
+        });
+        // HIDE button inside panel
+        document.getElementById('btn-toggle-ui').addEventListener('click', function() { 
+            ui.ctrlPanel.classList.remove('visible');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+            if(!isPaused) {
+                cycleTime += dt * timeScale;
+                if (cycleTime >= DEFAULT_CYCLE_DURATION) {
+                    cycleTime = 0;
+                    loopCounter++;
+                    document.getElementById('loop-count').innerText = loopCounter;
+                    uniforms.uSeed.value = Math.random() * 1000.0;
+                    ui.seed.innerText = uniforms.uSeed.value.toFixed(2);
+                }
+            }
+            const normalizedTime = cycleTime / DEFAULT_CYCLE_DURATION;
+            uniforms.uTime.value += dt * timeScale;
+            uniforms.uLoopProgress.value = normalizedTime;
+
+            if(normalizedTime > 0.18 && normalizedTime < 0.26) sunLight.color.setHex(0xffaa00);
+            else if(normalizedTime > 0.94) sunLight.color.setHex(0x0044ff);
+            else sunLight.color.setHex(0xffffff);
+
+            ui.fill.style.width = (normalizedTime * 100) + "%";
+            ui.year.innerText = Math.floor(normalizedTime * 13800000000).toLocaleString();
+            
+            updateUI(normalizedTime);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
