@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>통합 이펙트 - 멀티 레이어</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+#controls {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid #555;
+  color: #fff;
+  z-index: 1000;
+  max-width: 320px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#controls h2 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #55ccff;
+  border-bottom: 2px solid #555;
+  padding-bottom: 10px;
+}
+
+.effect-group {
+  margin-bottom: 20px;
+}
+
+.effect-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+}
+
+.effect-item:last-child {
+  border-bottom: none;
+}
+
+.effect-item label {
+  font-size: 14px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.effect-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.effect-item input[type="range"] {
+  width: 60px;
+  margin-left: 10px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+button {
+  flex: 1;
+  padding: 10px;
+  background: #55ccff;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+button:hover {
+  background: #77ddff;
+}
+
+button.secondary {
+  background: #666;
+  color: #fff;
+}
+
+button.secondary:hover {
+  background: #888;
+}
+
+#toggleControls {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 10px 15px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border: 2px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1001;
+  font-size: 14px;
+}
+
+#toggleControls:hover {
+  background: rgba(50, 50, 50, 0.9);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.info {
+  font-size: 11px;
+  color: #888;
+  margin-top: 10px;
+  line-height: 1.5;
+  padding-top: 10px;
+  border-top: 1px solid #333;
+}
+
+.intensity-label {
+  font-size: 11px;
+  color: #aaa;
+  margin-left: 5px;
+}
+
+#controls::-webkit-scrollbar {
+  width: 8px;
+}
+
+#controls::-webkit-scrollbar-track {
+  background: #222;
+}
+
+#controls::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+#controls::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<button id="toggleControls">컨트롤 숨기기/보기</button>
+
+<div id="controls">
+  <h2>🎮 멀티 이펙트 컨트롤</h2>
+  
+  <div class="effect-group">
+    <div class="effect-item">
+      <input type="checkbox" id="mouseTrail" checked>
+      <label for="mouseTrail">마우스 트레일</label>
+      <input type="range" id="mouseTrailIntensity" min="1" max="10" value="5">
+      <span class="intensity-label" id="mouseTrailValue">5</span>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="shockwave" checked>
+      <label for="shockwave">충격파 (클릭)</label>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="damageNumber" checked>
+      <label for="damageNumber">데미지 숫자</label>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="snowRain">
+      <label for="snowRain">눈/비 파티클</label>
+      <input type="range" id="snowRainIntensity" min="50" max="500" value="200" step="50">
+      <span class="intensity-label" id="snowRainValue">200</span>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="starfield">
+      <label for="starfield">스타필드 (Z축)</label>
+      <input type="range" id="starfieldIntensity" min="100" max="600" value="300" step="50">
+      <span class="intensity-label" id="starfieldValue">300</span>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="starfieldScroll">
+      <label for="starfieldScroll">횡스크롤 스타</label>
+      <input type="range" id="starfieldScrollIntensity" min="100" max="500" value="250" step="50">
+      <span class="intensity-label" id="starfieldScrollValue">250</span>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="petalBasic">
+      <label for="petalBasic">꽃잎 (기본)</label>
+      <input type="range" id="petalBasicIntensity" min="50" max="300" value="120" step="10">
+      <span class="intensity-label" id="petalBasicValue">120</span>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="petalAdvanced">
+      <label for="petalAdvanced">꽃잎 (3D 틸트)</label>
+      <input type="range" id="petalAdvancedIntensity" min="50" max="300" value="120" step="10">
+      <span class="intensity-label" id="petalAdvancedValue">120</span>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="typewriter">
+      <label for="typewriter">타자기 텍스트</label>
+    </div>
+    
+    <div class="effect-item">
+      <input type="checkbox" id="textFragment">
+      <label for="textFragment">텍스트 파편화</label>
+    </div>
+  </div>
+  
+  <div class="button-group">
+    <button id="applyEffects">적용</button>
+    <button class="secondary" id="clearAll">전체 해제</button>
+  </div>
+  
+  <div class="button-group">
+    <button class="secondary" id="selectAll">전체 선택</button>
+    <button class="secondary" id="resetDefaults">기본값</button>
+  </div>
+  
+  <div class="info">
+    <strong>💡 사용법:</strong><br>
+    • 원하는 이펙트를 체크/해제<br>
+    • 슬라이더로 강도 조절<br>
+    • 적용 버튼으로 즉시 반영<br>
+    • 마우스 드래그/클릭으로 상호작용<br>
+    <br>
+    <strong>⚠️ 주의:</strong> 너무 많은 이펙트를 동시에 활성화하면 성능이 저하될 수 있습니다.
+  </div>
+</div>
+
+<script>
+// ========================================
+// 전역 변수 및 캔버스 설정
+// ========================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let activeEffects = new Map();
+let animationId = null;
+let isMouseDown = false;
+let mouseX = 0;
+let mouseY = 0;
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ========================================
+// UI 컨트롤
+// ========================================
+const controls = document.getElementById('controls');
+const toggleBtn = document.getElementById('toggleControls');
+const applyBtn = document.getElementById('applyEffects');
+const clearAllBtn = document.getElementById('clearAll');
+const selectAllBtn = document.getElementById('selectAll');
+const resetDefaultsBtn = document.getElementById('resetDefaults');
+
+toggleBtn.addEventListener('click', () => {
+  controls.classList.toggle('hidden');
+});
+
+// 슬라이더 값 표시 업데이트
+const sliders = ['mouseTrail', 'snowRain', 'starfield', 'starfieldScroll', 'petalBasic', 'petalAdvanced'];
+sliders.forEach(name => {
+  const slider = document.getElementById(name + 'Intensity');
+  const valueLabel = document.getElementById(name + 'Value');
+  if (slider && valueLabel) {
+    slider.addEventListener('input', (e) => {
+      valueLabel.textContent = e.target.value;
+    });
+  }
+});
+
+applyBtn.addEventListener('click', applyEffects);
+clearAllBtn.addEventListener('click', clearAllEffects);
+selectAllBtn.addEventListener('click', selectAllEffects);
+resetDefaultsBtn.addEventListener('click', resetToDefaults);
+
+function clearAllEffects() {
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+  });
+}
+
+function selectAllEffects() {
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked = true;
+  });
+}
+
+function resetToDefaults() {
+  document.getElementById('mouseTrail').checked = true;
+  document.getElementById('shockwave').checked = true;
+  document.getElementById('damageNumber').checked = true;
+  document.getElementById('snowRain').checked = false;
+  document.getElementById('starfield').checked = false;
+  document.getElementById('starfieldScroll').checked = false;
+  document.getElementById('petalBasic').checked = false;
+  document.getElementById('petalAdvanced').checked = false;
+  document.getElementById('typewriter').checked = false;
+  document.getElementById('textFragment').checked = false;
+  
+  document.getElementById('mouseTrailIntensity').value = 5;
+  document.getElementById('mouseTrailValue').textContent = '5';
+  document.getElementById('snowRainIntensity').value = 200;
+  document.getElementById('snowRainValue').textContent = '200';
+  document.getElementById('starfieldIntensity').value = 300;
+  document.getElementById('starfieldValue').textContent = '300';
+  document.getElementById('starfieldScrollIntensity').value = 250;
+  document.getElementById('starfieldScrollValue').textContent = '250';
+  document.getElementById('petalBasicIntensity').value = 120;
+  document.getElementById('petalBasicValue').textContent = '120';
+  document.getElementById('petalAdvancedIntensity').value = 120;
+  document.getElementById('petalAdvancedValue').textContent = '120';
+}
+
+// ========================================
+// 마우스 이벤트
+// ========================================
+canvas.addEventListener('pointerdown', (e) => {
+  isMouseDown = true;
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+  
+  // 충격파 효과
+  if (activeEffects.has('shockwave')) {
+    activeEffects.get('shockwave').addWave(mouseX, mouseY);
+  }
+  
+  // 데미지 숫자
+  if (activeEffects.has('damageNumber')) {
+    const value = Math.floor(Math.random() * 90) + 10;
+    const critical = Math.random() < 0.25;
+    activeEffects.get('damageNumber').addDamage(mouseX, mouseY, value, critical);
+  }
+  
+  // 텍스트 파편화
+  if (activeEffects.has('textFragment')) {
+    activeEffects.get('textFragment').toggle();
+  }
+});
+
+canvas.addEventListener('pointerup', () => {
+  isMouseDown = false;
+});
+
+canvas.addEventListener('pointerleave', () => {
+  isMouseDown = false;
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+  
+  // 마우스 트레일
+  if (isMouseDown && activeEffects.has('mouseTrail')) {
+    activeEffects.get('mouseTrail').addParticles(mouseX, mouseY);
+  }
+});
+
+// ========================================
+// 이펙트 적용
+// ========================================
+function applyEffects() {
+  // 기존 이펙트 정리
+  activeEffects.clear();
+  
+  // 체크된 이펙트만 생성
+  if (document.getElementById('mouseTrail').checked) {
+    const intensity = parseInt(document.getElementById('mouseTrailIntensity').value);
+    activeEffects.set('mouseTrail', new MouseTrailEffect(intensity));
+  }
+  
+  if (document.getElementById('shockwave').checked) {
+    activeEffects.set('shockwave', new ShockwaveEffect());
+  }
+  
+  if (document.getElementById('damageNumber').checked) {
+    activeEffects.set('damageNumber', new DamageNumberEffect());
+  }
+  
+  if (document.getElementById('snowRain').checked) {
+    const count = parseInt(document.getElementById('snowRainIntensity').value);
+    activeEffects.set('snowRain', new SnowRainEffect(count));
+  }
+  
+  if (document.getElementById('starfield').checked) {
+    const count = parseInt(document.getElementById('starfieldIntensity').value);
+    activeEffects.set('starfield', new StarfieldEffect(count));
+  }
+  
+  if (document.getElementById('starfieldScroll').checked) {
+    const count = parseInt(document.getElementById('starfieldScrollIntensity').value);
+    activeEffects.set('starfieldScroll', new StarfieldScrollEffect(count));
+  }
+  
+  if (document.getElementById('petalBasic').checked) {
+    const count = parseInt(document.getElementById('petalBasicIntensity').value);
+    activeEffects.set('petalBasic', new PetalBasicEffect(count));
+  }
+  
+  if (document.getElementById('petalAdvanced').checked) {
+    const count = parseInt(document.getElementById('petalAdvancedIntensity').value);
+    activeEffects.set('petalAdvanced', new PetalAdvancedEffect(count));
+  }
+  
+  if (document.getElementById('typewriter').checked) {
+    activeEffects.set('typewriter', new TypewriterEffect());
+  }
+  
+  if (document.getElementById('textFragment').checked) {
+    activeEffects.set('textFragment', new TextFragmentEffect());
+  }
+  
+  // 애니메이션 재시작
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+  startAnimation();
+}
+
+// ========================================
+// 메인 애니메이션 루프
+// ========================================
+let lastTime = performance.now();
+
+function startAnimation() {
+  function loop(now) {
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+    const time = now / 1000;
+    
+    // 배경 결정 (이펙트 우선순위에 따라)
+    if (activeEffects.has('petalBasic')) {
+      activeEffects.get('petalBasic').drawBackground(ctx);
+    } else if (activeEffects.has('petalAdvanced')) {
+      activeEffects.get('petalAdvanced').drawBackground(ctx);
+    } else if (activeEffects.has('typewriter')) {
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      // 기본 배경 (약간의 페이드 효과)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // 모든 활성 이펙트 업데이트 및 렌더링
+    activeEffects.forEach((effect, name) => {
+      effect.update(dt, time);
+      effect.draw(ctx, time);
+    });
+    
+    animationId = requestAnimationFrame(loop);
+  }
+  
+  loop(performance.now());
+}
+
+// ========================================
+// Effect: 마우스 트레일 파티클
+// ========================================
+class MouseTrailEffect {
+  constructor(intensity = 5) {
+    this.particles = [];
+    this.intensity = intensity;
+  }
+  
+  addParticles(x, y) {
+    for (let i = 0; i < this.intensity; i++) {
+      this.particles.push(new TrailParticle(x, y));
+    }
+  }
+  
+  update(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update();
+      if (this.particles[i].life <= 0) {
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+  
+  draw(ctx) {
+    for (const p of this.particles) {
+      p.draw(ctx);
+    }
+  }
+}
+
+class TrailParticle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = (Math.random() - 0.5) * 2;
+    this.radius = Math.random() * 4 + 2;
+    this.life = 1;
+    this.decay = 0.03 + Math.random() * 0.02;
+  }
+  
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.96;
+    this.vy *= 0.96;
+    this.life -= this.decay;
+  }
+  
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(this.life, 0);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#55ccff';
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 충격파
+// ========================================
+class ShockwaveEffect {
+  constructor() {
+    this.waves = [];
+  }
+  
+  addWave(x, y) {
+    this.waves.push(new Shockwave(x, y));
+  }
+  
+  update() {
+    for (let i = this.waves.length - 1; i >= 0; i--) {
+      this.waves[i].update();
+      if (this.waves[i].life <= 0 || this.waves[i].radius > this.waves[i].maxRadius) {
+        this.waves.splice(i, 1);
+      }
+    }
+  }
+  
+  draw(ctx) {
+    for (const w of this.waves) {
+      w.draw(ctx);
+    }
+  }
+}
+
+class Shockwave {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 0;
+    this.maxRadius = Math.max(canvas.width, canvas.height) * 0.5;
+    this.lineWidth = 4;
+    this.life = 1;
+  }
+  
+  update() {
+    this.radius += 8;
+    this.life -= 0.02;
+  }
+  
+  draw(ctx) {
+    if (this.life <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = this.life;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = '#55ffff';
+    ctx.lineWidth = this.lineWidth;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 데미지 숫자
+// ========================================
+class DamageNumberEffect {
+  constructor() {
+    this.damageTexts = [];
+  }
+  
+  addDamage(x, y, value, critical) {
+    this.damageTexts.push(new DamageText(x, y, value, critical));
+  }
+  
+  update() {
+    for (let i = this.damageTexts.length - 1; i >= 0; i--) {
+      this.damageTexts[i].update();
+      if (this.damageTexts[i].life <= 0) {
+        this.damageTexts.splice(i, 1);
+      }
+    }
+  }
+  
+  draw(ctx) {
+    for (const d of this.damageTexts) {
+      d.draw(ctx);
+    }
+  }
+}
+
+class DamageText {
+  constructor(x, y, value, critical = false) {
+    this.x = x + (Math.random() - 0.5) * 20;
+    this.y = y;
+    this.vy = -1.0 - Math.random() * 0.5;
+    this.life = 1;
+    this.value = value;
+    this.critical = critical;
+  }
+  
+  update() {
+    this.y += this.vy;
+    this.life -= 0.02;
+  }
+  
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(this.life, 0);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = this.critical ? 'bold 40px Arial' : 'bold 28px Arial';
+    const color = this.critical ? '#ff4444' : '#ffdd55';
+    
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000000';
+    ctx.strokeText(this.value, this.x, this.y);
+    
+    ctx.fillStyle = color;
+    ctx.fillText(this.value, this.x, this.y);
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 눈/비 파티클
+// ========================================
+class SnowRainEffect {
+  constructor(count = 200) {
+    this.MODE = "snow";
+    this.drops = [];
+    for (let i = 0; i < count; i++) {
+      this.drops.push(new Drop(this.MODE));
+    }
+  }
+  
+  update() {
+    for (const d of this.drops) {
+      d.update();
+    }
+  }
+  
+  draw(ctx) {
+    for (const d of this.drops) {
+      d.draw(ctx);
+    }
+  }
+}
+
+class Drop {
+  constructor(mode) {
+    this.mode = mode;
+    this.reset();
+  }
+  
+  reset() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * -canvas.height;
+    if (this.mode === "snow") {
+      this.radius = Math.random() * 2 + 1;
+      this.speedY = Math.random() * 1 + 0.5;
+      this.wind = Math.random() * 0.5 - 0.25;
+      this.alpha = Math.random() * 0.5 + 0.5;
+    } else {
+      this.radius = Math.random() * 1 + 0.5;
+      this.speedY = Math.random() * 7 + 7;
+      this.wind = Math.random() * 1 - 0.5;
+      this.alpha = Math.random() * 0.3 + 0.3;
+    }
+  }
+  
+  update() {
+    this.y += this.speedY;
+    this.x += this.wind;
+    if (this.y > canvas.height + 20) {
+      this.reset();
+      this.y = -10;
+    }
+  }
+  
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    if (this.mode === "snow") {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x + this.wind * 3, this.y + this.speedY * 0.8);
+      ctx.strokeStyle = '#66aaff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 스타필드 (Z축)
+// ========================================
+class StarfieldEffect {
+  constructor(count = 300) {
+    this.center = { x: 0, y: 0 };
+    this.stars = [];
+    for (let i = 0; i < count; i++) {
+      this.stars.push(new Star3D());
+    }
+  }
+  
+  update() {
+    this.center.x = canvas.width / 2;
+    this.center.y = canvas.height / 2;
+    
+    for (const s of this.stars) {
+      s.update();
+    }
+  }
+  
+  draw(ctx) {
+    for (const s of this.stars) {
+      s.draw(ctx, this.center);
+    }
+  }
+}
+
+class Star3D {
+  constructor() {
+    this.reset();
+  }
+  
+  reset() {
+    this.x = (Math.random() - 0.5) * 2;
+    this.y = (Math.random() - 0.5) * 2;
+    this.z = Math.random() * 0.9 + 0.1;
+    this.prevScreen = null;
+  }
+  
+  update() {
+    this.z -= 0.01;
+    if (this.z <= 0) {
+      this.reset();
+      this.z = 1;
+    }
+  }
+  
+  project(center) {
+    const fov = 400;
+    const sx = center.x + this.x / this.z * fov;
+    const sy = center.y + this.y / this.z * fov;
+    return { x: sx, y: sy };
+  }
+  
+  draw(ctx, center) {
+    const cur = this.project(center);
+    const size = (1 - this.z) * 3 + 0.5;
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = size;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (this.prevScreen) {
+      ctx.moveTo(this.prevScreen.x, this.prevScreen.y);
+    } else {
+      ctx.moveTo(cur.x, cur.y);
+    }
+    ctx.lineTo(cur.x, cur.y);
+    ctx.stroke();
+    ctx.restore();
+    this.prevScreen = cur;
+  }
+}
+
+// ========================================
+// Effect: 횡스크롤 스타필드
+// ========================================
+class StarfieldScrollEffect {
+  constructor(count = 250) {
+    this.SCROLL_DIRECTION = -1;
+    this.stars = [];
+    
+    for (let i = 0; i < count; i++) {
+      this.stars.push(new StarScroll(this.SCROLL_DIRECTION, true));
+    }
+  }
+  
+  update(dt, time) {
+    for (const s of this.stars) {
+      s.update(dt);
+    }
+    this.time = time;
+  }
+  
+  draw(ctx) {
+    for (const s of this.stars) {
+      s.draw(ctx, this.time || 0);
+    }
+  }
+}
+
+class StarScroll {
+  constructor(scrollDir, initial = false) {
+    this.scrollDir = scrollDir;
+    this.reset(initial);
+  }
+  
+  reset(initial = false) {
+    const layerRand = Math.random();
+    if (layerRand < 0.35) {
+      this.speed = 0.4;
+      this.size = 1;
+      this.baseAlpha = 0.35;
+    } else if (layerRand < 0.75) {
+      this.speed = 1.0;
+      this.size = 1.7;
+      this.baseAlpha = 0.6;
+    } else {
+      this.speed = 2.0;
+      this.size = 2.4;
+      this.baseAlpha = 0.85;
+    }
+    
+    if (initial) {
+      this.x = Math.random() * canvas.width;
+    } else {
+      if (this.scrollDir < 0) {
+        this.x = canvas.width + Math.random() * canvas.width * 0.2;
+      } else {
+        this.x = -Math.random() * canvas.width * 0.2;
+      }
+    }
+    
+    this.y = Math.random() * canvas.height;
+    this.phase = Math.random() * Math.PI * 2;
+  }
+  
+  update(dt) {
+    this.x += this.speed * this.scrollDir * dt * 60;
+    
+    if (this.scrollDir < 0) {
+      if (this.x < -this.size * 2) {
+        this.reset(false);
+      }
+    } else {
+      if (this.x > canvas.width + this.size * 2) {
+        this.reset(false);
+      }
+    }
+  }
+  
+  draw(ctx, time) {
+    const twinkle = 0.4 + 0.3 * Math.sin(time * 2 + this.phase);
+    const alpha = Math.min(1, this.baseAlpha + twinkle * 0.4);
+    
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    
+    const tailLength = this.size * (1 + this.speed * 0.7);
+    const tailX = this.x - this.scrollDir * tailLength;
+    
+    ctx.beginPath();
+    ctx.moveTo(tailX, this.y);
+    ctx.lineTo(this.x, this.y);
+    ctx.lineWidth = this.size;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 꽃잎 횡스크롤 (기본)
+// ========================================
+class PetalBasicEffect {
+  constructor(count = 120) {
+    this.petals = [];
+    
+    for (let i = 0; i < count; i++) {
+      this.petals.push(new PetalBasic(true));
+    }
+  }
+  
+  update(dt) {
+    for (const p of this.petals) {
+      p.update(dt);
+    }
+    this.petals.sort((a, b) => a.depth - b.depth);
+  }
+  
+  draw(ctx) {
+    for (const p of this.petals) {
+      p.draw(ctx);
+    }
+  }
+  
+  drawBackground(ctx) {
+    const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    g.addColorStop(0.0, '#ffeef7');
+    g.addColorStop(0.4, '#fff7fb');
+    g.addColorStop(1.0, '#ffffff');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+class PetalBasic {
+  constructor(initial = false) {
+    this.reset(initial);
+  }
+  
+  reset(initial = false) {
+    this.depth = 0.15 + Math.random() * 0.85;
+    this.size = 6 + this.depth * 18;
+    this.speedX = -(40 + this.depth * 120);
+    this.speedY = 10 + this.depth * 40;
+    this.baseAlpha = 0.25 + this.depth * 0.65;
+    
+    if (initial) {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+    } else {
+      this.x = canvas.width + Math.random() * canvas.width * 0.3;
+      this.y = -canvas.height * 0.1 + Math.random() * canvas.height * 1.2;
+    }
+    
+    this.swayPhase = Math.random() * Math.PI * 2;
+    this.swaySpeed = 1 + Math.random() * 2;
+    this.spin = (Math.random() * 2 - 1) * 1.5;
+    this.angle = Math.random() * Math.PI * 2;
+    this.hue = 330 + Math.random() * 30;
+  }
+  
+  update(dt) {
+    this.x += this.speedX * dt;
+    this.y += this.speedY * dt;
+    this.swayPhase += this.swaySpeed * dt;
+    this.angle += this.spin * dt;
+    
+    const margin = 50;
+    if (this.x < -margin || this.y > canvas.height + margin) {
+      this.reset(false);
+    }
+  }
+  
+  draw(ctx) {
+    const swayX = Math.sin(this.swayPhase) * (8 + this.depth * 24);
+    const swayY = Math.cos(this.swayPhase * 0.7) * (4 + this.depth * 10);
+    
+    const px = this.x + swayX;
+    const py = this.y + swayY;
+    
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(this.angle);
+    
+    const squash = 0.6 + this.depth * 0.5;
+    ctx.scale(1, squash);
+    ctx.globalAlpha = this.baseAlpha;
+    
+    const s = this.size;
+    
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.quadraticCurveTo(s * 0.7, -s * 0.2, 0, s * 0.9);
+    ctx.quadraticCurveTo(-s * 0.7, -s * 0.2, 0, -s);
+    
+    const grd = ctx.createLinearGradient(-s, -s, s, s);
+    grd.addColorStop(0, `hsl(${this.hue}, 80%, 85%)`);
+    grd.addColorStop(0.5, `hsl(${this.hue}, 80%, 75%)`);
+    grd.addColorStop(1, `hsl(${this.hue}, 80%, 70%)`);
+    ctx.fillStyle = grd;
+    ctx.fill();
+    
+    ctx.globalAlpha = this.baseAlpha * 0.5;
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.3, s * 0.6, s * 0.3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fill();
+    
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 꽃잎 횡스크롤 (3D 틸트)
+// ========================================
+class PetalAdvancedEffect {
+  constructor(count = 120) {
+    this.PETAL_TEX_SIZE = 64;
+    this.petalTexture = this.createPetalTexture();
+    this.petals = [];
+    
+    for (let i = 0; i < count; i++) {
+      this.petals.push(new PetalAdvanced(this.PETAL_TEX_SIZE, true));
+    }
+  }
+  
+  createPetalTexture() {
+    const off = document.createElement('canvas');
+    off.width = this.PETAL_TEX_SIZE;
+    off.height = this.PETAL_TEX_SIZE;
+    const c = off.getContext('2d');
+    
+    const cx = this.PETAL_TEX_SIZE / 2;
+    const cy = this.PETAL_TEX_SIZE / 2;
+    const s = 20;
+    
+    c.clearRect(0, 0, off.width, off.height);
+    c.save();
+    c.translate(cx, cy);
+    
+    c.beginPath();
+    c.moveTo(0, -s);
+    c.quadraticCurveTo(s * 0.9, -s * 0.2, s * 0.4, s * 0.9);
+    c.quadraticCurveTo(0, s * 1.2, -s * 0.4, s * 0.9);
+    c.quadraticCurveTo(-s * 0.9, -s * 0.2, 0, -s);
+    c.closePath();
+    
+    const hue = 345;
+    const grad = c.createLinearGradient(-s, -s, s, s);
+    grad.addColorStop(0.0, `hsl(${hue}, 85%, 94%)`);
+    grad.addColorStop(0.5, `hsl(${hue}, 85%, 89%)`);
+    grad.addColorStop(1.0, `hsl(${hue}, 85%, 84%)`);
+    c.fillStyle = grad;
+    c.fill();
+    
+    c.lineWidth = 1.2;
+    c.strokeStyle = 'rgba(220,120,150,0.6)';
+    c.stroke();
+    
+    c.globalAlpha = 0.7;
+    c.beginPath();
+    c.ellipse(0, -s * 0.2, s * 0.9, s * 0.45, 0, 0, Math.PI * 2);
+    const grad2 = c.createRadialGradient(0, -s * 0.2, 0, 0, -s * 0.2, s * 0.9);
+    grad2.addColorStop(0.0, 'rgba(255,255,255,0.95)');
+    grad2.addColorStop(1.0, 'rgba(255,255,255,0)');
+    c.fillStyle = grad2;
+    c.fill();
+    
+    c.globalAlpha = 0.4;
+    c.lineWidth = 0.6;
+    c.strokeStyle = 'rgba(210,120,150,0.7)';
+    for (let i = -1; i <= 1; i++) {
+      c.beginPath();
+      c.moveTo(i * 2, -s * 0.4);
+      c.quadraticCurveTo(i * 4, 0, i * 1.2, s * 0.8);
+      c.stroke();
+    }
+    
+    c.restore();
+    return off;
+  }
+  
+  update(dt, time) {
+    for (const p of this.petals) {
+      p.update(dt, time);
+    }
+    this.petals.sort((a, b) => a.depth - b.depth);
+  }
+  
+  draw(ctx) {
+    for (const p of this.petals) {
+      p.draw(ctx, this.petalTexture, this.PETAL_TEX_SIZE);
+    }
+  }
+  
+  drawBackground(ctx) {
+    const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    g.addColorStop(0.0, '#d7ffd0');
+    g.addColorStop(0.4, '#bff5b0');
+    g.addColorStop(1.0, '#8dd977');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+class PetalAdvanced {
+  constructor(texSize, initial = false) {
+    this.texSize = texSize;
+    this.reset(initial);
+  }
+  
+  reset(initial = false) {
+    this.depth = 0.15 + Math.random() * 0.85;
+    this.size = 6 + this.depth * 18;
+    this.baseSpeedX = -(40 + this.depth * 120);
+    this.baseSpeedY = 10 + this.depth * 40;
+    this.baseAlpha = 0.25 + this.depth * 0.65;
+    
+    if (initial) {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+    } else {
+      this.x = canvas.width + Math.random() * canvas.width * 0.3;
+      this.y = -canvas.height * 0.1 + Math.random() * canvas.height * 1.2;
+    }
+    
+    this.localPhase = Math.random() * Math.PI * 2;
+    this.localFreq = 0.8 + Math.random() * 1.2;
+    this.localAmpX = 8 + this.depth * 26;
+    this.localAmpY = 4 + this.depth * 12;
+    
+    this.windPhase = Math.random() * Math.PI * 2;
+    this.windFreq = 0.2 + Math.random() * 0.3;
+    this.windAmp = 20 + this.depth * 40;
+    
+    this.tiltPhaseX = Math.random() * Math.PI * 2;
+    this.tiltPhaseY = Math.random() * Math.PI * 2;
+    this.tiltFreqX = 0.5 + Math.random() * 0.7;
+    this.tiltFreqY = 0.5 + Math.random() * 0.7;
+    this.maxTiltX = Math.PI / 3;
+    this.maxTiltY = Math.PI / 3;
+    
+    this.spin = (Math.random() * 2 - 1) * 1.5;
+    this.angle = Math.random() * Math.PI * 2;
+  }
+  
+  update(dt, time) {
+    const windWave = Math.sin(time * this.windFreq + this.windPhase) * this.windAmp;
+    const vx = this.baseSpeedX + windWave;
+    
+    this.x += vx * dt;
+    this.y += this.baseSpeedY * dt;
+    
+    this.localPhase += this.localFreq * dt;
+    this.tiltPhaseX += this.tiltFreqX * dt;
+    this.tiltPhaseY += this.tiltFreqY * dt;
+    this.angle += this.spin * dt;
+    
+    const margin = 60;
+    if (this.x < -margin || this.y > canvas.height + margin) {
+      this.reset(false);
+    }
+  }
+  
+  draw(ctx, texture, texSize) {
+    const swayX = Math.sin(this.localPhase) * this.localAmpX;
+    const swayY = Math.cos(this.localPhase * 0.7) * this.localAmpY;
+    const px = this.x + swayX;
+    const py = this.y + swayY;
+    
+    const tiltX = Math.sin(this.tiltPhaseX) * this.maxTiltX;
+    const tiltY = Math.sin(this.tiltPhaseY) * this.maxTiltY;
+    
+    const facing = (Math.cos(tiltX) * Math.cos(tiltY) + 1) / 2;
+    
+    let widthPerspective = 0.35 + 0.65 * Math.abs(Math.cos(tiltY));
+    let heightPerspective = 0.30 + 0.70 * Math.abs(Math.cos(tiltX));
+    
+    const depthSquash = 0.6 + this.depth * 0.5;
+    
+    const base = texSize;
+    const baseScale = (this.size / base) * 2.0;
+    
+    const scaleX = baseScale * widthPerspective;
+    const scaleY = baseScale * heightPerspective * depthSquash;
+    
+    const alpha = this.baseAlpha * (0.35 + 0.65 * facing);
+    
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(this.angle);
+    ctx.scale(scaleX, scaleY);
+    ctx.globalAlpha = alpha;
+    
+    const half = texSize / 2;
+    ctx.drawImage(texture, -half, -half);
+    
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 타자기 텍스트
+// ========================================
+class TypewriterEffect {
+  constructor() {
+    this.fullText = "게임에 오신 것을 환영합니다.\n방향키로 이동하고, 스페이스로 공격하세요!";
+    this.currentLength = 0;
+    this.speed = 2;
+  }
+  
+  update() {
+    if (this.currentLength < this.fullText.length) {
+      this.currentLength += this.speed;
+    }
+  }
+  
+  draw(ctx) {
+    const margin = 40;
+    const boxHeight = 150;
+    const x = margin;
+    const y = canvas.height - boxHeight - margin;
+    const w = canvas.width - margin * 2;
+    const h = boxHeight;
+    
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(x, y, w, h);
+    
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
+    
+    ctx.font = '20px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'top';
+    
+    const visibleText = this.fullText.slice(0, this.currentLength);
+    const lines = visibleText.split('\n');
+    const lineHeight = 28;
+    let ty = y + 20;
+    for (const line of lines) {
+      ctx.fillText(line, x + 20, ty);
+      ty += lineHeight;
+    }
+    ctx.restore();
+  }
+}
+
+// ========================================
+// Effect: 텍스트 파편화
+// ========================================
+class TextFragmentEffect {
+  constructor() {
+    this.text = "GAME OVER";
+    this.particles = [];
+    this.exploded = false;
+  }
+  
+  toggle() {
+    if (!this.exploded) {
+      this.createParticlesFromText();
+      this.exploded = true;
+    } else {
+      this.particles = [];
+      this.exploded = false;
+    }
+  }
+  
+  createParticlesFromText() {
+    const off = document.createElement('canvas');
+    const offCtx = off.getContext('2d');
+    
+    const fontSize = 96;
+    off.width = canvas.width;
+    off.height = canvas.height;
+    
+    offCtx.clearRect(0, 0, off.width, off.height);
+    offCtx.font = `bold ${fontSize}px Arial`;
+    offCtx.textAlign = 'center';
+    offCtx.textBaseline = 'middle';
+    offCtx.fillStyle = '#ffffff';
+    offCtx.fillText(this.text, off.width / 2, off.height / 2);
+    
+    const imgData = offCtx.getImageData(0, 0, off.width, off.height);
+    const data = imgData.data;
+    
+    const step = 6;
+    this.particles = [];
+    for (let y = 0; y < off.height; y += step) {
+      for (let x = 0; x < off.width; x += step) {
+        const idx = (y * off.width + x) * 4;
+        const alpha = data[idx + 3];
+        if (alpha > 128) {
+          this.particles.push(new TextParticle(x, y));
+        }
+      }
+    }
+  }
+  
+  update() {
+    if (this.exploded) {
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        this.particles[i].update();
+        if (this.particles[i].life <= 0) {
+          this.particles.splice(i, 1);
+        }
+      }
+      if (this.particles.length === 0) {
+        this.exploded = false;
+      }
+    }
+  }
+  
+  draw(ctx) {
+    if (!this.exploded) {
+      ctx.save();
+      ctx.font = 'bold 96px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(this.text, canvas.width / 2, canvas.height / 2);
+      ctx.restore();
+    } else {
+      for (const p of this.particles) {
+        p.draw(ctx);
+      }
+    }
+  }
+}
+
+class TextParticle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 8;
+    this.vy = (Math.random() - 0.5) * 8;
+    this.life = 1;
+    this.decay = Math.random() * 0.02 + 0.01;
+    this.size = 2;
+  }
+  
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.1;
+    this.life -= this.decay;
+  }
+  
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(this.life, 0);
+    ctx.fillStyle = '#ff5555';
+    ctx.fillRect(this.x, this.y, this.size, this.size);
+    ctx.restore();
+  }
+}
+
+// ========================================
+// 초기 실행
+// ========================================
+applyEffects();
+</script>
+</body>
+</html>
