@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>WebGL 온톨로지 레이어 뷰어</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #ffffff;
+            color: #111827;
+        }
+        #infoBar {
+            flex: 0 0 auto;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            padding: 8px 14px;
+            font-size: 12px;
+            background: linear-gradient(90deg, #f9fafb, #e5e7eb);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.8);
+            z-index: 20;
+        }
+        #infoBar span {
+            opacity: 0.9;
+            flex: 1 1 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #111827;
+        }
+        #settingsBtn {
+            flex: 0 0 auto;
+            border: none;
+            border-radius: 999px;
+            width: 26px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            background: #ffffff;
+            color: #111827;
+            box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.9);
+            transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+        }
+        #settingsBtn:hover {
+            background: #f3f4f6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(209, 213, 219, 0.9);
+        }
+
+        #canvasWrap {
+            position: relative;
+            flex: 1 1 auto;
+        }
+        #glCanvas, #overlayCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #overlayCanvas {
+            pointer-events: none;
+        }
+
+        #settingsPanel {
+            position: fixed;
+            top: 52px;
+            right: 16px;
+            width: 340px;
+            max-height: calc(100vh - 70px);
+            background: #f9fafb;
+            border-radius: 12px;
+            box-shadow: 0 18px 40px rgba(148, 163, 184, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.9);
+            padding: 12px 14px;
+            font-size: 11px;
+            color: #111827;
+            z-index: 30;
+            overflow-y: auto;
+            display: none;
+        }
+        #settingsPanel h3 {
+            margin: 4px 0 6px 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #111827;
+        }
+        .section {
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(209, 213, 219, 0.9);
+        }
+        .section:last-child { border-bottom: none; }
+        .field-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 6px;
+        }
+        .field-row label {
+            flex: 0 0 70px;
+            color: #4b5563;
+        }
+        .field-row input[type="number"],
+        .field-row input[type="text"],
+        .field-row select,
+        .field-row input[type="color"] {
+            flex: 1 1 auto;
+            border-radius: 6px;
+            border: 1px solid rgba(156, 163, 175, 0.9);
+            padding: 3px 6px;
+            background: #ffffff;
+            color: #111827;
+            font-size: 11px;
+        }
+        #propertiesInput {
+            width: 100%;
+            min-height: 72px;
+            resize: vertical;
+            border-radius: 6px;
+            border: 1px solid rgba(156, 163, 175, 0.9);
+            padding: 4px 6px;
+            background: #ffffff;
+            color: #111827;
+            font-size: 11px;
+        }
+        .btn-small {
+            border-radius: 999px;
+            border: none;
+            padding: 4px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 4px;
+            background: #e5e7eb;
+            color: #111827;
+        }
+        #applyCameraBtn {
+            background: #4b5563;
+            color: #f9fafb;
+        }
+        #applyLayerBtn {
+            background: #22c55e;
+            color: #022c22;
+        }
+        #closeSettingsBtn {
+            background: #111827;
+            color: #f9fafb;
+            float: right;
+        }
+        #anglePad {
+            width: 100%;
+            border-radius: 8px;
+            background: #f3f4f6;
+            border: 1px solid rgba(156, 163, 175, 0.9);
+            display: block;
+        }
+        #angleInfo {
+            font-size: 10px;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+<div id="infoBar">
+    <span>🧠 WebGL 온톨로지 레이어 · 좌클릭: 레이어 선택/드래그 · 휠: 줌 · 오른쪽/휠 드래그: 팬 · ⚙: 3D 뷰/레이어 설정</span>
+    <button id="settingsBtn" title="설정 열기/닫기">⚙</button>
+</div>
+
+<div id="canvasWrap">
+    <canvas id="glCanvas"></canvas>
+    <canvas id="overlayCanvas"></canvas>
+</div>
+
+<div id="settingsPanel">
+    <div class="section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <h3>3D 뷰 / 카메라 설정</h3>
+            <button id="closeSettingsBtn" class="btn-small">닫기</button>
+        </div>
+
+        <div style="margin-top:2px;margin-bottom:4px;color:#4b5563;">
+            3D 좌표계 패드에서 <b>Yaw(수평 회전)</b> · <b>Distance(줌)</b>를 조절합니다.
+        </div>
+        <canvas id="anglePad" width="220" height="160"></canvas>
+
+        <div style="display:flex;gap:4px;margin-top:4px;margin-bottom:4px;">
+            <button id="zoomInBtn" class="btn-small">＋ 줌인</button>
+            <button id="zoomOutBtn" class="btn-small">－ 줌아웃</button>
+            <button id="fitViewBtn" class="btn-small" style="margin-left:auto;">화면맞춤</button>
+        </div>
+
+        <div class="field-row">
+            <label>뷰 상태</label>
+            <div id="angleInfo"></div>
+        </div>
+
+        <div style="margin:4px 0 2px 0;color:#4b5563;">
+            세부값 (필요 시 숫자로 미세 조정)
+        </div>
+
+        <div class="field-row">
+            <label for="cameraX">cam X</label>
+            <input type="number" id="cameraX" step="0.1">
+        </div>
+        <div class="field-row">
+            <label for="cameraY">cam Y</label>
+            <input type="number" id="cameraY" step="0.1">
+        </div>
+        <div class="field-row">
+            <label for="cameraZ">cam Z</label>
+            <input type="number" id="cameraZ" step="0.1">
+        </div>
+        <div class="field-row">
+            <label for="cameraRotX">pitch°</label>
+            <input type="number" id="cameraRotX" step="1" min="10" max="85">
+        </div>
+        <div class="field-row">
+            <label for="yawAxisSelect">Yaw 축</label>
+            <select id="yawAxisSelect">
+                <option value="Y">Y 축 기준</option>
+                <option value="Z">Z 축 기준</option>
+                <option value="X">X 축 기준</option>
+            </select>
+        </div>
+        <div class="field-row">
+            <label for="spacingY">gap Y</label>
+            <input type="number" id="spacingY" step="0.1">
+        </div>
+        <div class="field-row">
+            <label for="spacingZ">gap Z</label>
+            <input type="number" id="spacingZ" step="0.1">
+        </div>
+        <div class="field-row">
+            <label for="scaleX">scale X</label>
+            <input type="number" id="scaleX" step="0.1">
+        </div>
+        <div class="field-row">
+            <label for="scaleY">scale Y</label>
+            <input type="number" id="scaleY" step="0.1">
+        </div>
+        <button id="applyCameraBtn" class="btn-small">카메라 설정 적용</button>
+    </div>
+
+    <div class="section">
+        <h3>레이어 / 노드 편집</h3>
+        <div class="field-row">
+            <label for="layerSelect">레이어</label>
+            <select id="layerSelect"></select>
+        </div>
+        <div class="field-row">
+            <label for="layerTitle">제목</label>
+            <input type="text" id="layerTitle">
+        </div>
+        <div class="field-row">
+            <label for="centerLabel">중앙 노드</label>
+            <input type="text" id="centerLabel">
+        </div>
+        <div class="field-row">
+            <label for="accentColor">색상</label>
+            <input type="color" id="accentColor">
+        </div>
+        <div style="margin-top:4px;margin-bottom:4px;color:#4b5563;">
+            프로퍼티(방사형 노드)를 줄 단위로 입력하세요.
+        </div>
+        <textarea id="propertiesInput"></textarea>
+        <button id="applyLayerBtn" class="btn-small">레이어 변경 적용</button>
+        <div class="field-row" style="justify-content:flex-end;gap:4px;margin-top:4px;">
+            <button id="addLayerBtn" class="btn-small" style="background:#dbeafe;color:#1d4ed8;">＋ 레이어 추가</button>
+            <button id="deleteLayerBtn" class="btn-small" style="background:#fee2e2;color:#b91c1c;">－ 레이어 삭제</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>레이어 링크 / 내보내기 / 상태 저장</h3>
+        <div class="field-row">
+            <label for="linkFrom">링크 From</label>
+            <select id="linkFrom"></select>
+        </div>
+        <div class="field-row">
+            <label for="linkTo">링크 To</label>
+            <select id="linkTo"></select>
+        </div>
+        <div class="field-row" style="justify-content:flex-end;gap:4px;">
+            <button id="addLinkBtn" class="btn-small">＋ 링크 추가</button>
+            <button id="removeLinkBtn" class="btn-small">－ 링크 삭제</button>
+        </div>
+        <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
+            <button id="savePngBtn" class="btn-small">PNG로 저장</button>
+            <button id="saveSvgBtn" class="btn-small">SVG로 저장</button>
+            <button id="saveStateBtn" class="btn-small" style="background:#d1fae5;color:#065f46;">상태 저장(브라우저)</button>
+            <button id="loadStateBtn" class="btn-small" style="background:#e0f2fe;color:#1d4ed8;">저장값 불러오기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ====== 데이터 / 카메라 기본 파라미터 ======
+const layers = [
+    {
+        id: "ui",
+        title: "UI / 앱 레이어",
+        accent: "#facc15",
+        centerLabel: "UI",
+        properties: ["대시보드", "입력 폼", "알림 센터", "API 호출", "사용자 설정"]
+    },
+    {
+        id: "workflow",
+        title: "프로세스 / 워크플로우",
+        accent: "#4ade80",
+        centerLabel: "Flow",
+        properties: ["이벤트", "비즈니스 규칙", "작업(Task)", "작업 큐", "실행 로그"]
+    },
+    {
+        id: "ontology",
+        title: "온톨로지 / 개념 모델",
+        accent: "#a855f7",
+        centerLabel: "개념",
+        properties: ["고객", "제품", "주문", "인보이스", "채널", "관계(Relation)"]
+    },
+    {
+        id: "model",
+        title: "데이터 모델 / 마트",
+        accent: "#22d3ee",
+        centerLabel: "Model",
+        properties: ["FactSales", "DimDate", "DimCustomer", "DimProduct", "DimRegion"]
+    },
+    {
+        id: "governance",
+        title: "데이터 거버넌스 / 카탈로그",
+        accent: "#f97316",
+        centerLabel: "Gov",
+        properties: ["정책", "품질 관리", "데이터 카탈로그", "라인리지", "보안"]
+    }
+];
+
+let camPos = { x: 0, y: 0, z: -8 };
+let camRotXDeg = 60;
+let camRotYDeg = 0;
+let yawAxis = "Y"; // "X", "Y", "Z"
+let layerSpacingY = 1.4;
+let layerSpacingZ = 0.7;
+let cardScaleX = 3.0;
+let cardScaleY = 1.7;
+
+const padMinDist = 5.0;
+const padMaxDist = 14.0;
+
+// ===== 공통 유틸 =====
+function hexToRgb(hex) {
+    let h = hex.replace("#", "");
+    if (h.length === 3) {
+        h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    }
+    const num = parseInt(h, 16);
+    return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+    };
+}
+function clamp(v, min, max) {
+    return v < min ? min : (v > max ? max : v);
+}
+function getCameraDistance() {
+    return -camPos.z;
+}
+function setCameraDistance(dist) {
+    dist = clamp(dist, padMinDist, padMaxDist);
+    camPos.z = -dist;
+}
+function randomPastelColor() {
+    const r = Math.round(127 + Math.random() * 128);
+    const g = Math.round(127 + Math.random() * 128);
+    const b = Math.round(127 + Math.random() * 128);
+    return "#" +
+        r.toString(16).padStart(2, "0") +
+        g.toString(16).padStart(2, "0") +
+        b.toString(16).padStart(2, "0");
+}
+
+// 행렬
+function mat4Identity() {
+    return [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    ];
+}
+function mat4Multiply(a, b) {
+    const out = new Array(16);
+    const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+    const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+    const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+    const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+    let b0, b1, b2, b3;
+
+    b0 = b[0]; b1 = b[1]; b2 = b[2]; b3 = b[3];
+    out[0]  = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+    out[1]  = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+    out[2]  = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+    out[3]  = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+    b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+    out[4]  = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+    out[5]  = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+    out[6]  = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+    out[7]  = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+    b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+    out[8]  = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+    out[9]  = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+    out[10] = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+    out[11] = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+    b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+    out[12] = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+    out[13] = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+    out[14] = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+    out[15] = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+    return out;
+}
+function mat4Perspective(fovy, aspect, near, far) {
+    const f = 1.0 / Math.tan(fovy / 2);
+    const nf = 1.0 / (near - far);
+    return [
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) * nf, -1,
+        0, 0, (2 * far * near) * nf, 0
+    ];
+}
+function mat4Translation(tx, ty, tz) {
+    return [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        tx, ty, tz, 1
+    ];
+}
+function mat4Scale(sx, sy, sz) {
+    return [
+        sx, 0,  0,  0,
+        0,  sy, 0,  0,
+        0,  0,  sz, 0,
+        0,  0,  0,  1
+    ];
+}
+function mat4RotationX(rad) {
+    const s = Math.sin(rad);
+    const c = Math.cos(rad);
+    return [
+        1, 0, 0, 0,
+        0, c, s, 0,
+        0, -s, c, 0,
+        0, 0, 0, 1
+    ];
+}
+function mat4RotationY(rad) {
+    const s = Math.sin(rad);
+    const c = Math.cos(rad);
+    return [
+        c, 0, -s, 0,
+        0, 1,  0, 0,
+        s, 0,  c, 0,
+        0, 0,  0, 1
+    ];
+}
+function mat4RotationZ(rad) {
+    const s = Math.sin(rad);
+    const c = Math.cos(rad);
+    return [
+         c,  s, 0, 0,
+        -s,  c, 0, 0,
+         0,  0, 1, 0,
+         0,  0, 0, 1
+    ];
+}
+function mat4Inverse(a) {
+    const out = new Array(16);
+    const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+    const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+    const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+    const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+    const b00 = a00 * a11 - a01 * a10;
+    const b01 = a00 * a12 - a02 * a10;
+    const b02 = a00 * a13 - a03 * a10;
+    const b03 = a01 * a12 - a02 * a11;
+    const b04 = a01 * a13 - a03 * a11;
+    const b05 = a02 * a13 - a03 * a12;
+    const b06 = a20 * a31 - a21 * a30;
+    const b07 = a20 * a32 - a22 * a30;
+    const b08 = a20 * a33 - a23 * a30;
+    const b09 = a21 * a32 - a22 * a31;
+    const b10 = a21 * a33 - a23 * a31;
+    const b11 = a22 * a33 - a23 * a32;
+
+    let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+    if (!det) return null;
+    det = 1.0 / det;
+
+    out[0]  = ( a11 * b11 - a12 * b10 + a13 * b09) * det;
+    out[1]  = (-a01 * b11 + a02 * b10 - a03 * b09) * det;
+    out[2]  = ( a31 * b05 - a32 * b04 + a33 * b03) * det;
+    out[3]  = (-a21 * b05 + a22 * b04 - a23 * b03) * det;
+    out[4]  = (-a10 * b11 + a12 * b08 - a13 * b07) * det;
+    out[5]  = ( a00 * b11 - a02 * b08 + a03 * b07) * det;
+    out[6]  = (-a30 * b05 + a32 * b02 - a33 * b01) * det;
+    out[7]  = ( a20 * b05 - a22 * b02 + a23 * b01) * det;
+    out[8]  = ( a10 * b10 - a11 * b08 + a13 * b06) * det;
+    out[9]  = (-a00 * b10 + a01 * b08 - a03 * b06) * det;
+    out[10] = ( a30 * b04 - a31 * b02 + a33 * b00) * det;
+    out[11] = (-a20 * b04 + a21 * b02 - a23 * b00) * det;
+    out[12] = (-a10 * b09 + a11 * b07 - a12 * b06) * det;
+    out[13] = ( a00 * b09 - a01 * b07 + a02 * b06) * det;
+    out[14] = (-a30 * b03 + a31 * b01 - a32 * b00) * det;
+    out[15] = ( a20 * b03 - a21 * b01 + a22 * b00) * det;
+    return out;
+}
+function transformVec4(m, v) {
+    const x = v[0], y = v[1], z = v[2], w = v[3];
+    return [
+        m[0] * x + m[4] * y + m[8]  * z + m[12] * w,
+        m[1] * x + m[5] * y + m[9]  * z + m[13] * w,
+        m[2] * x + m[6] * y + m[10] * z + m[14] * w,
+        m[3] * x + m[7] * y + m[11] * z + m[15] * w
+    ];
+}
+
+function normalizeLink(a, b) {
+    if (a === b) return null;
+    return (a < b) ? { from: a, to: b } : { from: b, to: a };
+}
+
+// 뷰 행렬
+function buildViewMatrix() {
+    let view = mat4Identity();
+    view = mat4Multiply(view, mat4Translation(camPos.x, camPos.y, camPos.z));
+    const yawRad = camRotYDeg * Math.PI / 180;
+    if (yawAxis === "Y") {
+        view = mat4Multiply(view, mat4RotationY(yawRad));
+    } else if (yawAxis === "Z") {
+        view = mat4Multiply(view, mat4RotationZ(yawRad));
+    } else if (yawAxis === "X") {
+        view = mat4Multiply(view, mat4RotationX(yawRad));
+    }
+    view = mat4Multiply(view, mat4RotationX(camRotXDeg * Math.PI / 180));
+    return view;
+}
+
+// ===== WebGL 초기화 =====
+const glCanvas = document.getElementById("glCanvas");
+const overlayCanvas = document.getElementById("overlayCanvas");
+const overlayCtx = overlayCanvas.getContext("2d");
+const container = document.getElementById("canvasWrap");
+
+const gl = glCanvas.getContext("webgl", { antialias: true });
+if (!gl) {
+    alert("이 브라우저에서는 WebGL을 사용할 수 없습니다.");
+}
+
+const vsSource = `
+attribute vec3 aPosition;
+uniform mat4 uMVP;
+void main() {
+    gl_Position = uMVP * vec4(aPosition, 1.0);
+}
+`;
+const fsSource = `
+precision mediump float;
+uniform vec4 uColor;
+void main() {
+    gl_FragColor = uColor;
+}
+`;
+
+function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("셰이더 컴파일 오류:", gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+    }
+    return shader;
+}
+function createProgram(gl, vsSrc, fsSrc) {
+    const vs = createShader(gl, gl.VERTEX_SHADER, vsSrc);
+    const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSrc);
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error("프로그램 링크 오류:", gl.getProgramInfoLog(program));
+        return null;
+    }
+    return program;
+}
+
+const program = createProgram(gl, vsSource, fsSource);
+gl.useProgram(program);
+
+const aPositionLoc = gl.getAttribLocation(program, "aPosition");
+const uMvpLoc = gl.getUniformLocation(program, "uMVP");
+const uColorLoc = gl.getUniformLocation(program, "uColor");
+
+// 카드 기본 정점(마름모꼴의 베이스)
+const quadVertices = new Float32Array([
+    -0.5, -0.3, 0.0,
+     0.5, -0.3, 0.0,
+     0.5,  0.3, 0.0,
+    -0.5, -0.3, 0.0,
+     0.5,  0.3, 0.0,
+    -0.5,  0.3, 0.0
+]);
+const quadBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, quadVertices, gl.STATIC_DRAW);
+gl.enableVertexAttribArray(aPositionLoc);
+gl.vertexAttribPointer(aPositionLoc, 3, gl.FLOAT, false, 0, 0);
+
+gl.enable(gl.DEPTH_TEST);
+gl.depthFunc(gl.LEQUAL);
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+// ===== 상태 =====
+let selectedIndex = -1;
+let layerStates = [];
+let layerOffsets = new Array(layers.length).fill(0).map(() => ({ x: 0, z: 0 }));
+let layerLinks = [];
+
+let isPanning = false;
+let lastPanX = 0;
+let lastPanY = 0;
+
+let isLeftMouseDown = false;
+let mouseDownLayerIndex = -1;
+let isDraggingLayer = false;
+let draggingLayerIndex = -1;
+let mouseDownCanvasX = 0;
+let mouseDownCanvasY = 0;
+
+let anglePadDragging = false;
+
+function resizeCanvases() {
+    const rect = container.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    glCanvas.width = width;
+    glCanvas.height = height;
+    overlayCanvas.width = width;
+    overlayCanvas.height = height;
+    gl.viewport(0, 0, width, height);
+}
+window.addEventListener("resize", resizeCanvases);
+resizeCanvases();
+
+// ===== 투영/투명 배경 및 노드 그리기 =====
+function projectPoint(x, y, z, mvp, width, height) {
+    const m = mvp;
+    const clipX = m[0] * x + m[4] * y + m[8]  * z + m[12];
+    const clipY = m[1] * x + m[5] * y + m[9]  * z + m[13];
+    const clipZ = m[2] * x + m[6] * y + m[10] * z + m[14];
+    const clipW = m[3] * x + m[7] * y + m[11] * z + m[15];
+    if (clipW === 0) return null;
+    const ndcX = clipX / clipW;
+    const ndcY = clipY / clipW;
+    const sx = (ndcX * 0.5 + 0.5) * width;
+    const sy = (-ndcY * 0.5 + 0.5) * height;
+    return { x: sx, y: sy, z: clipZ / clipW, w: clipW };
+}
+function pointInPolygon(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x, yi = poly[i].y;
+        const xj = poly[j].x, yj = poly[j].y;
+        const intersect =
+            (yi > y) !== (yj > y) &&
+            x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi;
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+function drawOverlay(layerStates, width, height) {
+    const ctx = overlayCtx;
+    ctx.clearRect(0, 0, width, height);
+    ctx.save();
+
+    // 배경 흰색
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+
+    // 회색 격자
+    const gridSize = 40;
+    ctx.beginPath();
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 1;
+    for (let x = 0.5; x < width; x += gridSize) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+    }
+    for (let y = 0.5; y < height; y += gridSize) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+    }
+    ctx.stroke();
+
+    // 레이어별 투명 쉐이프 배경
+    for (let i = 0; i < layerStates.length; i++) {
+        const state = layerStates[i];
+        const layer = layers[i];
+        if (!state || !state.screenPoly) continue;
+        const poly = state.screenPoly;
+        if (poly.some(p => !p)) continue;
+
+        const highlight = (selectedIndex === -1 || selectedIndex === i || (isDraggingLayer && draggingLayerIndex === i));
+        const baseAlpha = selectedIndex === -1 ? 0.06 : (highlight ? 0.14 : 0.03);
+        const accent = hexToRgb(layer.accent);
+
+        ctx.beginPath();
+        ctx.moveTo(poly[0].x, poly[0].y);
+        for (let j = 1; j < poly.length; j++) {
+            ctx.lineTo(poly[j].x, poly[j].y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${accent.r},${accent.g},${accent.b},${baseAlpha})`;
+        ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = `rgba(${accent.r},${accent.g},${accent.b},${baseAlpha * 3})`;
+        ctx.stroke();
+    }
+
+    // 레이어 간 링크 (모든 연결)
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.9)";
+    ctx.lineWidth = 1;
+    for (let li = 0; li < layerLinks.length; li++) {
+        const link = layerLinks[li];
+        const i = link.from;
+        const j = link.to;
+        if (i < 0 || j < 0 || i >= layerStates.length || j >= layerStates.length) continue;
+        const a = layerStates[i];
+        const b = layerStates[j];
+        if (!a || !b) continue;
+        const p1 = projectPoint(0, 0, 0, a.mvp, width, height);
+        const p2 = projectPoint(0, 0, 0, b.mvp, width, height);
+        if (!p1 || !p2) continue;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    const nodeRadiusLocal = 0.28;
+    const labelRadiusLocal = 0.38;
+
+    for (let i = 0; i < layerStates.length; i++) {
+        const layer = layers[i];
+        const state = layerStates[i];
+        if (!state) continue;
+
+        const mvp = state.mvp;
+        const draggingHighlight = isDraggingLayer && draggingLayerIndex === i;
+        const highlight = (selectedIndex === -1 || selectedIndex === i || draggingHighlight);
+        const alpha = selectedIndex === -1 ? 1.0 : (highlight ? 1.0 : 0.22);
+
+        const props = layer.properties || [];
+        const count = props.length;
+
+        const center = projectPoint(0, 0, 0, mvp, width, height);
+        if (!center) continue;
+
+        const accent = hexToRgb(layer.accent);
+
+        // 방사형 링크 (검은색)
+        ctx.strokeStyle = "rgba(0,0,0," + (0.75 * alpha) + ")";
+        ctx.lineWidth = highlight ? 1.4 : 1.0;
+        for (let k = 0; k < count; k++) {
+            const angle = (Math.PI * 2 * k) / count - Math.PI / 2;
+            const lx = nodeRadiusLocal * Math.cos(angle);
+            const ly = nodeRadiusLocal * Math.sin(angle);
+            const p = projectPoint(lx, ly, 0, mvp, width, height);
+            if (!p) continue;
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+        }
+
+        // 노드 + 텍스트
+        ctx.font = "11px system-ui, sans-serif";
+        ctx.textBaseline = "middle";
+
+        for (let k = 0; k < count; k++) {
+            const angle = (Math.PI * 2 * k) / count - Math.PI / 2;
+            const lxNode = nodeRadiusLocal * Math.cos(angle);
+            const lyNode = nodeRadiusLocal * Math.sin(angle);
+            const pNode = projectPoint(lxNode, lyNode, 0, mvp, width, height);
+
+            const lxLabel = labelRadiusLocal * Math.cos(angle);
+            const lyLabel = labelRadiusLocal * Math.sin(angle);
+            const pLabel = projectPoint(lxLabel, lyLabel, 0, mvp, width, height);
+
+            if (!pNode || !pLabel) continue;
+
+            // 노드 점 (채우기 + 검은 외곽선)
+            ctx.beginPath();
+            ctx.arc(pNode.x, pNode.y, highlight ? 6 : 5, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(" + accent.r + "," + accent.g + "," + accent.b + "," + (0.95 * alpha) + ")";
+            ctx.fill();
+            ctx.lineWidth = 1.3;
+            ctx.strokeStyle = "rgba(0,0,0," + (0.9 * alpha) + ")";
+            ctx.stroke();
+
+            // 텍스트
+            ctx.textAlign = pLabel.x < center.x ? "right" : "left";
+            ctx.fillStyle = "rgba(17,24,39," + (0.9 * alpha) + ")";
+            ctx.fillText(props[k], pLabel.x, pLabel.y);
+        }
+
+        // 중앙 노드: 글자 길이에 따라 가변 크기 라운드 사각형
+        const centerText = layer.centerLabel || "";
+        ctx.font = highlight ? "bold 11px system-ui, sans-serif" : "11px system-ui, sans-serif";
+        const metrics = ctx.measureText(centerText);
+        const paddingX = 10;
+        const paddingY = 6;
+        const boxWidth = Math.max(metrics.width + paddingX * 2, 30);
+        const boxHeight = 22;
+        const boxX = center.x - boxWidth / 2;
+        const boxY = center.y - boxHeight / 2;
+
+        drawRoundedRect(ctx, boxX, boxY, boxWidth, boxHeight, 999);
+        if (highlight) {
+            ctx.fillStyle = "rgba(" + accent.r + "," + accent.g + "," + accent.b + "," + (0.92 * alpha) + ")";
+        } else {
+            ctx.fillStyle = "rgba(249, 250, 251," + (0.95 * alpha) + ")";
+        }
+        ctx.fill();
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = "rgba(0,0,0," + (0.9 * alpha) + ")";
+        ctx.stroke();
+
+        ctx.fillStyle = highlight ? "#111827" : "rgba(31, 41, 55, 0.9)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(centerText, center.x, center.y);
+
+        // 레이어 타이틀
+        ctx.font = highlight ? "bold 14px system-ui, sans-serif" : "12px system-ui, sans-serif";
+        ctx.textBaseline = "bottom";
+        ctx.textAlign = "center";
+        ctx.fillStyle = highlight
+            ? "rgba(15, 23, 42, 0.98)"
+            : "rgba(55, 65, 81," + (0.9 * alpha) + ")";
+        const titleY = Math.min.apply(null, state.screenPoly.map(p => p.y)) - 8;
+        ctx.fillText(layer.title, center.x, titleY);
+    }
+
+    ctx.restore();
+}
+
+// ===== 렌더링 =====
+const quadCornersLocal = [
+    [-0.5, -0.3, 0],
+    [ 0.5, -0.3, 0],
+    [ 0.5,  0.3, 0],
+    [-0.5,  0.3, 0]
+];
+
+function render() {
+    const width = glCanvas.width;
+    const height = glCanvas.height;
+
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    const aspect = width / height;
+    const projection = mat4Perspective(Math.PI / 3, aspect, 0.1, 100.0);
+    const view = buildViewMatrix();
+    const pv = mat4Multiply(projection, view);
+
+    const dy = layerSpacingY;
+    const dz = layerSpacingZ;
+    const sx = cardScaleX;
+    const sy = cardScaleY;
+
+    const baseY = (layers.length - 1) * dy * 0.5;
+    const baseZ = -(layers.length - 1) * dz * 0.5;
+
+    layerStates = [];
+
+    for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        const offset = layerOffsets[i] || { x: 0, z: 0 };
+        let model = mat4Identity();
+        const ty = baseY - i * dy;
+        const tzBase = baseZ + i * dz;
+        model = mat4Multiply(model, mat4Translation(offset.x, ty, tzBase + offset.z));
+        model = mat4Multiply(model, mat4Scale(sx, sy, 1));
+
+        const mvp = mat4Multiply(pv, model);
+
+        const draggingHighlight = isDraggingLayer && draggingLayerIndex === i;
+        const highlight = (selectedIndex === -1 || selectedIndex === i || draggingHighlight);
+        const alpha = selectedIndex === -1 ? 0.9 : (highlight ? 0.95 : 0.25);
+        const rgb = hexToRgb(layer.accent);
+
+        gl.uniformMatrix4fv(uMvpLoc, false, new Float32Array(mvp));
+        gl.uniform4f(uColorLoc, rgb.r / 255, rgb.g / 255, rgb.b / 255, alpha);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        const screenPoly = quadCornersLocal.map(xyz =>
+            projectPoint(xyz[0], xyz[1], xyz[2], mvp, width, height)
+        );
+
+        layerStates.push({ mvp: mvp, screenPoly: screenPoly });
+    }
+
+    drawOverlay(layerStates, width, height);
+    requestAnimationFrame(render);
+}
+
+// ===== 레이 → 평면 교차 (드래그용) =====
+function screenToWorldRay(canvasX, canvasY) {
+    const width = glCanvas.width;
+    const height = glCanvas.height;
+    const aspect = width / height;
+
+    const projection = mat4Perspective(Math.PI / 3, aspect, 0.1, 100.0);
+    const view = buildViewMatrix();
+    const pv = mat4Multiply(projection, view);
+    const invPV = mat4Inverse(pv);
+    if (!invPV) return null;
+
+    const ndcX = (canvasX / width) * 2 - 1;
+    const ndcY = 1 - (canvasY / height) * 2;
+
+    const nearClip = transformVec4(invPV, [ndcX, ndcY, -1, 1]);
+    const farClip  = transformVec4(invPV, [ndcX, ndcY,  1, 1]);
+
+    const nearW = nearClip[3] || 1e-6;
+    const farW  = farClip[3]  || 1e-6;
+    const nearWorld = {
+        x: nearClip[0] / nearW,
+        y: nearClip[1] / nearW,
+        z: nearClip[2] / nearW
+    };
+    const farWorld = {
+        x: farClip[0] / farW,
+        y: farClip[1] / farW,
+        z: farClip[2] / farW
+    };
+
+    let dirX = farWorld.x - nearWorld.x;
+    let dirY = farWorld.y - nearWorld.y;
+    let dirZ = farWorld.z - nearWorld.z;
+    const len = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ) || 1e-6;
+    dirX /= len; dirY /= len; dirZ /= len;
+
+    return {
+        origin: nearWorld,
+        dir: { x: dirX, y: dirY, z: dirZ }
+    };
+}
+function intersectRayWithPlaneY(ray, planeY) {
+    const o = ray.origin;
+    const d = ray.dir;
+    const denom = d.y;
+    if (Math.abs(denom) < 1e-5) return null;
+    const t = (planeY - o.y) / denom;
+    if (t < 0) return null;
+    return {
+        x: o.x + d.x * t,
+        y: o.y + d.y * t,
+        z: o.z + d.z * t
+    };
+}
+
+// ===== 입력 / 드래그 =====
+function getCanvasCoords(e) {
+    const rect = glCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (glCanvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (glCanvas.height / rect.height);
+    return { x, y };
+}
+function findLayerAt(canvasX, canvasY) {
+    for (let i = 0; i < layerStates.length; i++) {
+        const state = layerStates[i];
+        if (!state || !state.screenPoly) continue;
+        const poly = state.screenPoly;
+        if (poly.some(p => !p)) continue;
+        if (pointInPolygon(canvasX, canvasY, poly)) {
+            return i;
+        }
+    }
+    return -1;
+}
+function dragLayerToScreenPos(layerIndex, canvasX, canvasY) {
+    if (layerIndex < 0 || layerIndex >= layers.length) return;
+
+    const ray = screenToWorldRay(canvasX, canvasY);
+    if (!ray) return;
+
+    const dy = layerSpacingY;
+    const dz = layerSpacingZ;
+    const baseY = (layers.length - 1) * dy * 0.5;
+    const baseZ = -(layers.length - 1) * dz * 0.5;
+    const ty = baseY - layerIndex * dy;
+    const tzBase = baseZ + layerIndex * dz;
+
+    const hit = intersectRayWithPlaneY(ray, ty);
+    if (!hit) return;
+
+    const off = layerOffsets[layerIndex] || (layerOffsets[layerIndex] = { x: 0, z: 0 });
+    off.x = hit.x;
+    off.z = hit.z - tzBase;
+}
+
+glCanvas.addEventListener("mousedown", e => {
+    if (e.button === 0) {
+        const pos = getCanvasCoords(e);
+        isLeftMouseDown = true;
+        mouseDownCanvasX = pos.x;
+        mouseDownCanvasY = pos.y;
+        mouseDownLayerIndex = findLayerAt(pos.x, pos.y);
+        isDraggingLayer = false;
+        draggingLayerIndex = -1;
+    } else if (e.button === 1 || e.button === 2) {
+        isPanning = true;
+        lastPanX = e.clientX;
+        lastPanY = e.clientY;
+        e.preventDefault();
+    }
+});
+
+window.addEventListener("mousemove", e => {
+    // 3D 뷰 패드
+    if (anglePadDragging) {
+        handleAnglePadEvent(e);
+    }
+
+    // 팬
+    if (isPanning) {
+        const dx = e.clientX - lastPanX;
+        const dy = e.clientY - lastPanY;
+        lastPanX = e.clientX;
+        lastPanY = e.clientY;
+
+        const dist = getCameraDistance();
+        const panSpeed = 0.003 * dist;
+        camPos.x += dx * panSpeed;
+        camPos.y -= dy * panSpeed;
+        fillCameraFields();
+    }
+
+    // 레이어 드래그
+    if (isLeftMouseDown && mouseDownLayerIndex !== -1) {
+        const pos = getCanvasCoords(e);
+        const dx = pos.x - mouseDownCanvasX;
+        const dy = pos.y - mouseDownCanvasY;
+        const distSq = dx * dx + dy * dy;
+
+        if (!isDraggingLayer && distSq > 25) {
+            isDraggingLayer = true;
+            draggingLayerIndex = mouseDownLayerIndex;
+        }
+        if (isDraggingLayer) {
+            dragLayerToScreenPos(draggingLayerIndex, pos.x, pos.y);
+        }
+    }
+});
+
+window.addEventListener("mouseup", e => {
+    if (e.button === 0) {
+        if (isLeftMouseDown) {
+            if (!isDraggingLayer) {
+                if (mouseDownLayerIndex === -1) {
+                    selectedIndex = -1;
+                } else {
+                    selectedIndex = (selectedIndex === mouseDownLayerIndex)
+                        ? -1
+                        : mouseDownLayerIndex;
+                }
+            }
+            isLeftMouseDown = false;
+            isDraggingLayer = false;
+            mouseDownLayerIndex = -1;
+            draggingLayerIndex = -1;
+        }
+    }
+    if (e.button === 1 || e.button === 2) {
+        isPanning = false;
+    }
+    anglePadDragging = false;
+});
+
+glCanvas.addEventListener("contextmenu", e => {
+    e.preventDefault();
+});
+
+glCanvas.addEventListener("wheel", e => {
+    e.preventDefault();
+    let dist = getCameraDistance();
+    const zoomFactor = 1.1;
+    if (e.deltaY > 0) {
+        dist *= zoomFactor;
+    } else {
+        dist /= zoomFactor;
+    }
+    setCameraDistance(dist);
+    fillCameraFields();
+    drawAnglePad();
+}, { passive: false });
+
+// ===== 설정 패널 / UI =====
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsPanel = document.getElementById("settingsPanel");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+
+const cameraXInput = document.getElementById("cameraX");
+const cameraYInput = document.getElementById("cameraY");
+const cameraZInput = document.getElementById("cameraZ");
+const cameraRotXInput = document.getElementById("cameraRotX");
+const spacingYInput = document.getElementById("spacingY");
+const spacingZInput = document.getElementById("spacingZ");
+const scaleXInput = document.getElementById("scaleX");
+const scaleYInput = document.getElementById("scaleY");
+const yawAxisSelect = document.getElementById("yawAxisSelect");
+const applyCameraBtn = document.getElementById("applyCameraBtn");
+
+const layerSelect = document.getElementById("layerSelect");
+const layerTitleInput = document.getElementById("layerTitle");
+const centerLabelInput = document.getElementById("centerLabel");
+const accentColorInput = document.getElementById("accentColor");
+const propertiesInput = document.getElementById("propertiesInput");
+const applyLayerBtn = document.getElementById("applyLayerBtn");
+const addLayerBtn = document.getElementById("addLayerBtn");
+const deleteLayerBtn = document.getElementById("deleteLayerBtn");
+
+const linkFromSelect = document.getElementById("linkFrom");
+const linkToSelect = document.getElementById("linkTo");
+const addLinkBtn = document.getElementById("addLinkBtn");
+const removeLinkBtn = document.getElementById("removeLinkBtn");
+
+const zoomInBtn = document.getElementById("zoomInBtn");
+const zoomOutBtn = document.getElementById("zoomOutBtn");
+const fitViewBtn = document.getElementById("fitViewBtn");
+
+const anglePad = document.getElementById("anglePad");
+const anglePadCtx = anglePad.getContext("2d");
+const angleInfo = document.getElementById("angleInfo");
+
+const savePngBtn = document.getElementById("savePngBtn");
+const saveSvgBtn = document.getElementById("saveSvgBtn");
+const saveStateBtn = document.getElementById("saveStateBtn");
+const loadStateBtn = document.getElementById("loadStateBtn");
+
+// ===== 3D 좌표계 패드 =====
+function drawAnglePad() {
+    const ctx = anglePadCtx;
+    const w = anglePad.width;
+    const h = anglePad.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min((w - 32) / 2, (h - 32) / 2);
+
+    ctx.fillStyle = "#f3f4f6";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // 바깥 원
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.9)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // 내부 원
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.25, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(209, 213, 219, 0.9)";
+    ctx.setLineDash([3, 3]);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 십자선
+    ctx.beginPath();
+    ctx.moveTo(-radius, 0);
+    ctx.lineTo(radius, 0);
+    ctx.moveTo(0, -radius);
+    ctx.lineTo(0, radius);
+    ctx.strokeStyle = "rgba(209, 213, 219, 0.9)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 축 표시(모델링 느낌)
+    // X
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(radius * 0.7, radius * 0.3);
+    ctx.strokeStyle = "rgba(248, 113, 113, 0.9)";
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+    // Z
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-radius * 0.6, radius * 0.1);
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.9)";
+    ctx.stroke();
+    // Y
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -radius * 0.8);
+    ctx.strokeStyle = "rgba(16, 185, 129, 0.9)";
+    ctx.stroke();
+
+    ctx.font = "9px system-ui, sans-serif";
+    ctx.fillStyle = "#1f2937";
+    ctx.fillText("X", radius * 0.72, radius * 0.34);
+    ctx.fillText("Z", -radius * 0.65, radius * 0.16);
+    ctx.fillText("Y", 4, -radius * 0.82);
+
+    // 현재 yaw + distance -> 핸들 위치
+    const dist = clamp(getCameraDistance(), padMinDist, padMaxDist);
+    const t = (dist - padMinDist) / (padMaxDist - padMinDist);
+    const r = radius * (0.25 + 0.75 * t);
+
+    const yawRad = camRotYDeg * Math.PI / 180;
+    const hx = Math.sin(yawRad) * r;
+    const hy = -Math.cos(yawRad) * r;
+
+    ctx.beginPath();
+    ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(56, 189, 248, 0.95)";
+    ctx.fill();
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = "rgba(30, 64, 175, 0.95)";
+    ctx.stroke();
+
+    ctx.restore();
+
+    angleInfo.textContent =
+        "Yaw: " + camRotYDeg.toFixed(0) +
+        "° / Dist: " + dist.toFixed(1) +
+        " / Pitch: " + camRotXDeg.toFixed(0) + "° / Axis: " + yawAxis;
+}
+function handleAnglePadEvent(evt) {
+    const rect = anglePad.getBoundingClientRect();
+    const pxCss = evt.clientX - rect.left;
+    const pyCss = evt.clientY - rect.top;
+    const px = (pxCss / rect.width) * anglePad.width;
+    const py = (pyCss / rect.height) * anglePad.height;
+
+    const w = anglePad.width;
+    const h = anglePad.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min((w - 32) / 2, (h - 32) / 2);
+
+    let dx = px - cx;
+    let dy = py - cy;
+    let r = Math.sqrt(dx * dx + dy * dy);
+    if (r < 6) return;
+
+    const rOuter = radius;
+    const rInner = radius * 0.25;
+    const rClamped = clamp(r, rInner, rOuter);
+    dx *= rClamped / (r || 1);
+    dy *= rClamped / (r || 1);
+
+    const angle = Math.atan2(dx, -dy); // hx=sin(yaw), hy=-cos(yaw)
+    let yawDeg = angle * 180 / Math.PI;
+    if (yawDeg < -180) yawDeg += 360;
+    if (yawDeg > 180) yawDeg -= 360;
+    camRotYDeg = yawDeg;
+
+    const t = clamp((rClamped - rInner) / (rOuter - rInner), 0, 1);
+    const dist = padMinDist + t * (padMaxDist - padMinDist);
+    setCameraDistance(dist);
+
+    fillCameraFields();
+    drawAnglePad();
+}
+
+// ===== 카메라/레이어 편집 =====
+function resetCameraToFit() {
+    const n = layers.length;
+    const targetPitch = 60;
+    let dist = padMinDist + (n - 1) * 0.7;
+    dist = clamp(dist, padMinDist + 1, padMaxDist - 0.5);
+
+    camPos.x = 0;
+    camPos.y = 0;
+    camRotXDeg = targetPitch;
+    camRotYDeg = 0;
+    yawAxis = "Y";
+    setCameraDistance(dist);
+    fillCameraFields();
+    drawAnglePad();
+}
+
+function refreshLayerOptions(selectedIdx) {
+    function fillSelect(sel) {
+        if (!sel) return;
+        sel.innerHTML = "";
+        for (let i = 0; i < layers.length; i++) {
+            const opt = document.createElement("option");
+            opt.value = String(i);
+            opt.textContent = (i + 1) + " · " + layers[i].title;
+            sel.appendChild(opt);
+        }
+    }
+    fillSelect(layerSelect);
+    fillSelect(linkFromSelect);
+    fillSelect(linkToSelect);
+
+    if (selectedIdx == null) selectedIdx = 0;
+    if (selectedIdx < 0) selectedIdx = 0;
+    if (selectedIdx >= layers.length) selectedIdx = layers.length - 1;
+
+    if (layerSelect) layerSelect.value = String(selectedIdx);
+    if (linkFromSelect) linkFromSelect.value = "0";
+    if (linkToSelect && layers.length > 1) linkToSelect.value = "1";
+}
+function fillCameraFields() {
+    cameraXInput.value = camPos.x.toFixed(1);
+    cameraYInput.value = camPos.y.toFixed(1);
+    cameraZInput.value = camPos.z.toFixed(1);
+    cameraRotXInput.value = camRotXDeg.toFixed(0);
+    spacingYInput.value = layerSpacingY.toFixed(1);
+    spacingZInput.value = layerSpacingZ.toFixed(1);
+    scaleXInput.value = cardScaleX.toFixed(1);
+    scaleYInput.value = cardScaleY.toFixed(1);
+    if (yawAxisSelect) yawAxisSelect.value = yawAxis;
+}
+function fillLayerFields(index) {
+    const idx = parseInt(index, 10);
+    if (isNaN(idx) || idx < 0 || idx >= layers.length) return;
+    const layer = layers[idx];
+    layerTitleInput.value = layer.title;
+    centerLabelInput.value = layer.centerLabel;
+    accentColorInput.value = layer.accent;
+    propertiesInput.value = (layer.properties || []).join("\n");
+}
+function populateSettingsUI() {
+    fillCameraFields();
+    refreshLayerOptions(selectedIndex === -1 ? 0 : selectedIndex);
+    fillLayerFields(layerSelect.value);
+    drawAnglePad();
+}
+
+// ===== LocalStorage (상태 저장) =====
+const STORAGE_KEY = "ontology_layer_state_v1";
+
+function saveStateToLocalStorage() {
+    const state = {
+        layers: layers,
+        camPos: camPos,
+        camRotXDeg: camRotXDeg,
+        camRotYDeg: camRotYDeg,
+        yawAxis: yawAxis,
+        layerSpacingY: layerSpacingY,
+        layerSpacingZ: layerSpacingZ,
+        cardScaleX: cardScaleX,
+        cardScaleY: cardScaleY,
+        layerOffsets: layerOffsets,
+        selectedIndex: selectedIndex,
+        layerLinks: layerLinks
+    };
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        alert("현재 상태가 브라우저에 저장되었습니다.");
+    } catch (e) {
+        console.error("상태 저장 오류:", e);
+        alert("상태를 저장하는 중 오류가 발생했습니다.");
+    }
+}
+
+function loadStateFromLocalStorage() {
+    try {
+        const text = localStorage.getItem(STORAGE_KEY);
+        if (!text) return false;
+        const state = JSON.parse(text);
+        if (!state || !Array.isArray(state.layers)) return false;
+
+        layers.length = 0;
+        for (let i = 0; i < state.layers.length; i++) {
+            const l = state.layers[i];
+            layers.push({
+                id: l.id || ("layer_" + i),
+                title: l.title || ("Layer " + (i + 1)),
+                accent: l.accent || randomPastelColor(),
+                centerLabel: l.centerLabel || "Center",
+                properties: Array.isArray(l.properties) ? l.properties : []
+            });
+        }
+
+        if (state.camPos) {
+            camPos.x = Number(state.camPos.x) || 0;
+            camPos.y = Number(state.camPos.y) || 0;
+            camPos.z = Number(state.camPos.z) || -8;
+        }
+        if (typeof state.camRotXDeg === "number") camRotXDeg = state.camRotXDeg;
+        if (typeof state.camRotYDeg === "number") camRotYDeg = state.camRotYDeg;
+        if (typeof state.yawAxis === "string") yawAxis = state.yawAxis;
+
+        if (typeof state.layerSpacingY === "number") layerSpacingY = state.layerSpacingY;
+        if (typeof state.layerSpacingZ === "number") layerSpacingZ = state.layerSpacingZ;
+        if (typeof state.cardScaleX === "number") cardScaleX = state.cardScaleX;
+        if (typeof state.cardScaleY === "number") cardScaleY = state.cardScaleY;
+
+        if (Array.isArray(state.layerOffsets)) {
+            layerOffsets = [];
+            for (let i = 0; i < layers.length; i++) {
+                const o = state.layerOffsets[i] || {};
+                layerOffsets.push({ x: Number(o.x) || 0, z: Number(o.z) || 0 });
+            }
+        } else {
+            layerOffsets = new Array(layers.length).fill(0).map(() => ({ x: 0, z: 0 }));
+        }
+
+        if (Array.isArray(state.layerLinks)) {
+            layerLinks = [];
+            for (let i = 0; i < state.layerLinks.length; i++) {
+                const ln = state.layerLinks[i];
+                const a = Number(ln.from);
+                const b = Number(ln.to);
+                if (Number.isInteger(a) && Number.isInteger(b) &&
+                    a >= 0 && b >= 0 && a < layers.length && b < layers.length && a !== b) {
+                    const norm = normalizeLink(a, b);
+                    if (norm && !layerLinks.some(l => l.from === norm.from && l.to === norm.to)) {
+                        layerLinks.push(norm);
+                    }
+                }
+            }
+        } else {
+            layerLinks = [];
+        }
+
+        if (Number.isInteger(state.selectedIndex) &&
+            state.selectedIndex >= 0 && state.selectedIndex < layers.length) {
+            selectedIndex = state.selectedIndex;
+        } else {
+            selectedIndex = -1;
+        }
+        return true;
+    } catch (e) {
+        console.error("상태 불러오기 오류:", e);
+        return false;
+    }
+}
+function initDefaultLinks() {
+    layerLinks = [];
+    for (let i = 0; i < layers.length - 1; i++) {
+        layerLinks.push({ from: i, to: i + 1 });
+    }
+}
+
+// ===== 내보내기 (PNG / SVG) =====
+function exportAsPng() {
+    const width = glCanvas.width;
+    const height = glCanvas.height;
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = width;
+    exportCanvas.height = height;
+    const ctx = exportCanvas.getContext("2d");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(glCanvas, 0, 0);
+    ctx.drawImage(overlayCanvas, 0, 0);
+
+    const dataUrl = exportCanvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = "ontology_layers.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function exportAsSvg() {
+    const width = overlayCanvas.width;
+    const height = overlayCanvas.height;
+
+    const svgParts = [];
+    svgParts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+    svgParts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
+    svgParts.push(`<rect width="100%" height="100%" fill="#ffffff" />`);
+
+    // 격자
+    const gridSize = 40;
+    for (let x = 0.5; x < width; x += gridSize) {
+        svgParts.push(`<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${height}" stroke="#e5e7eb" stroke-width="1" />`);
+    }
+    for (let y = 0.5; y < height; y += gridSize) {
+        svgParts.push(`<line x1="0" y1="${y.toFixed(1)}" x2="${width}" y2="${y.toFixed(1)}" stroke="#e5e7eb" stroke-width="1" />`);
+    }
+
+    // 레이어 배경 쉐이프
+    for (let i = 0; i < layerStates.length; i++) {
+        const state = layerStates[i];
+        const layer = layers[i];
+        if (!state || !state.screenPoly) continue;
+        const poly = state.screenPoly;
+        if (poly.some(p => !p)) continue;
+        const accent = hexToRgb(layer.accent);
+        const highlight = (selectedIndex === -1 || selectedIndex === i || (isDraggingLayer && draggingLayerIndex === i));
+        const baseAlpha = selectedIndex === -1 ? 0.06 : (highlight ? 0.14 : 0.03);
+
+        const points = poly.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+        svgParts.push(
+            `<polygon points="${points}" fill="rgb(${accent.r},${accent.g},${accent.b})" fill-opacity="${baseAlpha.toFixed(2)}" stroke="rgb(${accent.r},${accent.g},${accent.b})" stroke-opacity="${Math.min(baseAlpha * 3, 1).toFixed(2)}" stroke-width="1.6" />`
+        );
+    }
+
+    // 레이어 간 링크
+    for (let li = 0; li < layerLinks.length; li++) {
+        const link = layerLinks[li];
+        const i = link.from;
+        const j = link.to;
+        if (i < 0 || j < 0 || i >= layerStates.length || j >= layerStates.length) continue;
+        const a = layerStates[i];
+        const b = layerStates[j];
+        if (!a || !b) continue;
+        const p1 = projectPoint(0, 0, 0, a.mvp, width, height);
+        const p2 = projectPoint(0, 0, 0, b.mvp, width, height);
+        if (!p1 || !p2) continue;
+        svgParts.push(
+            `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 4" />`
+        );
+    }
+
+    // 노드/텍스트
+    const nodeRadiusLocal = 0.28;
+    const labelRadiusLocal = 0.38;
+
+    for (let i = 0; i < layerStates.length; i++) {
+        const layer = layers[i];
+        const state = layerStates[i];
+        if (!state) continue;
+        const mvp = state.mvp;
+        const center = projectPoint(0, 0, 0, mvp, width, height);
+        if (!center) continue;
+
+        const accent = hexToRgb(layer.accent);
+        const props = layer.properties || [];
+        const count = props.length;
+        const draggingHighlight = isDraggingLayer && draggingLayerIndex === i;
+        const highlight = (selectedIndex === -1 || selectedIndex === i || draggingHighlight);
+        const alpha = selectedIndex === -1 ? 1.0 : (highlight ? 1.0 : 0.22);
+
+        // 방사형 링크
+        for (let k = 0; k < count; k++) {
+            const angle = (Math.PI * 2 * k) / count - Math.PI / 2;
+            const lx = nodeRadiusLocal * Math.cos(angle);
+            const ly = nodeRadiusLocal * Math.sin(angle);
+            const p = projectPoint(lx, ly, 0, mvp, width, height);
+            if (!p) continue;
+            svgParts.push(
+                `<line x1="${center.x.toFixed(1)}" y1="${center.y.toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="rgba(0,0,0,${(0.75 * alpha).toFixed(2)})" stroke-width="${highlight ? 1.4 : 1.0}" />`
+            );
+        }
+
+        // 노드
+        for (let k = 0; k < count; k++) {
+            const angle = (Math.PI * 2 * k) / count - Math.PI / 2;
+            const lxNode = nodeRadiusLocal * Math.cos(angle);
+            const lyNode = nodeRadiusLocal * Math.sin(angle);
+            const pNode = projectPoint(lxNode, lyNode, 0, mvp, width, height);
+            const lxLabel = labelRadiusLocal * Math.cos(angle);
+            const lyLabel = labelRadiusLocal * Math.sin(angle);
+            const pLabel = projectPoint(lxLabel, lyLabel, 0, mvp, width, height);
+            if (!pNode || !pLabel) continue;
+            const rNode = highlight ? 6 : 5;
+
+            svgParts.push(
+                `<circle cx="${pNode.x.toFixed(1)}" cy="${pNode.y.toFixed(1)}" r="${rNode}" fill="rgb(${accent.r},${accent.g},${accent.b})" fill-opacity="${(0.95 * alpha).toFixed(2)}" stroke="rgba(0,0,0,${(0.9 * alpha).toFixed(2)})" stroke-width="1.3" />`
+            );
+
+            const anchor = pLabel.x < center.x ? "end" : "start";
+            svgParts.push(
+                `<text x="${pLabel.x.toFixed(1)}" y="${pLabel.y.toFixed(1)}" font-size="11" font-family="system-ui, sans-serif" text-anchor="${anchor}" dominant-baseline="middle" fill="rgba(17,24,39,${(0.9 * alpha).toFixed(2)})">${props[k]}</text>`
+            );
+        }
+
+        // 중앙 노드(라운드 사각형)
+        const centerText = layer.centerLabel || "";
+        overlayCtx.font = highlight ? "bold 11px system-ui, sans-serif" : "11px system-ui, sans-serif";
+        const metrics = overlayCtx.measureText(centerText);
+        const paddingX = 10;
+        const paddingY = 6;
+        const boxWidth = Math.max(metrics.width + paddingX * 2, 30);
+        const boxHeight = 22;
+        const boxX = center.x - boxWidth / 2;
+        const boxY = center.y - boxHeight / 2;
+
+        const fillAlpha = highlight ? 0.92 * alpha : 0.95 * alpha;
+        const strokeAlpha = 0.9 * alpha;
+
+        svgParts.push(
+            `<rect x="${boxX.toFixed(1)}" y="${boxY.toFixed(1)}" width="${boxWidth.toFixed(1)}" height="${boxHeight.toFixed(1)}" rx="${(boxHeight / 2).toFixed(1)}" ry="${(boxHeight / 2).toFixed(1)}" fill="rgb(${accent.r},${accent.g},${accent.b})" fill-opacity="${fillAlpha.toFixed(2)}" stroke="rgba(0,0,0,${strokeAlpha.toFixed(2)})" stroke-width="1.4" />`
+        );
+        svgParts.push(
+            `<text x="${center.x.toFixed(1)}" y="${center.y.toFixed(1)}" font-size="11" font-family="system-ui, sans-serif" text-anchor="middle" dominant-baseline="middle" fill="${highlight ? "#111827" : "rgba(31,41,55,0.9)"}">${centerText}</text>`
+        );
+
+        // 타이틀
+        const titleY = Math.min.apply(null, state.screenPoly.map(p => p.y)) - 8;
+        const titleFontSize = highlight ? 14 : 12;
+        const titleWeight = highlight ? "bold" : "normal";
+        const titleFill = highlight
+            ? "rgba(15,23,42,0.98)"
+            : "rgba(55,65,81,0.9)";
+        svgParts.push(
+            `<text x="${center.x.toFixed(1)}" y="${titleY.toFixed(1)}" font-size="${titleFontSize}" font-family="system-ui, sans-serif" font-weight="${titleWeight}" text-anchor="middle" dominant-baseline="baseline" fill="${titleFill}">${layer.title}</text>`
+        );
+    }
+
+    svgParts.push(`</svg>`);
+    const svgBlob = new Blob([svgParts.join("\n")], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ontology_layers.svg";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// ===== 이벤트 핸들러 =====
+settingsBtn.addEventListener("click", () => {
+    if (settingsPanel.style.display === "block") {
+        settingsPanel.style.display = "none";
+    } else {
+        populateSettingsUI();
+        settingsPanel.style.display = "block";
+    }
+});
+closeSettingsBtn.addEventListener("click", () => {
+    settingsPanel.style.display = "none";
+});
+
+applyCameraBtn.addEventListener("click", () => {
+    const cx = parseFloat(cameraXInput.value);
+    const cy = parseFloat(cameraYInput.value);
+    const cz = parseFloat(cameraZInput.value);
+    const rx = parseFloat(cameraRotXInput.value);
+    const syVal = parseFloat(spacingYInput.value);
+    const szVal = parseFloat(spacingZInput.value);
+    const sxVal = parseFloat(scaleXInput.value);
+    const sy2Val = parseFloat(scaleYInput.value);
+
+    if (!isNaN(cx)) camPos.x = cx;
+    if (!isNaN(cy)) camPos.y = cy;
+    if (!isNaN(cz)) camPos.z = cz;
+    if (!isNaN(rx)) camRotXDeg = rx;
+    if (!isNaN(syVal)) layerSpacingY = syVal;
+    if (!isNaN(szVal)) layerSpacingZ = szVal;
+    if (!isNaN(sxVal)) cardScaleX = sxVal;
+    if (!isNaN(sy2Val)) cardScaleY = sy2Val;
+
+    if (yawAxisSelect) yawAxis = yawAxisSelect.value;
+    drawAnglePad();
+});
+yawAxisSelect.addEventListener("change", () => {
+    yawAxis = yawAxisSelect.value;
+    drawAnglePad();
+});
+
+layerSelect.addEventListener("change", () => {
+    fillLayerFields(layerSelect.value);
+});
+
+applyLayerBtn.addEventListener("click", () => {
+    const idx = parseInt(layerSelect.value, 10);
+    if (isNaN(idx) || idx < 0 || idx >= layers.length) return;
+
+    const layer = layers[idx];
+    layer.title = layerTitleInput.value || layer.title;
+    const centerText = centerLabelInput.value.trim();
+    if (centerText.length === 0) {
+        alert("중앙 노드 텍스트는 비워둘 수 없습니다.");
+        centerLabelInput.value = layer.centerLabel;
+        return;
+    }
+    layer.centerLabel = centerText;
+    if (accentColorInput.value) {
+        layer.accent = accentColorInput.value;
+    }
+    const propsRaw = propertiesInput.value.split(/\r?\n/);
+    const propsClean = [];
+    for (let i = 0; i < propsRaw.length; i++) {
+        const t = propsRaw[i].trim();
+        if (t) propsClean.push(t);
+    }
+    layer.properties = propsClean;
+
+    refreshLayerOptions(idx);
+});
+
+// 신규 레이어 추가
+addLayerBtn.addEventListener("click", () => {
+    const centerText = centerLabelInput.value.trim();
+    if (centerText.length === 0) {
+        alert("신규 레이어 생성 시 중앙 노드는 반드시 필요합니다. 중앙 노드 텍스트를 입력해 주세요.");
+        return;
+    }
+    let title = layerTitleInput.value.trim();
+    if (!title) title = "새 레이어 " + (layers.length + 1);
+    const accent = accentColorInput.value || randomPastelColor();
+
+    const propsRaw = propertiesInput.value.split(/\r?\n/);
+    const propsClean = [];
+    for (let i = 0; i < propsRaw.length; i++) {
+        const t = propsRaw[i].trim();
+        if (t) propsClean.push(t);
+    }
+
+    const newLayer = {
+        id: "layer_" + Date.now(),
+        title: title,
+        accent: accent,
+        centerLabel: centerText,
+        properties: propsClean
+    };
+    layers.push(newLayer);
+    layerOffsets.push({ x: 0, z: 0 });
+
+    const newIndex = layers.length - 1;
+    // 기본적으로 바로 위 레이어와 링크 연결
+    if (newIndex > 0) {
+        const norm = normalizeLink(newIndex - 1, newIndex);
+        if (norm && !layerLinks.some(l => l.from === norm.from && l.to === norm.to)) {
+            layerLinks.push(norm);
+        }
+    }
+
+    selectedIndex = newIndex;
+    refreshLayerOptions(newIndex);
+    fillLayerFields(newIndex);
+});
+
+// 레이어 삭제
+deleteLayerBtn.addEventListener("click", () => {
+    if (layers.length <= 1) {
+        alert("마지막 레이어는 삭제할 수 없습니다.");
+        return;
+    }
+    const idx = parseInt(layerSelect.value, 10);
+    if (isNaN(idx) || idx < 0 || idx >= layers.length) return;
+    if (!confirm("선택된 레이어를 삭제하시겠습니까?")) return;
+
+    layers.splice(idx, 1);
+    layerOffsets.splice(idx, 1);
+
+    // 링크 재정렬
+    layerLinks = layerLinks
+        .filter(link => link.from !== idx && link.to !== idx)
+        .map(link => {
+            let from = link.from;
+            let to = link.to;
+            if (from > idx) from--;
+            if (to > idx) to--;
+            return { from, to };
+        });
+
+    if (selectedIndex === idx) {
+        selectedIndex = -1;
+    } else if (selectedIndex > idx) {
+        selectedIndex--;
+    }
+
+    const newIdx = Math.min(idx, layers.length - 1);
+    refreshLayerOptions(newIdx);
+    fillLayerFields(newIdx);
+});
+
+// 링크 추가/삭제
+addLinkBtn.addEventListener("click", () => {
+    const a = parseInt(linkFromSelect.value, 10);
+    const b = parseInt(linkToSelect.value, 10);
+    if (isNaN(a) || isNaN(b) || a < 0 || b < 0 || a >= layers.length || b >= layers.length) return;
+    if (a === b) {
+        alert("서로 다른 두 레이어를 선택해 주세요.");
+        return;
+    }
+    const norm = normalizeLink(a, b);
+    if (!norm) return;
+    if (!layerLinks.some(l => l.from === norm.from && l.to === norm.to)) {
+        layerLinks.push(norm);
+    }
+});
+
+removeLinkBtn.addEventListener("click", () => {
+    const a = parseInt(linkFromSelect.value, 10);
+    const b = parseInt(linkToSelect.value, 10);
+    if (isNaN(a) || isNaN(b)) return;
+    const norm = normalizeLink(a, b);
+    if (!norm) return;
+    layerLinks = layerLinks.filter(l => !(l.from === norm.from && l.to === norm.to));
+});
+
+// 줌 / 화면맞춤
+zoomInBtn.addEventListener("click", () => {
+    let dist = getCameraDistance();
+    dist /= 1.1;
+    setCameraDistance(dist);
+    fillCameraFields();
+    drawAnglePad();
+});
+zoomOutBtn.addEventListener("click", () => {
+    let dist = getCameraDistance();
+    dist *= 1.1;
+    setCameraDistance(dist);
+    fillCameraFields();
+    drawAnglePad();
+});
+fitViewBtn.addEventListener("click", () => {
+    resetCameraToFit();
+});
+
+// 패드 드래그
+anglePad.addEventListener("mousedown", evt => {
+    anglePadDragging = true;
+    handleAnglePadEvent(evt);
+});
+window.addEventListener("mousemove", evt => {
+    if (anglePadDragging) {
+        handleAnglePadEvent(evt);
+    }
+});
+
+// PNG / SVG / 상태 저장 버튼
+savePngBtn.addEventListener("click", exportAsPng);
+saveSvgBtn.addEventListener("click", exportAsSvg);
+saveStateBtn.addEventListener("click", saveStateToLocalStorage);
+loadStateBtn.addEventListener("click", () => {
+    const ok = loadStateFromLocalStorage();
+    if (!ok) {
+        alert("저장된 상태가 없습니다.");
+        return;
+    }
+    // 불러온 상태에 맞게 옵션/필드 갱신
+    if (!Array.isArray(layerOffsets) || layerOffsets.length !== layers.length) {
+        layerOffsets = new Array(layers.length).fill(0).map(() => ({ x: 0, z: 0 }));
+    }
+    if (!Array.isArray(layerLinks)) {
+        initDefaultLinks();
+    }
+    populateSettingsUI();
+});
+
+// ===== 초기 로딩: 저장 상태 불러오기 or 기본값 =====
+const loaded = loadStateFromLocalStorage();
+if (!loaded) {
+    layerOffsets = new Array(layers.length).fill(0).map(() => ({ x: 0, z: 0 }));
+    initDefaultLinks();
+    resetCameraToFit();
+} else {
+    if (!Array.isArray(layerOffsets) || layerOffsets.length !== layers.length) {
+        layerOffsets = new Array(layers.length).fill(0).map(() => ({ x: 0, z: 0 }));
+    }
+    if (!Array.isArray(layerLinks) || layerLinks.length === 0) {
+        initDefaultLinks();
+    }
+}
+populateSettingsUI();
+
+// 렌더 시작
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
