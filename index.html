@@ -48,6 +48,69 @@
         }
         .subtitle { color: var(--text-sub); font-size: 1.1rem; }
 
+        /* === Introduction Text === */
+        .intro-text {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            padding: 0 20px;
+            text-align: center;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-sub);
+            word-break: keep-all; /* 단어 단위 줄바꿈 */
+        }
+		
+		/* === Star Wars Style Crawl Effect === */
+        .intro-container {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            height: 100px; /* 약 3~4줄이 보일 높이 설정 */
+            overflow: hidden; /* 넘치는 텍스트 숨김 */
+            position: relative;
+            perspective: 300px; /* 3D 원근감 추가 */
+            
+            /* 상단과 하단을 부드럽게 페이드 아웃 처리 (마스킹) */
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+        }
+
+        .crawl-content {
+            color: var(--accent); /* 네온 라임색 적용 (기존 테마 유지) */
+            font-size: 1rem;
+            line-height: 1.8;
+            text-align: center;
+            font-weight: 700;
+            
+            /* 스타워즈 느낌의 기울기 */
+            transform-origin: 50% 100%;
+            transform: rotateX(20deg); 
+
+            /* 애니메이션 적용 */
+            position: relative;
+            animation: crawl 20s linear infinite;
+        }
+
+        /* 마우스를 올리면 멈춰서 읽기 편하게 함 */
+        .intro-container:hover .crawl-content {
+            animation-play-state: paused;
+        }
+
+        @keyframes crawl {
+            0% {
+                top: 100%; /* 박스 아래에서 시작 */
+                transform: rotateX(20deg) translateY(0%);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            100% {
+                top: -250%; /* 텍스트 길이만큼 위로 올라감 (텍스트 양에 따라 조절 필요) */
+                transform: rotateX(25deg) translateY(0%);
+                opacity: 1;
+            }
+        }
+
         /* === Catalog Grid (Desktop Default) === */
         .container {
             max-width: 1400px; margin: 0 auto; padding: 20px;
@@ -193,6 +256,16 @@
         <div class="subtitle">Vibe Coding Game & Tool Collection</div>
     </header>
 
+    <div class="intro-text">
+	<div class="intro-container">
+        <div class="crawl-content">
+            이 페이지의 툴과 게임들은 2025년 10월 1일부터 LLM ( Chatgpt , Claude , Gemini )등을 통해서, 점심시간을 활용해 최소 1시간 ~ 최대 4시간의 시간을 소요해서 만들어본 vibe coding의 결과물이며, 모든 프로그램을 단지 html , css , javascript ( typescript ) 만을 사용해서, html 1개의 파일로 구성되어 만들어진 것으로 해당 소스는 모두 오픈 되어 있고, 다운로드 해서 로컬에서도 바로 활용이 가능합니다.<br><br>
+        vibe코딩을 사용해 본 결과 평소 접근과 학습이 쉽지 않았던 webgl 기반 three.js를 활용해 로컬 머신의 GPU 자원을 활용한 그래픽처리 다양한 사운드 효과등 다양한 기술적 접근을 통해 단지 자연어와 지난한 디버깅과 LLM 달래기(?)를 통해서 아주 쉽게 만들 수 있습니다.
+        </div>
+    </div>
+        
+    </div>
+
     <main class="container" id="grid">
         </main>
 
@@ -312,5 +385,4 @@
         });
     </script>
 </body>
-
 </html>
