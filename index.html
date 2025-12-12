@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Coding Catalog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --card-bg: #1a1a1a;
+            --text-main: #ffffff;
+            --text-sub: #aaaaaa;
+            --accent: #ccff00; /* Neon Lime */
+            --accent-hover: #b3e600;
+            --tag-bg: #333;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Noto Sans KR', sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased; /* 모바일 폰트 부드럽게 */
+        }
+
+        /* 배경 노이즈 효과 */
+        .noise-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+            opacity: 0.05; pointer-events: none; z-index: -1;
+        }
+
+        /* === Header === */
+        header {
+            padding: 80px 20px 40px; text-align: center;
+        }
+        h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 3rem; text-transform: uppercase; letter-spacing: 2px;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #fff, #888);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: var(--text-sub); font-size: 1.1rem; }
+
+        /* === Catalog Grid (Desktop Default) === */
+        .container {
+            max-width: 1400px; margin: 0 auto; padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 40px;
+            padding-bottom: 100px;
+        }
+
+        /* === Card Style === */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            display: flex; flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            text-decoration: none; color: inherit;
+            border-radius: 4px; /* 모바일에서 약간의 부드러움 */
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-color: var(--accent);
+        }
+
+        /* Screenshot Area */
+        .thumb-box {
+            width: 100%; aspect-ratio: 18/10;
+            overflow: hidden; position: relative;
+            border-bottom: 1px solid #333;
+        }
+        .thumb-box img {
+            width: 100%; height: 100%; object-fit: contain;
+            transition: transform 0.5s;
+            opacity: 0; animation: fadeIn 0.5s forwards 0.5s;
+        }
+        .card:hover .thumb-box img { transform: scale(1.2); }
+
+        /* Info Area */
+        .info-box { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
+
+        /* Tag */
+        .tags { margin-bottom: 15px; }
+        .tag {
+            font-family: 'Oswald', sans-serif; font-size: 0.8rem;
+            background: var(--tag-bg); color: var(--text-sub);
+            padding: 4px 8px; border-radius: 2px; text-transform: uppercase;
+            letter-spacing: 1px; margin-right: 5px;
+        }
+        .card:hover .tag { background: var(--accent); color: #000; }
+
+        /* Typography */
+        .title {
+            font-family: 'Oswald', sans-serif; font-size: 2rem;
+            line-height: 1.1; margin-bottom: 10px;
+            text-transform: uppercase; word-break: keep-all;
+        }
+        .desc {
+            font-size: 0.95rem; color: var(--text-sub);
+            line-height: 1.6; margin-bottom: 25px;
+            flex-grow: 1; word-break: keep-all;
+        }
+
+        /* Button */
+        .play-btn {
+            margin-top: auto;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 0 0;
+            border-top: 1px solid #333;
+            font-family: 'Oswald', sans-serif; font-size: 1.2rem;
+            color: var(--text-main); transition: color 0.3s;
+        }
+        .play-btn i { transform: rotate(-45deg); transition: transform 0.3s; }
+        
+        .card:hover .play-btn { color: var(--accent); }
+        .card:hover .play-btn i { transform: rotate(0deg); }
+
+        /* Loading Animation */
+        .skeleton {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+            background-size: 200% 100%; animation: load 1.5s infinite;
+        }
+        @keyframes load { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* Footer */
+        footer {
+            text-align: center; padding: 40px; color: #555; font-size: 0.9rem;
+            border-top: 1px solid #222;
+        }
+
+        /* =========================================
+           📱 Mobile Adaptive Styles (미디어 쿼리)
+           ========================================= */
+        @media (max-width: 768px) {
+            /* Header 축소 */
+            header { padding: 50px 20px 30px; }
+            h1 { font-size: 2.8rem; }
+            .subtitle { font-size: 0.9rem; }
+
+            /* Grid: 모바일에서는 1열로 꽉 차게 */
+            .container {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                padding: 15px;
+            }
+
+            /* Card 모바일 최적화 */
+            .card {
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* 기본 그림자 조금 더 진하게 */
+            }
+            
+            /* 터치 디바이스에서는 Hover 효과 대신 기본 상태를 좀 더 명확하게 */
+            .tag {
+                background: #444; /* 조금 더 밝게 */
+                color: #ccc;
+            }
+            
+            /* 폰트 사이즈 조정 */
+            .title { font-size: 1.8rem; }
+            .desc { font-size: 0.9rem; margin-bottom: 20px; }
+            .play-btn { font-size: 1.1rem; }
+            
+            /* 모바일에서는 화살표가 이미 정방향인게 더 직관적일 수 있음 */
+            .play-btn i { transform: rotate(0deg); color: var(--accent); }
+            
+            .info-box { padding: 20px; }
+        }
+
+        @media (max-width: 480px) {
+             h1 { font-size: 2.2rem; }
+             .container { gap: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise-bg"></div>
+
+    <header>
+        <h1>nE@pR12m Lab</h1>
+        <div class="subtitle">Vibe Coding Game & Tool Collection</div>
+    </header>
+
+    <main class="container" id="grid">
+        </main>
+
+    <footer>
+        Created By neoprizm
+    </footer>
+
+    <script>
+        const data = [
+            {
+                title: "Pixel Art Studio",
+                desc: "네오 포토샵: MZ 에디션. 웹 기반의 강력한 픽셀 아트 및 이미지 편집 도구입니다.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/ps.html",
+				img: "sc/sc1.png",
+                tag: "TOOL"
+            },
+            {
+                title: "Cosmos Media Art",
+                desc: "칼 세이건의 코스모스에서 영감을 받은, 별과 우주를 표현한 인터랙티브 미디어 아트.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/cosmos.html",
+				img: "sc/sc2.png",
+                tag: "ART"
+            },
+            {
+                title: "3D Pinball Ladder",
+                desc: "물리 엔진이 적용된 다이내믹한 3D 핀볼 사다리 게임입니다.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/ball.html",
+				img: "sc/sc3.png",
+                tag: "GAME"
+            },
+            {
+                title: "Unicorn Run",
+                desc: "달려라 유니콘: 픽셀 리마스터 버전. 아이들을 위한 쉬운 조작의 러닝 게임.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/uni.html",
+				img: "sc/sc4.png",
+                tag: "KIDS"
+            },
+            {
+                title: "Life is Sudoku",
+                desc: "AI가 도와주는 스도쿠 게임. 논리적 사고와 두뇌 회전을 위한 퍼즐.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/sudoku.html",
+				img: "sc/sc5.png",
+                tag: "PUZZLE"
+            },
+            {
+                title: "AI Minesweeper",
+                desc: "인생의 지뢰 찾기. 파스텔 톤 UI와 AI Solver가 결합된 현대적인 지뢰찾기.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/mine.html", 
+				img: "sc/sc6.png",
+                tag: "PUZZLE"
+            },
+            {
+                title: "Space Defense M",
+                desc: "모바일 환경에 최적화된 우주선 디펜스 슈팅 게임.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/x2.html",
+				img: "sc/sc7.png",
+                tag: "MOBILE"
+            },
+            {
+                title: "Retro Shooter",
+                desc: "고전 아케이드 감성의 레트로 슈팅 게임.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/space-shooter_v2.html",
+				img: "sc/sc8.png",
+                tag: "ARCADE"
+            },
+            {
+                title: "Ontology Chart",
+                desc: "데이터 간의 관계를 시각화하는 WebGL 기반 온톨로지 차트 메이커.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/chart.html",
+				img: "sc/sc9.png",
+                tag: "DATA"
+            },
+            {
+                title: "3D Multi Effector",
+                desc: "다양한 시각 효과를 레이어별로 적용할 수 있는 3D 웹 이펙터.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/multi_effect.html",
+				img: "sc/sc10.png",
+                tag: "VISUAL"
+            },
+            {
+                title: "Cellular Life",
+                desc: "무한 순환 우주: 100만 개의 큐브가 살아 움직이는 GPU 가속 시뮬레이션.",
+                url: "https://neoprizm.github.io/neo_Minesweeper/100M2.html",
+				img: "sc/sc11.png",
+                tag: "SIMULATION"
+            }
+        ];
+
+        const grid = document.getElementById('grid');
+
+        data.forEach(item => {
+            const card = document.createElement('a');
+            card.className = 'card';
+            card.href = item.url;
+            card.target = "_blank";
+
+            // thum.io 스크린샷 URL (width 600px로 설정하여 모바일에서도 선명하게)
+            const thumbUrl = `https://image.thum.io/get/width/600/crop/900/noanimate/${item.url}`;
+
+            card.innerHTML = `
+                <div class="thumb-box">
+                    <div class="skeleton"></div>
+					 <img src="${item.img}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/600x400/1a1a20/ffffff?text=No+Image';" onload="this.style.opacity=1; this.previousElementSibling.style.display='none'">
+                </div>
+                <div class="info-box">
+                    <div class="tags">
+                        <span class="tag">${item.tag}</span>
+                    </div>
+                    <div class="title">${item.title}</div>
+                    <div class="desc">${item.desc}</div>
+                    <div class="play-btn">
+                        PLAY NOW <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    </script>
+</body>
+</html>
