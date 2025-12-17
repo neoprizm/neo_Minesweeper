@@ -2851,14 +2851,28 @@ function resolveCollisions(nextX, nextY){
 
         e.mesh.position.x = e.x;
 
-        // ✅ 슬라임 텍스쳐 애니메이션(걷기/휴식)
+        // ✅ 슬라임 텍스쳐 애니메이션(걷기 A/B + 휴식)
         e.animT += dt;
         const moving = Math.abs(e.vx) > 0.05;
-        const nextState = moving ? ((Math.floor(e.animT*6) % 2) ? "walk" : "rest") : "rest";
+
+        let nextState = "rest";
+        if(moving){
+          const phase = Math.floor(e.animT*8) % 2;
+          nextState = phase ? "walkA" : "walkB";
+        }
+
         if(nextState !== e.texState){
           e.texState = nextState;
-          e.mesh.material.map = (nextState === "walk") ? texSlimeWalkA : texSlimeWalkB ;
+          e.mesh.material.map =
+            (nextState === "rest")  ? texSlimeRest :
+            (nextState === "walkA") ? texSlimeWalkA :
+                                      texSlimeWalkB;
           e.mesh.material.needsUpdate = true;
+        }
+
+        // 이동 방향에 따라 좌/우 반전
+        if(moving){
+          e.mesh.scale.x = Math.abs(e.mesh.scale.x) * (e.vx >= 0 ? 1 : -1);
         }
 
         const ex = e.x - e.w/2;
