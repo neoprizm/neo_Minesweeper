@@ -1208,7 +1208,12 @@
       "character_green_duck.png",
       "character_green_front.png",
       "character_green_climb_a.png",
-      "character_green_climb_b.png",
+      "character_green_climb_b.png",,
+      "hud_coin.png",
+      "slime_normal_flat.png",
+      "slime_normal_rest.png",
+      "slime_normal_walk_a.png",
+	  "slime_normal_walk_b.png"
     ];
 
     // ✅ BGM: 첨부 MP3 사용(파일명 변경 시 여기만 수정)
@@ -1267,9 +1272,9 @@
     try{
       const texPs = required.map(loadTex);
       const bgmEl = await loadBGM(BGM_URL);
-      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB] = await Promise.all(texPs);
+      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA , slimeWalkB] = await Promise.all(texPs);
 
-      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB };
+      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA , slimeWalkB };
 
       // 사운드에 BGM MP3 주입
       sound.bgmEl = bgmEl;
@@ -1416,31 +1421,12 @@
       g.beginPath(); g.arc(cx,cy,r*0.82,0,Math.PI*2); g.stroke();
     });
 
-    const texSlime = makeCanvasTexture((g,w,h)=>{
-      g.clearRect(0,0,w,h);
-      const grd = g.createLinearGradient(0,0,0,h);
-      grd.addColorStop(0,"#66ef7d");
-      grd.addColorStop(1,"#1bb44e");
-      g.fillStyle=grd;
-
-      g.beginPath();
-      g.moveTo(40, 160);
-      g.quadraticCurveTo(70, 70, 128, 70);
-      g.quadraticCurveTo(186, 70, 216, 160);
-      g.quadraticCurveTo(190, 220, 128, 220);
-      g.quadraticCurveTo(66, 220, 40, 160);
-      g.closePath();
-      g.fill();
-
-      g.fillStyle="rgba(0,0,0,.60)";
-      g.beginPath(); g.arc(98, 140, 10, 0, Math.PI*2); g.fill();
-      g.beginPath(); g.arc(158, 140, 10, 0, Math.PI*2); g.fill();
-
-      g.globalAlpha=.22;
-      g.fillStyle="#fff";
-      g.beginPath(); g.arc(95, 105, 24, 0, Math.PI*2); g.fill();
-      g.globalAlpha=1;
-    });
+    const texSlimeFlat = TEX.slimeFlat;
+    const texSlimeRest = TEX.slimeRest;
+    const texSlimeWalkA = TEX.slimeWalkA;
+	const texSlimeWalkB = TEX.slimeWalkB;
+    // 기본 슬라임 텍스쳐
+    const texSlime = texSlimeRest;
 
     const texSpring = makeCanvasTexture((g,w,h)=>{
       g.clearRect(0,0,w,h);
@@ -1606,12 +1592,26 @@
       const top = p.y + p.h;
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(1.2, 0.95),
-        new THREE.MeshBasicMaterial({ map: texSlime, transparent:true })
+        new THREE.MeshBasicMaterial({ map: texSlimeRest, transparent:true })
       );
       const yCenter = top + 0.33;
       mesh.position.set(xCenter, yCenter, 2.1);
       scene.add(mesh);
-      const e = { x: xCenter, y: yCenter, w:1.0, h:0.65, vx: rand(1.2,2.2)*(rng()<.5?-1:1), mesh, dead:false, roamMin: p.x+0.7, roamMax: p.x+p.w-0.7 };
+
+      const e = {
+        x: xCenter,
+        y: yCenter,
+        w: 1.0,
+        h: 0.65,
+        vx: rand(-1,1) < 0 ? -rand(1.1, 1.7) : rand(1.1, 1.7),
+        mesh,
+        dead:false,
+        roamMin: p.x+0.7,
+        roamMax: p.x+p.w-0.7,
+        animT: 0,
+        texState: "rest",
+        deathTimer: 0
+      };
       world.enemies.push(e);
       return e;
     }
@@ -2836,12 +2836,30 @@ function resolveCollisions(nextX, nextY){
       const py = player.y - player.h*0.5;
 
       for(const e of world.enemies){
-        if(e.dead) continue;
+        // 죽음 연출(납작) 타이머
+        if(e.dead){
+          e.deathTimer -= dt;
+          if(e.deathTimer <= 0){
+            scene.remove(e.mesh);
+            e.deathTimer = 0;
+          }
+          continue;
+        }
 
         e.x += e.vx * dt;
         if(e.x < e.roamMin || e.x > e.roamMax) e.vx *= -1;
 
         e.mesh.position.x = e.x;
+
+        // ✅ 슬라임 텍스쳐 애니메이션(걷기/휴식)
+        e.animT += dt;
+        const moving = Math.abs(e.vx) > 0.05;
+        const nextState = moving ? ((Math.floor(e.animT*6) % 2) ? "walk" : "rest") : "rest";
+        if(nextState !== e.texState){
+          e.texState = nextState;
+          e.mesh.material.map = (nextState === "walk") ? texSlimeWalkA : texSlimeWalkB ;
+          e.mesh.material.needsUpdate = true;
+        }
 
         const ex = e.x - e.w/2;
         const ey = e.y - e.h/2;
@@ -2851,7 +2869,11 @@ function resolveCollisions(nextX, nextY){
 
           if(player.vy < 0 && playerBottom > enemyTop - 0.25){
             e.dead = true;
-            scene.remove(e.mesh);
+            // ✅ 납작(Flat) 스프라이트로 잠깐 연출 후 제거
+            e.mesh.material.map = texSlimeFlat;
+            e.mesh.material.needsUpdate = true;
+            e.mesh.scale.y = 0.55;
+            e.deathTimer = 0.14;
             player.vy = 12.0;
             spawnParticles(e.x, e.y, 22, 1.35);
             spawnDust(e.x, e.y - 0.25, 10);
