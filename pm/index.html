@@ -12,7 +12,7 @@
       --hud: rgba(255,255,255,.78);
       --hud2: rgba(255,255,255,.55);
     }
-    html,body{ height:100%; margin:0; background:var(--bg); overflow:hidden; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
+    html,body{ height:100%; margin:0; background:var(--bg); overflow:hidden; touch-action:none; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
     #wrap{ position:fixed; inset:0; }
     canvas{ width:100%; height:100%; display:block; }
 
@@ -86,7 +86,21 @@
       backdrop-filter: blur(8px);
       font-size: 12px;
       line-height: 1.55;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity .18s ease, transform .18s ease;
       pointer-events:none;
+    }
+    #subtitle.subHidden{
+      opacity:0;
+      transform: translateY(10px);
+    }
+    #infoPill{
+      display:none;
+      width: 36px; height: 36px;
+      padding: 0;
+      justify-content:center;
+      font-size: 16px;
     }
     #toast{
       position:absolute;
@@ -145,11 +159,87 @@
     #touch .leftCluster{ left: 16px; }
     #touch .rightCluster{ right: 16px; }
     #touch .col{ display:flex; flex-direction:column; gap:10px; }
-  </style>
+  
+    /* 로딩 오버레이 */
+    #loader{
+      position:fixed; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(10,12,18,.70);
+      z-index:9999;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    #loader .panel{
+      width:min(420px, 86vw);
+      padding:18px 18px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.92);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      border:1px solid rgba(0,0,0,.10);
+    }
+    #loader .title{
+      font-weight:900;
+      letter-spacing:.4px;
+      text-align:center;
+      margin-bottom:12px;
+    }
+    #loader .bar{
+      height:12px;
+      border-radius:999px;
+      background:rgba(0,0,0,.10);
+      overflow:hidden;
+    }
+    #barFill{
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background:linear-gradient(90deg, rgba(0,255,200,.95), rgba(120,220,255,.95), rgba(180,120,255,.95));
+      transition: width .12s ease;
+    }
+
+
+    /* 모바일 가변 UI */
+    @media (max-width: 768px){
+      #hud .row{
+        padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+        gap: 10px;
+      }
+      .pill{ padding: 7px 10px; }
+      #touch .cluster{ bottom: calc(14px + env(safe-area-inset-bottom)); }
+      #touch .leftCluster{ left: calc(14px + env(safe-area-inset-left)); }
+      #touch .rightCluster{ right: calc(14px + env(safe-area-inset-right)); }
+      #touch .btn{
+        width: clamp(52px, 11vw, 82px);
+        height: clamp(52px, 11vw, 82px);
+        border-radius: clamp(14px, 3.8vw, 22px);
+        font-size: clamp(18px, 4.8vw, 30px);
+      }
+      /* 모바일에서는 도움말이 컨트롤 버튼을 가리지 않도록 위로 올림 */
+      #subtitle{ bottom: calc(118px + env(safe-area-inset-bottom)); }
+      #infoPill{ width: 34px; height: 34px; font-size: 16px; }
+    }
+    @media (orientation: landscape) and (max-height: 480px){
+      #touch .cluster{ bottom: calc(10px + env(safe-area-inset-bottom)); }
+      #subtitle{ bottom: calc(96px + env(safe-area-inset-bottom)); font-size: 11px; }
+    }
+    @media (max-width: 420px){
+      #subtitle{ bottom: calc(138px + env(safe-area-inset-bottom)); }
+    }
+
+</style>
 </head>
 
 <body>
   <div id="wrap"></div>
+
+  <!-- 로딩 오버레이: 모든 리소스 로딩 완료 후 시작 -->
+  <div id="loader" aria-label="로딩">
+    <div class="panel">
+      <div class="title">Loading...</div>
+      <div class="bar"><div id="barFill"></div></div>
+      <div id="loadText" class="small" style="opacity:.85; text-align:center; margin-top:10px;">리소스 로딩 중</div>
+    </div>
+  </div>
 
   <div id="hud">
     <div class="row">
@@ -178,6 +268,7 @@
       </div>
 
       <div class="right">
+        <div class="pill clickable" id="infoPill" title="조작/설명 보기">ℹ️</div>
         <div class="pill" id="heartWrap" aria-label="생명">
           <span id="hearts">❤❤❤</span>
         </div>
@@ -457,13 +548,29 @@
     }
 
     function applySoundGains(){
-      if(!sound.ctx) return;
-      sound.master.gain.setTargetAtTime(sound.enabled ? sound.masterVol : 0, sound.ctx.currentTime, 0.02);
-      sound.musicBus.gain.setTargetAtTime((sound.enabled && sound.musicEnabled) ? sound.musicVol : 0, sound.ctx.currentTime, 0.02);
-      sound.sfxBus.gain.setTargetAtTime((sound.enabled && sound.sfxEnabled) ? sound.sfxVol : 0, sound.ctx.currentTime, 0.02);
+      // ✅ MP3 BGM 볼륨/토글(오디오 컨텍스트 없이도 적용)
+      if(sound.bgmEl){
+        const v = (sound.enabled && sound.musicEnabled) ? clamp(sound.masterVol * sound.musicVol, 0, 1) : 0;
+        try{ sound.bgmEl.volume = v; }catch(_){}
+        if(v <= 0.0001){
+          try{ sound.bgmEl.pause(); }catch(_){}
+        }else if(sound.started){
+          // autoplay 정책: 첫 입력 이후(sound.started)만 재생 시도
+          sound.bgmEl.play().catch(()=>{});
+        }
+      }
+
+      // SFX는 WebAudio 버스에 적용
+      if(sound.ctx){
+        sound.master.gain.setTargetAtTime(sound.enabled ? sound.masterVol : 0, sound.ctx.currentTime, 0.02);
+        sound.musicBus.gain.setTargetAtTime((sound.enabled && sound.musicEnabled) ? sound.musicVol : 0, sound.ctx.currentTime, 0.02);
+        sound.sfxBus.gain.setTargetAtTime((sound.enabled && sound.sfxEnabled) ? sound.sfxVol : 0, sound.ctx.currentTime, 0.02);
+      }
+
       syncSoundUI();
       saveSoundSettings();
     }
+
 
     function ensureAudio(){
       if(sound.ctx) return;
@@ -608,31 +715,18 @@
 
     // --- BGM(밝고 경쾌한 캐주얼) ---
     function startBGM(){
-      if(!sound.ctx) return;
-      stopBGM();
-
-      // 레벨마다 seed를 갱신하고 싶으면, startLevel에서 sound.rng를 다시 seed하는 방식으로 확장 가능
-      sound.bgmStep = 0;
-      sound.bgmNextT = sound.ctx.currentTime + 0.08;
-
-      sound.bgmTimer = setInterval(()=>{
-        if(!sound.ctx || !sound.enabled || !sound.musicEnabled) return;
-        const ctx = sound.ctx;
-        const stepDur = 60 / sound.bpm / 4; // 16분음표
-        const ahead = 0.22;
-
-        while(sound.bgmNextT < ctx.currentTime + ahead){
-          scheduleBgmStep(sound.bgmNextT, sound.bgmStep);
-          sound.bgmNextT += stepDur;
-          sound.bgmStep++;
-        }
-      }, 25);
+      // ✅ MP3 BGM 재생 (WebAudio 합성 BGM 제거)
+      if(!sound.bgmEl) return;
+      if(!sound.enabled || !sound.musicEnabled) return;
+      const v = clamp(sound.masterVol * sound.musicVol, 0, 1);
+      try{ sound.bgmEl.volume = v; }catch(_){}
+      // autoplay 정책: unlockAudio(첫 입력) 이후에만 정상 재생됩니다.
+      sound.bgmEl.play().catch(()=>{});
     }
 
     function stopBGM(){
-      if(sound.bgmTimer){
-        clearInterval(sound.bgmTimer);
-        sound.bgmTimer = null;
+      if(sound.bgmEl){
+        try{ sound.bgmEl.pause(); }catch(_){}
       }
     }
 
@@ -908,11 +1002,36 @@
       input[k] = false;
     });
 
+    // 모바일 도움말(Info 버튼)
+    // - 모바일에서는 설명을 기본 숨김
+    // - ℹ️ 버튼을 누르면 5초간 표시 후 자동 숨김
+    const $subtitle = document.getElementById("subtitle");
+    const $infoPill = document.getElementById("infoPill");
+    let infoTimer = null;
+
+    function hideHelp(){
+      if(!$subtitle) return;
+      $subtitle.classList.add("subHidden");
+    }
+    function showHelp(){
+      if(!$subtitle) return;
+      $subtitle.classList.remove("subHidden");
+      if(infoTimer) clearTimeout(infoTimer);
+      infoTimer = setTimeout(()=>{ hideHelp(); }, 5000);
+    }
+
     // 터치(모바일)
     const touch = ("ontouchstart" in window) || (navigator.maxTouchPoints>0);
     const $touch = document.getElementById("touch");
     if(touch){
       $touch.style.display="block";
+      // 모바일: 도움말은 ℹ️로만 노출
+      if($infoPill) $infoPill.style.display = "inline-flex";
+      hideHelp();
+      if($infoPill){
+        $infoPill.addEventListener("click", (ev)=>{ ev.preventDefault(); ev.stopPropagation(); showHelp(); });
+      }
+
       const bind = (id, key)=>{
         const el = document.getElementById(id);
         const down = (ev)=>{ ev.preventDefault();
@@ -929,12 +1048,32 @@
       bind("tDown","down");
       bind("tJump","jump");
       bind("tDash","dash");
+    }else{
+      // 데스크톱에서는 기본 설명을 항상 보여주고, ℹ️는 숨김
+      if($infoPill) $infoPill.style.display = "none";
     }
 
     // ----------------------------
     // Three 기본 세팅
     // ----------------------------
+
     const wrap = document.getElementById("wrap");
+
+    // ----------------------------
+    // 로딩 UI (리소스 로딩 완료 후 시작)
+    // ----------------------------
+    const $loader = document.getElementById("loader");
+    const $barFill = document.getElementById("barFill");
+    const $loadText = document.getElementById("loadText");
+    function setLoading(done, total, label){
+      const pct = total > 0 ? Math.round((done/total)*100) : 0;
+      if($barFill) $barFill.style.width = pct + "%";
+      if($loadText) $loadText.textContent = `${label || "로딩 중"}  (${done}/${total})`;
+    }
+    function hideLoader(){
+      if($loader) $loader.style.display = "none";
+    }
+
     const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1055,13 +1194,6 @@
     // 텍스처 로딩
     // ----------------------------
     const loader = new THREE.TextureLoader();
-    const loadTex = (url)=>new Promise((resolve,reject)=>{
-      loader.load(url, (t)=>{
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.needsUpdate = true;
-        resolve(t);
-      }, undefined, (e)=>reject(e));
-    });
 
     const required = [
       "background_color_mushrooms.png",
@@ -1079,15 +1211,78 @@
       "character_green_climb_b.png",
     ];
 
+    // ✅ BGM: 첨부 MP3 사용(파일명 변경 시 여기만 수정)
+    const BGM_URL = encodeURI("반짝이는 모험.mp3");
+
+    let _loadDone = 0;
+    const _loadTotal = required.length + 1; // + BGM
+    setLoading(_loadDone, _loadTotal, "초기 리소스 준비...");
+
+    function markLoaded(label){
+      _loadDone++;
+      setLoading(_loadDone, _loadTotal, label);
+    }
+
+    const loadTex = (url)=>new Promise((resolve,reject)=>{
+      loader.load(url, (t)=>{
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.needsUpdate = true;
+        markLoaded(url);
+        resolve(t);
+      }, undefined, (e)=>reject(e));
+    });
+
+    function loadBGM(url){
+      return new Promise((resolve, reject)=>{
+        const a = new Audio();
+        a.preload = "auto";
+        a.loop = true;
+        a.src = url;
+
+        const done = ()=>{
+          cleanup();
+          markLoaded("BGM");
+          resolve(a);
+        };
+        const fail = ()=>{
+          cleanup();
+          reject(new Error("BGM 로딩 실패: MP3 파일(반짝이는 모험.mp3)이 index.html과 같은 폴더에 있는지 확인하세요."));
+        };
+        const cleanup = ()=>{
+          a.removeEventListener("canplaythrough", done);
+          a.removeEventListener("loadeddata", done);
+          a.removeEventListener("error", fail);
+        };
+
+        // 일부 환경에서 canplaythrough가 안 뜨는 경우가 있어 loadeddata도 같이 받습니다.
+        a.addEventListener("canplaythrough", done, { once:true });
+        a.addEventListener("loadeddata", done, { once:true });
+        a.addEventListener("error", fail, { once:true });
+
+        try{ a.load(); }catch(_){}
+      });
+    }
+
     let TEX = {};
     try{
-      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB] = await Promise.all(required.map(loadTex));
+      const texPs = required.map(loadTex);
+      const bgmEl = await loadBGM(BGM_URL);
+      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB] = await Promise.all(texPs);
+
       TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB };
+
+      // 사운드에 BGM MP3 주입
+      sound.bgmEl = bgmEl;
+      try{ applySoundGains(); }catch(_){}
+
+      hideLoader();
     }catch(err){
       console.error(err);
-      showToast("이미지 로딩 실패: PNG 파일이 같은 폴더에 있는지 확인하세요.", 3000);
+      if($loadText) $loadText.textContent = "로딩 실패: 파일 누락/경로 문제";
+      showToast((err && err.message) ? err.message : "리소스 로딩 실패", 4000);
       throw err;
     }
+
 
     // ----------------------------
     // CanvasTexture 생성기
