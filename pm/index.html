@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Celeste 느낌 플랫포머 (퍼즐 구간/정책 토글/꽃비+폭죽)</title>
+  <title>Tiny Hero : Dash & Run</title>
   <style>
     :root{
       --bg:#bfe4ff;
@@ -493,16 +493,16 @@
           <span style="font-weight:900">🪙</span>
           <span id="coinText" style="font-weight:900">0</span>
         </div>
-        <div class="pill small" id="stageText">레벨 1</div>
+        <div class="pill small" id="stageText">Level 1</div>
 
-        <div class="pill small clickable" id="policyPill" title="클릭해서 토글 (단축키: H/C)" style="display:none">
-          <span style="font-weight:900">정책</span>
-          <span>HP</span><span id="hpPolicyTag" class="onTag">유지</span>
-          <span>코인</span><span id="coinPolicyTag" class="onTag">유지</span>
+        <div class="pill small clickable" id="policyPill" title="Click Toggle (key: H/C)" style="display:none">
+          <span style="font-weight:900">Policy</span>
+          <span>HP</span><span id="hpPolicyTag" class="onTag">Stay</span>
+          <span>Coin</span><span id="coinPolicyTag" class="onTag">Stay</span>
         </div>
 
         <div class="pill small">
-          <span style="font-weight:900">대시</span>
+          <span style="font-weight:900">Dash</span>
           <span id="dashText">1/1</span>
         </div>
         <div class="pill small" id="bossHpWrap" style="display:none">
@@ -510,7 +510,7 @@
           <span id="bossHpText" style="font-weight:900">■■■■■</span>
           <span id="bossLvText" class="small" style="opacity:.75">Lv1</span>
         </div>
-        <div class="pill small clickable" id="soundPill" title="사운드 토글: 클릭=전체 ON/OFF, M=뮤직, N=SFX, +/-=볼륨">
+        <div class="pill small clickable" id="soundPill" title="Sound Toggle: Click=All ON/OFF, M=Music, N=SFX, +/-=Vol">
           <span id="soundIcon" style="font-weight:900">🔊</span>
           <span id="soundLabel" style="font-weight:900">ON</span>
           <span id="soundVolText" class="small" style="opacity:.75">85%</span>
@@ -518,24 +518,24 @@
       </div>
 
       <div class="right">
-        <div class="pill clickable" id="infoPill" title="조작/설명 보기">ℹ️</div>
-        <div class="pill" id="heartWrap" aria-label="생명">
+        <div class="pill clickable" id="infoPill" title="play/Manual">ℹ️</div>
+        <div class="pill" id="heartWrap" aria-label="Life">
           <span id="hearts" style="color:red">❤❤❤❤❤❤</span>
         </div>
       </div>
     </div>
 
-    <div id="toast">준비!</div>
+    <div id="toast">Ready!</div>
 
     <div id="subtitle">
-      보스전 <span class="kbd">Z</span> / 맵만들기 <span class="kbd">F2</span> / 이동 <span class="kbd">A</span><span class="kbd">D</span> / <span class="kbd">←</span><span class="kbd">→</span> ·
-      점프 <span class="kbd">Space</span> ·
-      숙이기 <span class="kbd">S</span>/<span class="kbd">↓</span> (충돌 박스↓) ·
-      대시 <span class="kbd">X</span> (대체: <span class="kbd">K</span>, 8방향, 공중 1회) ·
-      슬라이드 <span class="kbd">↓</span>+<span class="kbd">X</span> ·
-      벽슬라이드(벽에 붙으면) → <span class="kbd">Space</span> 벽점프 ·
-      사다리 <span class="kbd">W</span><span class="kbd">S</span> / <span class="kbd">↑</span><span class="kbd">↓</span> ·
-      정책 토글 <span class="kbd">H</span>(HP) <span class="kbd">C</span>(코인) · 재시작 <span class="kbd">R</span> · 사운드 <span class="kbd">M</span>(뮤직) <span class="kbd">N</span>(SFX) <span class="kbd">+</span>/<span class="kbd">-</span>(볼륨)
+      instant Boss <span class="kbd">Z</span> / <b>Map Create</b> <span class="kbd">F2</span> / Move <span class="kbd">A</span><span class="kbd">D</span> / <span class="kbd">←</span><span class="kbd">→</span> ·
+      Jump <span class="kbd">Space</span> ·
+      Crouch <span class="kbd">S</span>/<span class="kbd">↓</span> (crash box↓) ·
+      Dash <span class="kbd">X</span> (alt: <span class="kbd">K</span>, 8 Arrow, Air 1) ·
+      Slide <span class="kbd">↓</span>+<span class="kbd">X</span> ·
+      Wall Slide → <span class="kbd">Space</span> WallJump ·
+      Up/Dn <span class="kbd">W</span><span class="kbd">S</span> / <span class="kbd">↑</span><span class="kbd">↓</span> ·
+      Policy <span class="kbd">H</span>(HP) <span class="kbd">C</span>(Coin) · Restart <span class="kbd">R</span> · Sound <span class="kbd">M</span>(Music) <span class="kbd">N</span>(SFX) <span class="kbd">+</span>/<span class="kbd">-</span>(Vol)
     </div>
   </div>
 
@@ -1405,7 +1405,7 @@
     function showReadyToStart(){
       __canStart = true;
       if($btnStart) $btnStart.disabled = false;
-      if($loadText) $loadText.textContent = "준비 완료! Dash & Run 버튼을 눌러 시작하세요.";
+      if($loadText) $loadText.textContent = "All Ready! Dash & Run Push button and Start Game.";
     }
 
     function startFromTitle(){
@@ -1430,7 +1430,7 @@
     function setLoading(done, total, label){
       const pct = total > 0 ? Math.round((done/total)*100) : 0;
       if($barFill) $barFill.style.width = pct + "%";
-      if($loadText) $loadText.textContent = `${label || "로딩 중"}  (${done}/${total})`;
+      if($loadText) $loadText.textContent = `${label || "Loading..."}  (${done}/${total})`;
     }
     function hideLoader(){
       if($loader) $loader.style.display = "none";
@@ -1588,7 +1588,7 @@
 
     let _loadDone = 0;
     const _loadTotal = required.length + 1; // + BGM
-    setLoading(_loadDone, _loadTotal, "초기 리소스 준비...");
+    setLoading(_loadDone, _loadTotal, "Resource Loading...");
 
     function markLoaded(label){
       _loadDone++;
@@ -1876,8 +1876,8 @@ function sliceStripAuto(sheet, expected=5){
       showReadyToStart();
     }catch(err){
       console.error(err);
-      if($loadText) $loadText.textContent = "로딩 실패: 파일 누락/경로 문제";
-      showToast((err && err.message) ? err.message : "리소스 로딩 실패", 4000);
+      if($loadText) $loadText.textContent = "Loading Failed: File Path Error";
+      showToast((err && err.message) ? err.message : "Resource Loading Failed", 4000);
       throw err;
     }
 
@@ -3399,7 +3399,7 @@ function resolveCollisions(nextX, nextY){
       // UI 초기화
       world.collectedCoinsLevel = 0;
       const title = m.name ? ` · ${m.name}` : "";
-      $stageText.textContent = `레벨 ${level} · 맵 ${mapIndex+1}/${mapTotal}${title}`;
+      $stageText.textContent = `Level ${level} · Map ${mapIndex+1}/${mapTotal}${title}`;
       updateCoinHUD();
     }
 
@@ -3509,7 +3509,7 @@ function resolveCollisions(nextX, nextY){
 
       // UI 초기화
       world.collectedCoinsLevel = 0;
-      $stageText.textContent = `레벨 ${level}`;
+      $stageText.textContent = `Level ${level}`;
       updateCoinHUD();
     }
 
@@ -3519,7 +3519,7 @@ function resolveCollisions(nextX, nextY){
     function updateCoinHUD(){
       const levelPart = `${world.collectedCoinsLevel} / ${world.totalCoinsLevel}`;
       if(policy.keepCoins){
-        $coinText.textContent = `${levelPart} | 총 ${world.totalCoinsRun}`;
+        $coinText.textContent = `${levelPart} | Total ${world.totalCoinsRun}`;
       }else{
         $coinText.textContent = levelPart;
       }
@@ -4093,7 +4093,7 @@ function resolveCollisions(nextX, nextY){
 
       // HP가 0이 되면 즉시 사망 연출(스프라이트 시트 + 사운드) 후 리스폰
       if(player.hp <= 0){
-        startRespawn("체력이 다했어…");
+        startRespawn("I'm exhausted...");
         return;
       }
 
@@ -4107,7 +4107,7 @@ function resolveCollisions(nextX, nextY){
       spawnParticles(player.x, player.y, 18, 1.25);
       spawnDust(player.x, player.y - player.h/2 + 0.05, 10);
       SFX.hurt();
-      showToast("피격!", 700);
+      showToast("Damaged!", 700);
     }
 
     function updateEnemies(dt){
@@ -4161,7 +4161,7 @@ const ex = e.x - e.w/2;
             spawnDust(e.x, e.y - 0.25, 10);
             screenShake(0.10, 0.12);
             SFX.stomp();
-            showToast("밟기!", 500);
+            showToast("Stepping!", 500);
           }else{
             hurtPlayer(e.x);
           }
@@ -4183,7 +4183,7 @@ const ex = e.x - e.w/2;
             spawnParticles(s.x, s.y+0.2, 18, 1.2);
             spawnDust(s.x, s.y, 10);
             screenShake(0.10, 0.14);
-            showToast("스프링!", 600);
+            showToast("Spring!", 600);
           }
         }
       }
@@ -4199,7 +4199,7 @@ const ex = e.x - e.w/2;
         g.active = true;
         g.mesh.material.map = texFlagOn;
         g.mesh.material.needsUpdate = true;
-        showToast("골 활성화!", 900);
+        showToast("Goal Activation!", 900);
       }
 
       if(!g.active || game.state !== "play") return;
@@ -4505,23 +4505,23 @@ function startBossFight(){
 
   // arena 구성
   buildBossArena(diff, kind);
-  const kindLabel = (kind === 'dragon') ? '드래곤' : (kind === 'octopus' ? '문어' : '고래');
+  const kindLabel = (kind === 'dragon') ? 'Dragon' : (kind === 'octopus' ? 'Octupus' : 'Whale');
   $stageText.textContent = `BOSS Lv ${diff} (${kindLabel})`;
 
   showBigMsg(true,
-    kind === 'dragon' ? `BOSS 등장! 요란한 드래곤 (Lv ${diff})`
-    : (kind === 'octopus' ? `BOSS 등장! 느릿느릿 문어 (Lv ${diff})` : `BOSS 등장! 거대한 고래 (Lv ${diff})`)
+    kind === 'dragon' ? `BOSS !!! Noisy Dragon (Lv ${diff})`
+    : (kind === 'octopus' ? `BOSS !!! Funny octopus (Lv ${diff})` : `BOSS !!! Big-mouthed Whale (Lv ${diff})`)
   );
 
   if(kind === 'dragon'){
-    showToast("보스전! 불꽃을 피하고 대시로 공격! (드래곤은 빠름)", 15000);
+    showToast("Boss Stage! Attack with a Dash! ", 15000);
   }else if(kind === 'octopus'){
-    showToast("보스전! 초록 물방울을 피하고 대시로 공격! (문어는 느림)", 15000);
+    showToast("Boss Stage! Attack with a Dash! ", 15000);
   }else{
-    showToast("보스전! 거품 미사일을 피하고 대시로 공격!", 15000);
+    showToast("Boss Stage! Attack with a Dash!", 15000);
   }
 
-  showToast("대시!! ", 15000);
+  showToast("Dash!! ", 15000);
   screenShake(0.99, 0.99);
   screenShake(0.18, 0.20);
   SFX.clear();
@@ -4693,8 +4693,8 @@ function spawnBossShot(b, x,y, vx,vy, r, homing){
         // 다음부터 더 어려움
         game.bossDifficulty = (game.bossDifficulty|0) + 1;
 
-        showBigMsg(true, `격파 성공! 다음 보스 Lv ${game.bossDifficulty}`);
-        showToast("보스 격파! 다음 레벨로...", 1200);
+        showBigMsg(true, `Defeat successful! Next boss Lv ${game.bossDifficulty}`);
+        showToast("Defeat successful! Next Level...", 1200);
 
         // 탄 제거
         for(const bb of world.bossBullets){
@@ -5141,7 +5141,7 @@ if(b.patternCd <= 0){
       SFX.spawn();
 
       $dashText.textContent = `${player.dashCharges}/${DASH_CHARGES_MAX}`;
-      showToast(fromDeath ? "리스타트!" : `레벨 ${level} 시작!`, fromDeath ? 650 : 900);
+      showToast(fromDeath ? "Restart!" : `Level ${level} 시작!`, fromDeath ? 650 : 900);
     }
 
     // ----------------------------
@@ -5207,7 +5207,7 @@ if(b.patternCd <= 0){
         if(game.t <= 0){
           showBigMsg(false);
           game.state = "boss";
-          showToast("START! (대시로 고래 몸통에 박치기)", 900);
+          showToast("START! (Headbutt the whale's torso with a dash)", 900);
         }
       }else if(game.state === "boss"){
         updatePlayer(dt);
@@ -5266,9 +5266,9 @@ if(b.patternCd <= 0){
 				game.t = 0.9;
 
 				buildBossArena(diff, kind);
-				$stageText.textContent = `BOSS Lv ${diff} (${kind === 'dragon' ? '드래곤' : '고래'})`;
-				showBigMsg(true, kind === 'dragon' ? `BOSS 재도전! 요란한 드래곤 (Lv ${diff})` : `BOSS 재도전! 거대한 고래 (Lv ${diff})`);
-				showToast(kind === 'dragon' ? "다시 도전! 불꽃을 조심!" : "다시 도전!", 900);
+				$stageText.textContent = `BOSS Lv ${diff} (${kind === 'dragon' ? 'Dragon' : 'Whale'})`;
+				showBigMsg(true, kind === 'dragon' ? `BOSS Retry! Dragon (Lv ${diff})` : `BOSS Retry! Whale (Lv ${diff})`);
+				showToast(kind === 'dragon' ? "reChallenge! Beware of fire!" : "re Challenge!", 900);
 				return;
 				*/
 				const diff = Math.max(1, (game.bossDifficulty|0));
@@ -5285,20 +5285,20 @@ if(b.patternCd <= 0){
 
 				buildBossArena(diff, kind);
 
-				const kindKo = (kind === 'dragon') ? '드래곤' : (kind === 'octopus') ? '문어' : '고래';
+				const kindKo = (kind === 'dragon') ? 'Dragon' : (kind === 'octopus') ? 'Octopus' : 'Whale';
 				$stageText.textContent = `BOSS Lv ${diff} (${kindKo})`;
 
 				const introMsg =
-				  (kind === 'dragon')  ? `BOSS 재도전! 요란한 드래곤 (Lv ${diff})` :
-				  (kind === 'octopus') ? `BOSS 재도전! 느릿느릿 문어 (Lv ${diff})` :
-										 `BOSS 재도전! 거대한 고래 (Lv ${diff})`;
+				  (kind === 'dragon')  ? `BOSS Retry! Dragon (Lv ${diff})` :
+				  (kind === 'octopus') ? `BOSS BOSS Retry! Octopus (Lv ${diff})` :
+										 `BOSS Retry! Whale (Lv ${diff})`;
 
 				showBigMsg(true, introMsg);
 
 				const toastMsg =
-				  (kind === 'dragon')  ? "다시 도전! 불꽃을 조심!" :
-				  (kind === 'octopus') ? "다시 도전! 초록 물방울 조심!" :
-										 "다시 도전!";
+				  (kind === 'dragon')  ? "reChallenge!" :
+				  (kind === 'octopus') ? "reChallenge!" :
+										 "reChallenge!";
 
 				showToast(toastMsg, 900);
 				return;
@@ -5449,15 +5449,15 @@ if(b.patternCd <= 0){
       setTab(state.tab || "edit");
 
       const TOOLSET = [
-        { id:"select",   label:"선택" },
-        { id:"platform", label:"플랫폼" },
-        { id:"ladder",   label:"사다리" },
-        { id:"coin",     label:"코인" },
-        { id:"enemy",    label:"적" },
-        { id:"spring",   label:"스프링" },
-        { id:"spawn",    label:"스폰" },
-        { id:"goal",     label:"깃발" },
-        { id:"delete",   label:"삭제" },
+        { id:"select",   label:"Select" },
+        { id:"platform", label:"Platform" },
+        { id:"ladder",   label:"Ladder" },
+        { id:"coin",     label:"Coin" },
+        { id:"enemy",    label:"Slime" },
+        { id:"spring",   label:"Spring" },
+        { id:"spawn",    label:"Spawnt" },
+        { id:"goal",     label:"Goal" },
+        { id:"delete",   label:"Del" },
       ];
 
       function setTool(id){
@@ -5754,7 +5754,7 @@ if(b.patternCd <= 0){
         const m = state.map;
 
         if(!sel || !m){
-          $props.innerHTML = `<div class="tag">선택된 오브젝트가 없습니다.</div>`;
+          $props.innerHTML = `<div class="tag">Not Selected Object</div>`;
           return;
         }
 
@@ -5957,9 +5957,9 @@ if(b.patternCd <= 0){
             removeSelection(sel);
             setSelection(null);
             rebuild(false);
-            toast2("삭제", 500);
+            toast2("Deleted", 500);
           }else{
-            toast2("삭제 대상 없음", 500);
+            toast2("Not Selected Object", 500);
           }
           e.preventDefault();
           return;
@@ -5975,7 +5975,7 @@ if(b.patternCd <= 0){
         if(state.tool === "select"){
           const sel = pickAt(wx, wy);
           setSelection(sel);
-          toast2(sel ? `선택: ${sel.kind}` : "선택 없음", 650);
+          toast2(sel ? `Selected: ${sel.kind}` : "Not Selected", 650);
           e.preventDefault();
           return;
         }
@@ -5993,9 +5993,9 @@ if(b.patternCd <= 0){
             removeSelection(sel);
             setSelection(null);
             rebuild(false);
-            toast2("삭제", 500);
+            toast2("Delete", 500);
           }else{
-            toast2("삭제 대상 없음", 500);
+            toast2("Not Selected Object", 500);
           }
           e.preventDefault();
           return;
@@ -6035,7 +6035,7 @@ if(b.patternCd <= 0){
 
         if(w < 0.15 || h < 0.15){
           setGhostRect(0,0,1,1,false);
-          toast2("너무 작아서 취소", 650);
+          toast2("Too Small Cancel", 650);
           return;
         }
 
@@ -6043,12 +6043,12 @@ if(b.patternCd <= 0){
           state.map.platforms.push({ x, y, w, h });
           setSelection({ kind:"platform", i: state.map.platforms.length-1 });
           rebuild(false);
-          toast2("플랫폼 추가", 650);
+          toast2("Platform ADD", 650);
         }else if(d.kind === "ladder"){
           state.map.ladders.push({ x, y, w, h, topLow:y, topHigh:(y+h) });
           setSelection({ kind:"ladder", i: state.map.ladders.length-1 });
           rebuild(false);
-          toast2("사다리 추가", 650);
+          toast2("Ladder ADD", 650);
         }
       });
 
@@ -6072,35 +6072,35 @@ if(b.patternCd <= 0){
           m.coins.push({ x, y });
           setSelection({ kind:"coin", i: m.coins.length-1 });
           rebuild(false);
-          toast2("코인 추가", 600);
+          toast2("Coin Add", 600);
           return;
         }
         if(kind === "enemy"){
           m.enemies.push({ x, y });
           setSelection({ kind:"enemy", i: m.enemies.length-1 });
           rebuild(false);
-          toast2("적 추가", 600);
+          toast2("Slime Add", 600);
           return;
         }
         if(kind === "spring"){
           m.springs.push({ x, y });
           setSelection({ kind:"spring", i: m.springs.length-1 });
           rebuild(false);
-          toast2("스프링 추가", 600);
+          toast2("Spring Add", 600);
           return;
         }
         if(kind === "spawn"){
           m.spawn.x = x; m.spawn.y = y;
           setSelection({ kind:"spawn" });
           rebuild(false);
-          toast2("스폰 이동", 600);
+          toast2("Spawn Moved", 600);
           return;
         }
         if(kind === "goal"){
           m.goal.x = x; m.goal.y = y;
           setSelection({ kind:"goal" });
           rebuild(false);
-          toast2("깃발 이동", 600);
+          toast2("Goal Moved", 600);
           return;
         }
 
@@ -6108,7 +6108,7 @@ if(b.patternCd <= 0){
         const sel = pickAt(x, y);
         if(sel){
           setSelection(sel);
-          toast2(`선택: ${sel.kind}`, 600);
+          toast2(`sel: ${sel.kind}`, 600);
         }else{
           setSelection(null);
         }
@@ -6193,7 +6193,7 @@ if(b.patternCd <= 0){
       $btnSave.addEventListener("click", ()=>{
         commitCurrentMapToPack();
         const ok = savePackToLocalStorage(activePack);
-        toast2(ok ? "저장 완료 (LocalStorage)" : "저장 실패", 1000);
+        toast2(ok ? "Saved (LocalStorage)" : "Save Failed", 1000);
         if(ok){
           $mapInfo.textContent = `maps:${activePack.maps.length}`;
         }
@@ -6201,14 +6201,14 @@ if(b.patternCd <= 0){
 
       $btnNew.addEventListener("click", ()=>{
         commitCurrentMapToPack();
-        const nm = normalizeMap({ name:"새 맵" });
+        const nm = normalizeMap({ name:"New Map" });
         activePack.maps.push(nm);
         state.pack = activePack;
         state.mapIndex = activePack.maps.length - 1;
         state.map = deepClone(activePack.maps[state.mapIndex]);
         setSelection(null);
         rebuild(true);
-        toast2("새 맵 생성", 900);
+        toast2("New Map Created", 900);
         $mapInfo.textContent = `maps:${activePack.maps.length}`;
       });
 
@@ -6217,20 +6217,20 @@ if(b.patternCd <= 0){
         const cur = activePack.maps[state.mapIndex];
         const copy = normalizeMap(deepClone(cur));
         copy.id = `copy-${Date.now().toString(36)}`;
-        copy.name = `${cur.name || "맵"} (copy)`;
+        copy.name = `${cur.name || "Map"} (copy)`;
         activePack.maps.splice(state.mapIndex+1, 0, copy);
         state.mapIndex++;
         state.map = deepClone(copy);
         setSelection(null);
         rebuild(true);
-        toast2("복제 완료", 900);
+        toast2("Copy Done", 900);
         $mapInfo.textContent = `maps:${activePack.maps.length}`;
       });
 
       $btnDel.addEventListener("click", ()=>{
         commitCurrentMapToPack();
         if(activePack.maps.length <= 1){
-          toast2("최소 1개 맵은 필요합니다.", 900);
+          toast2("At least 1 map is required.", 900);
           return;
         }
         activePack.maps.splice(state.mapIndex, 1);
@@ -6238,7 +6238,7 @@ if(b.patternCd <= 0){
         state.map = deepClone(activePack.maps[state.mapIndex]);
         setSelection(null);
         rebuild(true);
-        toast2("삭제 완료", 900);
+        toast2("Deleted", 900);
         $mapInfo.textContent = `maps:${activePack.maps.length}`;
       });
 
@@ -6264,10 +6264,10 @@ if(b.patternCd <= 0){
             activePack = normalizePack(obj);
             state.pack = activePack;
             state.mapIndex = 0;
-            state.map = deepClone(activePack.maps[0] || normalizeMap({ name:"새 맵" }));
+            state.map = deepClone(activePack.maps[0] || normalizeMap({ name:"New Map" }));
             setSelection(null);
             rebuild(true);
-            toast2("맵팩 불러오기 완료", 1000);
+            toast2("MapPack loaded!!", 1000);
             $mapInfo.textContent = `maps:${activePack.maps.length}`;
           }else{
             const m = normalizeMap(obj);
@@ -6277,11 +6277,11 @@ if(b.patternCd <= 0){
             state.map = deepClone(m);
             setSelection(null);
             rebuild(true);
-            toast2("맵 추가 완료", 1000);
+            toast2("Map Added", 1000);
             $mapInfo.textContent = `maps:${activePack.maps.length}`;
           }
         }catch(_e){
-          toast2("JSON 파싱 실패", 1000);
+          toast2("JSON Parsing Failed", 1000);
         }
       });
 
@@ -6298,7 +6298,7 @@ if(b.patternCd <= 0){
             state.map = deepClone(state.pack.maps[i]);
             setSelection(null);
             rebuild(true);
-            toast2(`맵 선택: ${state.map.name || state.map.id}`, 700);
+            toast2(`Map Select: ${state.map.name || state.map.id}`, 700);
           });
           $mapList.appendChild(el);
         }
@@ -6330,7 +6330,7 @@ if(b.patternCd <= 0){
       });
 
       // 초기 안내(한 번만)
-      toast2("F2: DEV 맵 에디터", 1400);
+      toast2("F2: DEV Map Editor", 1400);
     })();
 
 
@@ -6343,11 +6343,11 @@ if(b.patternCd <= 0){
   <!-- DEV MAP EDITOR UI -->
   <div id="devToast2"></div>
   <div id="devPanel" aria-hidden="true">
-    <h3>DEV 맵 에디터 <span class="tag" id="devMapInfo">F2</span></h3>
+    <h3>DEV Map Editor <span class="tag" id="devMapInfo">F2</span></h3>
 
     <div class="row2">
-      <button class="btn primary" id="devToggle">DEV 종료(F2)</button>
-      <button class="btn" id="devTest">현재 맵 테스트</button>
+      <button class="btn primary" id="devToggle">DEV Close(F2)</button>
+      <button class="btn" id="devTest">Map Test</button>
       <span class="tag" id="devStatus">OFF</span>
     </div>
 
@@ -6356,60 +6356,60 @@ if(b.patternCd <= 0){
     </div>
 
     <div id="devTabs">
-      <button class="tab on" data-tab-target="edit">편집</button>
-      <button class="tab" data-tab-target="map">맵</button>
-      <button class="tab" data-tab-target="save">저장</button>
+      <button class="tab on" data-tab-target="edit">EDIT</button>
+      <button class="tab" data-tab-target="map">MAP</button>
+      <button class="tab" data-tab-target="save">SAVE</button>
     </div>
 
     <div class="tabPage on" data-tab="edit">
       <div class="row2">
-        <label class="tag">스냅</label>
+        <label class="tag">Snap</label>
         <input type="checkbox" id="devSnap" checked />
-        <label class="tag">격자</label>
+        <label class="tag">Grid</label>
         <input type="number" id="devGrid" value="0.5" step="0.1" min="0.1" style="width:86px;border-radius:10px;border:1px solid rgba(0,0,0,.12);padding:6px 8px;font-size:12px;" />
-        <label class="tag">카메라 고정</label>
+        <label class="tag">Fix Camera</label>
         <input type="checkbox" id="devFreeCam" checked />
       </div>
 
       <div id="devTools"></div>
 
       <div class="row2">
-        <span class="tag">선택 속성</span>
+        <span class="tag">Sel Attr</span>
       </div>
       <div id="devProps">
-        <div class="tag">선택된 오브젝트가 없습니다.</div>
+        <div class="tag">Not Selected Object</div>
       </div>
 
       <div class="row2">
         <span class="tag">TIP</span>
-        <span class="tag">플랫폼/사다리: 좌클릭 드래그</span>
-        <span class="tag">코인/적/스프링/스폰/깃발: 좌클릭</span>
-        <span class="tag">삭제: 우클릭</span>
+        <span class="tag">Platform/Ladder: LeftClick Drag</span>
+        <span class="tag">Coin/Slime/Spring/Spawn/Goal: LeftClick</span>
+        <span class="tag">Del: RightClick</span>
       </div>
     </div>
 
     <div class="tabPage" data-tab="map">
       <div class="row2">
-        <span class="tag">맵 목록</span>
+        <span class="tag">Map List</span>
       </div>
       <div id="devMapList"></div>
 
       <div class="row2">
-        <button class="btn" id="devNew">새 맵</button>
-        <button class="btn" id="devDup">복제</button>
-        <button class="btn danger" id="devDel">삭제</button>
+        <button class="btn" id="devNew">New Map</button>
+        <button class="btn" id="devDup">Duplicate</button>
+        <button class="btn danger" id="devDel">Delete</button>
       </div>
     </div>
 
     <div class="tabPage" data-tab="save">
       <div class="row2">
-        <button class="btn" id="devSave">저장(LocalStorage)</button>
+        <button class="btn" id="devSave">Save(Browser-Storage)</button>
       </div>
 
       <div class="row2">
-        <button class="btn" id="devExportMap">JSON 다운로드(맵)</button>
-        <button class="btn" id="devExportPack">JSON 다운로드(팩)</button>
-        <label class="btn" for="devImportFile" style="cursor:pointer;">JSON 불러오기</label>
+        <button class="btn" id="devExportMap">JSON Download(Map)</button>
+        <button class="btn" id="devExportPack">JSON Download(Pack)</button>
+        <label class="btn" for="devImportFile" style="cursor:pointer;">JSON Open</label>
         <input id="devImportFile" type="file" accept="application/json" style="display:none;" />
       </div>
     </div>
