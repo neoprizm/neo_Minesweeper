@@ -226,6 +226,195 @@
       #subtitle{ bottom: calc(138px + env(safe-area-inset-bottom)); }
     }
 
+
+    /* =========================
+       DEV MAP EDITOR (F2)
+       ========================= */
+    #devPanel{
+      position:fixed;
+      right:14px;
+      top:64px;
+      width:min(420px, calc(100vw - 28px));
+      max-height: calc(100vh - 92px);
+      overflow:auto;
+      background: rgba(255,255,255,.86);
+      border:1px solid rgba(0,0,0,.10);
+      box-shadow: 0 18px 55px rgba(0,0,0,.22);
+      border-radius: 16px;
+      padding: 12px;
+      display:none;
+      z-index: 9999;
+      pointer-events:auto;
+      backdrop-filter: blur(10px);
+    }
+    #devPanel h3{
+      margin: 2px 0 10px;
+      font-size: 14px;
+      letter-spacing: -0.2px;
+    }
+    #devTabs{
+      display:flex;
+      gap:2px;
+      flex-wrap:wrap;
+      margin: 8px 0 10px;
+      padding: 4px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.04);
+      border: 1px solid rgba(0,0,0,.10);
+    }
+    #devTabs .tab{
+      border:1px solid transparent;
+      background: transparent;
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 12px;
+      cursor:pointer;
+      box-shadow: none;
+      color: rgba(0,0,0,.72);
+    }
+    #devTabs .tab.on{
+      background: #fff;
+      border-color: rgba(0,0,0,.12);
+      color: #1d1d1f;
+      box-shadow: 0 6px 16px rgba(0,0,0,.08);
+    }
+    .tabPage{ display:none; }
+    .tabPage.on{ display:block; }
+    #devPanel .row2{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin: 8px 0;
+    }
+    #devPanel .btn{
+      pointer-events:auto;
+      user-select:none;
+      border:1px solid rgba(0,0,0,.12);
+      background: rgba(255,255,255,.9);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      cursor:pointer;
+      box-shadow: 0 8px 18px rgba(0,0,0,.10);
+    }
+    #devPanel .btn.primary{
+      background: rgba(45,123,255,.12);
+      border-color: rgba(45,123,255,.35);
+    }
+    #devPanel .btn.danger{
+      background: rgba(255,60,60,.10);
+      border-color: rgba(255,60,60,.35);
+    }
+    #devPanel .btn:active{ transform: translateY(1px); }
+    #devPanel .tag{
+      font-size: 12px;
+      background: rgba(0,0,0,.06);
+      border:1px solid rgba(0,0,0,.06);
+      padding: 5px 8px;
+      border-radius: 999px;
+    }
+    #devTools{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin: 8px 0 10px;
+    }
+    #devTools .tool{
+      border:1px solid rgba(0,0,0,.12);
+      background: rgba(255,255,255,.9);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor:pointer;
+    }
+    #devTools .tool.on{
+      background: rgba(45,123,255,.16);
+      border-color: rgba(45,123,255,.55);
+    }
+    #devMiniMap{
+      width:100%;
+      height: 170px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.04);
+      border:1px solid rgba(0,0,0,.08);
+      display:block;
+      cursor: grab;
+    }
+    #devMiniMap:active{ cursor: grabbing; }
+    #devProps{
+      border:1px dashed rgba(0,0,0,.15);
+      border-radius: 12px;
+      padding: 10px;
+      margin-top: 8px;
+      background: rgba(255,255,255,.65);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 10px;
+    }
+    #devProps .propRow{
+      display:grid;
+      grid-template-columns: 76px 1fr;
+      align-items:center;
+      gap:10px;
+      margin: 0;
+    }
+    #devProps .tag{
+      grid-column: 1 / -1;
+      margin-bottom: 4px;
+    }
+    #devProps label{
+      font-size: 12px;
+      opacity: .78;
+      text-align: right;
+      padding-right: 4px;
+    }
+    #devProps input{
+      flex:1;
+      border-radius: 10px;
+      border:1px solid rgba(0,0,0,.12);
+      padding: 7px 10px;
+      font-size: 12px;
+      background: rgba(255,255,255,.95);
+      width: 100%;
+    }
+    #devMapList{
+      max-height: 140px;
+      overflow:auto;
+      border:1px solid rgba(0,0,0,.10);
+      border-radius: 12px;
+      background: rgba(255,255,255,.65);
+      padding: 6px;
+    }
+    #devMapList .item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding: 7px 8px;
+      border-radius: 10px;
+      cursor:pointer;
+      font-size: 12px;
+    }
+    #devMapList .item:hover{ background: rgba(0,0,0,.05); }
+    #devMapList .item.on{ background: rgba(45,123,255,.14); border:1px solid rgba(45,123,255,.25); }
+    #devToast2{
+      position:fixed;
+      left: 50%;
+      top: 16px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.70);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      pointer-events:none;
+      opacity: 0;
+      transition: opacity .18s ease;
+      z-index: 10000;
+      white-space: nowrap;
+    }
+
 </style>
 </head>
 
@@ -1718,7 +1907,7 @@
     function addCoin(x,y){
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(0.7,0.7),
-        new THREE.MeshBasicMaterial({ map: TEX.hudCoin, transparent:true })
+        new THREE.MeshBasicMaterial({ map: (TEX.hudCoin || texCoin), transparent:true })
       );
       mesh.position.set(x, y, 2.2);
       scene.add(mesh);
@@ -1802,6 +1991,39 @@
       world.springs.push(s);
       return s;
     }
+
+
+    // ----------------------------
+    // 사다리(클라임용)
+    //  - x,y,w,h: AABB(바닥 기준)
+    //  - topLow/topHigh: 플레이어 y(중심) 클램프 기준이 되는 "밟는 높이"(대개 아래/위 발판의 top)
+    // ----------------------------
+    function addLadder(x, y, w, h, topLow=null, topHigh=null){
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({ map: texLadder, transparent:true, opacity: 0.95 })
+      );
+      mesh.position.set(x + w/2, y + h/2, 2.02);
+      mesh.frustumCulled = false;
+
+      // 텍스처 반복(세로 방향)
+      try{
+        mesh.material.map.repeat.set(Math.max(1, w/1.2), Math.max(1, h/1.6));
+        mesh.material.map.needsUpdate = true;
+      }catch(_e){}
+
+      scene.add(mesh);
+
+      const l = {
+        x, y, w, h,
+        topLow: (topLow==null ? y : topLow),
+        topHigh: (topHigh==null ? (y+h) : topHigh),
+        mesh
+      };
+      world.ladders.push(l);
+      return l;
+    }
+
 
     // 사다리: 아래 블록 top ~ 위 블록 top
     function addGoalWithBase(pBase){
@@ -2622,11 +2844,290 @@ function resolveCollisions(nextX, nextY){
       return { endX: exit.x + exit.w, endTop: exit.y + exit.h, entry, exit };
     }
 
+
+    // ----------------------------
+    // 맵팩(Map Pack) 기반 레벨 구성
+    // - LocalStorage(pm_map_pack_v1) 우선
+    // - 없으면 EMBEDDED_MAP_PACK.maps 사용
+    // ----------------------------
+    const MAP_PACK_LS_KEY = "pm_map_pack_v1";
+
+    function deepClone(v){
+      try{ return JSON.parse(JSON.stringify(v)); }catch(_e){ return v; }
+    }
+    function _num(v, d){ v = Number(v); return Number.isFinite(v) ? v : d; }
+    function _str(v, d){ return (typeof v === "string" && v.trim()) ? v : d; }
+    function _arr(v){ return Array.isArray(v) ? v : []; }
+
+    function normalizeMap(m){
+      const nowId = () => `map-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+      m = (m && typeof m === "object") ? m : {};
+      const ground = m.ground || {};
+      const out = {
+        schema: 1,
+        id: _str(m.id, nowId()),
+        name: _str(m.name, "새 맵"),
+        ground: {
+          x: _num(ground.x, -80),
+          y: _num(ground.y, -2.8),
+          w: _num(ground.w, 160),
+          h: _num(ground.h, 2.2),
+        },
+        spawn: {
+          x: _num(m.spawn?.x, -15.5),
+          y: _num(m.spawn?.y,  2.6),
+        },
+        platforms: _arr(m.platforms).map(p => ({
+          x:_num(p.x, 0), y:_num(p.y, 0), w:Math.max(0.2,_num(p.w, 4)), h:Math.max(0.2,_num(p.h, 1))
+        })),
+        coins: _arr(m.coins).map(c => ({ x:_num(c.x, 0), y:_num(c.y, 1) })),
+        enemies: _arr(m.enemies).map(e => ({ x:_num(e.x, 0), y:_num(e.y, 1) })),
+        springs: _arr(m.springs).map(s => ({ x:_num(s.x, 0), y:_num(s.y, 1) })),
+        ladders: _arr(m.ladders).map(l => ({
+          x:_num(l.x, 0), y:_num(l.y, 0),
+          w:Math.max(0.2,_num(l.w, 1.2)), h:Math.max(0.2,_num(l.h, 4.0)),
+          topLow: _num(l.topLow, _num(l.y,0)),
+          topHigh: _num(l.topHigh, _num(l.y,0) + Math.max(0.2,_num(l.h,4.0))),
+        })),
+        goal: {
+          x: _num(m.goal?.x, 50),
+          y: _num(m.goal?.y,  1.0),
+        }
+      };
+      // 최소 1개 발판(중앙) 보장(에디터 UX)
+      if(out.platforms.length === 0){
+        out.platforms.push({ x:-18, y:(out.ground.y+out.ground.h) - 1.0 + 0.6, w:6.0, h:1.0 });
+      }
+      return out;
+    }
+
+    function normalizePack(p){
+      p = (p && typeof p === "object") ? p : {};
+      const maps = _arr(p.maps).map(normalizeMap);
+      return { version: 1, maps };
+    }
+
+    function loadPackFromLocalStorage(){
+      try{
+        const s = localStorage.getItem(MAP_PACK_LS_KEY);
+        if(!s) return null;
+        const obj = JSON.parse(s);
+        const pack = normalizePack(obj);
+        if(!pack.maps.length) return null;
+        return pack;
+      }catch(_e){
+        return null;
+      }
+    }
+
+    function savePackToLocalStorage(pack){
+      try{
+        const norm = normalizePack(pack);
+        localStorage.setItem(MAP_PACK_LS_KEY, JSON.stringify(norm));
+        return true;
+      }catch(_e){
+        return false;
+      }
+    }
+
+    // 👇 여기 EMBEDDED_MAP_PACK.maps 배열에 맵 JSON을 추가하면, 게임에 "내장 맵"으로 포함됩니다.
+    const EMBEDDED_MAP_PACK = normalizePack({
+      version: 1,
+      maps: [
+        {
+          id: "demo-001",
+          name: "초원 스타트",
+          ground: { x:-80, y:-2.8, w:160, h:2.2 },
+          spawn: { x:-15.5, y: 2.6 },
+          platforms: [
+            { x:-18, y:-1.0, w:6.0, h:1.0 },
+            { x:-8,  y: 0.2, w:5.0, h:1.0 },
+            { x: 2,  y: 1.3, w:5.6, h:1.0 },
+            { x: 12, y: 2.4, w:6.0, h:1.0 },
+            { x: 28, y: 1.2, w:6.5, h:1.0 },
+            { x: 40, y:-1.0, w:7.0, h:1.0 }
+          ],
+          coins: [
+            { x:-15.5, y: 0.9 },
+            { x:-5.5,  y: 2.0 },
+            { x: 4.6,  y: 3.1 },
+            { x: 14.8, y: 4.1 },
+            { x: 31.0, y: 3.0 },
+            { x: 43.0, y: 1.0 }
+          ],
+          enemies: [{ x: 14.5, y: 3.0 }],
+          springs: [{ x: -5.5, y: 1.1 }],
+          ladders: [],
+          goal: { x: 45.6, y: 0.8 }
+        },
+        {
+          id: "demo-002",
+          name: "사다리 점프",
+          ground: { x:-80, y:-2.8, w:160, h:2.2 },
+          spawn: { x:-10.0, y: 2.4 },
+          platforms: [
+            { x:-12, y:-1.0, w:7.0, h:1.0 },
+            { x:  2, y: 4.0,  w:7.0, h:1.0 },
+            { x: 16, y: 2.2,  w:6.0, h:1.0 },
+            { x: 30, y:-1.0,  w:8.0, h:1.0 }
+          ],
+          ladders: [
+            { x: -8.1, y: 0.0, w: 1.2, h: 5.0, topLow: 0.0, topHigh: 5.0 }
+          ],
+          coins: [
+            { x:-8.1, y: 2.2 },
+            { x: 5.6, y: 6.2 },
+            { x:18.8, y: 4.2 },
+            { x:33.0, y: 1.0 }
+          ],
+          enemies: [{ x: 18.6, y: 3.0 }],
+          springs: [{ x: 33.5, y: 0.2 }],
+          goal: { x: 36.5, y: 0.8 }
+        },
+        {
+          id: "demo-003",
+          name: "러시 런",
+          ground: { x:-80, y:-2.8, w:160, h:2.2 },
+          spawn: { x:-20.0, y: 2.6 },
+          platforms: [
+            { x:-22, y:-1.0, w:7.0, h:1.0 },
+            { x:-10, y: 0.6, w:5.0, h:1.0 },
+            { x:  0, y: 2.2, w:5.0, h:1.0 },
+            { x: 10, y: 3.2, w:5.0, h:1.0 },
+            { x: 20, y: 2.0, w:5.0, h:1.0 },
+            { x: 32, y: 0.6, w:8.0, h:1.0 },
+            { x: 48, y:-1.0, w:8.0, h:1.0 }
+          ],
+          coins: [
+            { x:-18.3, y: 1.0 }, { x:-7.2, y: 2.4 },
+            { x:  2.3, y: 3.9 }, { x: 12.4, y: 4.9 },
+            { x: 22.3, y: 3.8 }, { x: 35.0, y: 2.0 },
+            { x: 52.0, y: 1.0 }
+          ],
+          enemies: [{ x: 12.3, y: 4.0 }, { x: 22.3, y: 3.0 }],
+          springs: [],
+          ladders: [],
+          goal: { x: 55.0, y: 0.8 }
+        }
+      ]
+    });
+
+    let activePack = loadPackFromLocalStorage() || EMBEDDED_MAP_PACK;
+
+    function getMapForLevel(level){
+      if(!activePack || !Array.isArray(activePack.maps) || activePack.maps.length === 0) return null;
+      const idx = ((level|0) - 1) % activePack.maps.length;
+      const map = activePack.maps[idx];
+      if(!map) return null;
+      return { map, index: idx, total: activePack.maps.length };
+    }
+
+    function addGoalAt(x, y){
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.2, 1.6),
+        new THREE.MeshBasicMaterial({ map: texFlagOff, transparent:true })
+      );
+      mesh.position.set(x, y, 2.0);
+      scene.add(mesh);
+      world.goal = { x, y, w:0.8, h:1.2, mesh, active:false, base:null };
+      return world.goal;
+    }
+
+    function findSupportPlatformAt(x, yHint){
+      let best = null;
+      let bestTop = -Infinity;
+      const yMax = (Number.isFinite(yHint) ? yHint : (world.groundTop + 4));
+      for(const p of world.platforms){
+        const top = p.y + p.h;
+        const inside = (x >= p.x + 0.35) && (x <= p.x + p.w - 0.35);
+        if(!inside) continue;
+        // yHint 근처 아래쪽에서 가장 높은 top 선택
+        if(top <= yMax + 0.8 && top > bestTop){
+          bestTop = top;
+          best = p;
+        }
+      }
+      // 그래도 없으면 (지면 포함) 가장 가까운 플랫폼
+      if(!best && world.platforms.length){
+        for(const p of world.platforms){
+          const top = p.y + p.h;
+          const inside = (x >= p.x) && (x <= p.x + p.w);
+          if(!inside) continue;
+          if(top > bestTop){
+            bestTop = top;
+            best = p;
+          }
+        }
+      }
+      return best;
+    }
+
+    function buildLevelFromJson(map, level=1, mapIndex=0, mapTotal=1){
+      const m = normalizeMap(map);
+      clearWorld();
+
+      world.currentMap = m;
+
+      // ground
+      const g = m.ground;
+      const groundTop = g.y + g.h;
+      addPlatform(g.x, g.y, g.w, g.h);
+      world.groundTop = groundTop;
+      world.killY = g.y - 10.5;
+
+      // platforms
+      for(const p of m.platforms){
+        // ground와 완전히 겹치는 경우는 중복 방지(간단)
+        if(Math.abs(p.x-g.x)<1e-6 && Math.abs(p.y-g.y)<1e-6 && Math.abs(p.w-g.w)<1e-6 && Math.abs(p.h-g.h)<1e-6) continue;
+        addPlatform(p.x, p.y, p.w, p.h);
+      }
+
+      // ladders
+      for(const l of m.ladders){
+        addLadder(l.x, l.y, l.w, l.h, l.topLow, l.topHigh);
+      }
+
+      // coins
+      for(const c of m.coins){
+        addCoin(c.x, c.y);
+      }
+
+      // enemies / springs: support platform 찾아서 올려놓기
+      for(const e of m.enemies){
+        const p = findSupportPlatformAt(e.x, e.y);
+        if(p) addEnemyOnPlatform(p, e.x);
+      }
+      for(const s of m.springs){
+        const p = findSupportPlatformAt(s.x, s.y);
+        if(p) addSpringOnPlatform(p, s.x);
+      }
+
+      // goal
+      if(m.goal) addGoalAt(m.goal.x, m.goal.y);
+
+      // UI 초기화
+      world.collectedCoinsLevel = 0;
+      const title = m.name ? ` · ${m.name}` : "";
+      $stageText.textContent = `레벨 ${level} · 맵 ${mapIndex+1}/${mapTotal}${title}`;
+      updateCoinHUD();
+    }
+
+
     // ----------------------------
     // 랜덤 레벨 생성(퍼즐 모듈 포함)
     // ----------------------------
     function buildRandomLevel(level){
+      // ✅ 맵팩 우선: LocalStorage(pm_map_pack_v1) -> EMBEDDED_MAP_PACK
+      const info = getMapForLevel(level);
+      if(info){
+        const diff = 1.0 + (level-1)*0.16;
+        game.difficulty = diff;
+        buildLevelFromJson(info.map, level, info.index, info.total);
+        return;
+      }
+
       clearWorld();
+      world.currentMap = null;
 
       const diff = 1.0 + (level-1)*0.16;
       game.difficulty = diff;
@@ -4058,9 +4559,10 @@ const ex = e.x - e.w/2;
 
       buildRandomLevel(level);
 
-      // 시작 위치(좌측)
-      player.x = -15.5;
-      player.y = 2.6;
+      // 시작 위치(맵 스폰 우선)
+      const sp = world.currentMap?.spawn;
+      player.x = (sp && Number.isFinite(sp.x)) ? sp.x : -15.5;
+      player.y = (sp && Number.isFinite(sp.y)) ? sp.y : 2.6;
       resetPlayer();
       playerSprite.visible = true;
 
@@ -4084,6 +4586,17 @@ const ex = e.x - e.w/2;
       if(toastT > 0){
         toastT -= dt;
         if(toastT <= 0) $toast.style.opacity = "0";
+      }
+
+      // DEV 에디터가 켜져있으면 게임 로직을 일시정지하고, 에디터 렌더/입력만 처리
+      if(window.__DEV_EDITOR && window.__DEV_EDITOR.enabled){
+        window.__DEV_EDITOR.step(dt);
+        // 입력 플래그 잔상 방지
+        input.jumpPressed = false;
+        input.jumpReleased = false;
+        input.dashPressed = false;
+        updateDebugOverlay();
+        return;
       }
 
       if(game.state === "celebrate"){
@@ -4230,10 +4743,1073 @@ const ex = e.x - e.w/2;
       requestAnimationFrame(animate);
     }
 
+
+    // ----------------------------
+    // DEV 맵 에디터 (F2 토글)
+    //  - 맵 제작 → JSON 다운로드(맵/팩)
+    //  - 저장(LocalStorage) → 게임에서 즉시 사용
+    // ----------------------------
+    (function initDevMapEditor(){
+      const $panel = document.getElementById("devPanel");
+      const $toggle = document.getElementById("devToggle");
+      const $test = document.getElementById("devTest");
+      const $status = document.getElementById("devStatus");
+      const $tools = document.getElementById("devTools");
+      const $props = document.getElementById("devProps");
+      const $mapList = document.getElementById("devMapList");
+      const $mapInfo = document.getElementById("devMapInfo");
+      const $snap = document.getElementById("devSnap");
+      const $grid = document.getElementById("devGrid");
+      const $freeCam = document.getElementById("devFreeCam");
+      const $mini = document.getElementById("devMiniMap");
+      const $importFile = document.getElementById("devImportFile");
+      const $btnSave = document.getElementById("devSave");
+      const $btnNew = document.getElementById("devNew");
+      const $btnDup = document.getElementById("devDup");
+      const $btnDel = document.getElementById("devDel");
+      const $btnExportMap = document.getElementById("devExportMap");
+      const $btnExportPack = document.getElementById("devExportPack");
+      const $toast2 = document.getElementById("devToast2");
+      const $tabBar = document.getElementById("devTabs");
+      const $tabButtons = $tabBar ? [...$tabBar.querySelectorAll(".tab")] : [];
+      const $tabPages = $panel ? [...$panel.querySelectorAll(".tabPage")] : [];
+
+      if(!$panel || !$mini) return;
+
+      const miniCtx = $mini.getContext("2d");
+
+      function toast2(msg, ms=900){
+        if(!$toast2) return;
+        $toast2.textContent = msg;
+        $toast2.style.opacity = "1";
+        clearTimeout(toast2._t);
+        toast2._t = setTimeout(()=>{ $toast2.style.opacity = "0"; }, ms);
+      }
+
+      function downloadJson(filename, obj){
+        const s = JSON.stringify(obj, null, 2);
+        const blob = new Blob([s], { type:"application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 500);
+      }
+
+      function ensurePack(){
+        activePack = normalizePack(activePack || EMBEDDED_MAP_PACK);
+        if(!activePack.maps.length){
+          activePack.maps.push(normalizeMap({ name:"새 맵" }));
+        }
+        return activePack;
+      }
+
+      const state = {
+        enabled: false,
+        tool: "platform",
+        tab: "edit",
+        snap: true,
+        grid: 0.5,
+        freeCam: true,
+        pack: ensurePack(),
+        mapIndex: 0,
+        map: null,
+        sel: null,
+        drag: null,
+        camX: 0,
+        camY: 0,
+        miniDrag: null,
+        ghostFill: null,
+        ghostLine: null,
+        gridLines: null,
+        prevGameState: null,
+        prevPolicy: null,
+      };
+
+      function setTab(id){
+        if(!id) return;
+        state.tab = id;
+        for(const b of $tabButtons){
+          b.classList.toggle("on", b.dataset.tabTarget === id);
+        }
+        for(const p of $tabPages){
+          p.classList.toggle("on", p.dataset.tab === id);
+        }
+      }
+      for(const b of $tabButtons){
+        b.addEventListener("click", ()=> setTab(b.dataset.tabTarget));
+      }
+      setTab(state.tab || "edit");
+
+      const TOOLSET = [
+        { id:"select",   label:"선택" },
+        { id:"platform", label:"플랫폼" },
+        { id:"ladder",   label:"사다리" },
+        { id:"coin",     label:"코인" },
+        { id:"enemy",    label:"적" },
+        { id:"spring",   label:"스프링" },
+        { id:"spawn",    label:"스폰" },
+        { id:"goal",     label:"깃발" },
+        { id:"delete",   label:"삭제" },
+      ];
+
+      function setTool(id){
+        state.tool = id;
+        [...$tools.querySelectorAll(".tool")].forEach(b=>{
+          b.classList.toggle("on", b.dataset.id === id);
+        });
+        const cur = state.tool;
+        const curCursor = (cur === "platform" || cur === "ladder") ? "crosshair" :
+                          (cur === "delete") ? "not-allowed" :
+                          (cur === "select") ? "pointer" : "copy";
+        renderer.domElement.style.cursor = state.enabled ? curCursor : "";
+      }
+
+      function syncToggles(){
+        state.snap = !!$snap.checked;
+        state.grid = Math.max(0.1, Number($grid.value) || 0.5);
+        state.freeCam = !!$freeCam.checked;
+      }
+
+      function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+
+      function worldFromScreen(clientX, clientY){
+        const rect = renderer.domElement.getBoundingClientRect();
+        const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -(((clientY - rect.top) / rect.height) * 2 - 1);
+        const v = new THREE.Vector3(ndcX, ndcY, 0);
+        v.unproject(camera);
+        return { x: v.x, y: v.y };
+      }
+
+      function snapVal(v){
+        return state.snap ? (Math.round(v / state.grid) * state.grid) : v;
+      }
+
+      function ensureGhost(){
+        if(state.ghostFill) return;
+
+        const fill = new THREE.Mesh(
+          new THREE.PlaneGeometry(1,1),
+          new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.18 })
+        );
+        fill.position.set(0,0,3.0);
+        fill.visible = false;
+        scene.add(fill);
+
+        const geom = new THREE.BufferGeometry();
+        const pos = new Float32Array(5*3); // loop
+        geom.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        const line = new THREE.Line(
+          geom,
+          new THREE.LineBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.45 })
+        );
+        line.position.set(0,0,3.01);
+        line.visible = false;
+        scene.add(line);
+
+        state.ghostFill = fill;
+        state.ghostLine = line;
+      }
+
+      function setGhostRect(x, y, w, h, on){
+        ensureGhost();
+        const fill = state.ghostFill;
+        const line = state.ghostLine;
+
+        fill.visible = !!on;
+        line.visible = !!on;
+        if(!on) return;
+
+        fill.scale.set(w, h, 1);
+        fill.position.set(x + w/2, y + h/2, 3.0);
+
+        const arr = line.geometry.attributes.position.array;
+        // local coords relative to line position (0,0)
+        const pts = [
+          [x, y], [x+w, y], [x+w, y+h], [x, y+h], [x, y]
+        ];
+        for(let i=0;i<5;i++){
+          arr[i*3+0] = pts[i][0];
+          arr[i*3+1] = pts[i][1];
+          arr[i*3+2] = 0;
+        }
+        line.geometry.attributes.position.needsUpdate = true;
+      }
+
+      function ensureGridLinesForMap(m){
+        if(state.gridLines){
+          scene.remove(state.gridLines);
+          state.gridLines.geometry.dispose();
+          state.gridLines.material.dispose();
+          state.gridLines = null;
+        }
+        // 단순 그리드: 맵 범위 기반
+        const b = computeBounds(m);
+        const step = Math.max(0.5, state.grid);
+        const minX = Math.floor((b.minX - 6)/step)*step;
+        const maxX = Math.ceil((b.maxX + 6)/step)*step;
+        const minY = Math.floor((b.minY - 6)/step)*step;
+        const maxY = Math.ceil((b.maxY + 6)/step)*step;
+
+        const lines = [];
+        for(let x=minX; x<=maxX+1e-6; x+=step){
+          lines.push(x, minY, 0,  x, maxY, 0);
+        }
+        for(let y=minY; y<=maxY+1e-6; y+=step){
+          lines.push(minX, y, 0,  maxX, y, 0);
+        }
+
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute("position", new THREE.BufferAttribute(new Float32Array(lines), 3));
+        const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.12 });
+        const grid = new THREE.LineSegments(geom, mat);
+        grid.position.z = 2.95;
+        grid.frustumCulled = false;
+        scene.add(grid);
+        state.gridLines = grid;
+      }
+
+      function computeBounds(m){
+        const g = m.ground;
+        let minX = g.x, maxX = g.x+g.w;
+        let minY = g.y, maxY = g.y+g.h;
+
+        const expandRect = (x,y,w,h)=>{
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x+w);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y+h);
+        };
+        const expandPt = (x,y)=>{
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        };
+
+        for(const p of m.platforms) expandRect(p.x,p.y,p.w,p.h);
+        for(const l of m.ladders) expandRect(l.x,l.y,l.w,l.h);
+        for(const c of m.coins) expandPt(c.x,c.y);
+        for(const e of m.enemies) expandPt(e.x,e.y);
+        for(const s of m.springs) expandPt(s.x,s.y);
+        expandPt(m.spawn.x, m.spawn.y);
+        expandPt(m.goal.x, m.goal.y);
+
+        // padding
+        const groundTop = g.y + g.h;
+        minY = Math.max(minY, groundTop);
+        const padX = 8, padYTop = 6, padYBottom = 0;
+        return {
+          minX: minX - padX,
+          maxX: maxX + padX,
+          minY: minY - padYBottom,
+          maxY: maxY + padYTop
+        };
+      }
+
+      function drawMiniMap(){
+        const m = state.map;
+        if(!m) return;
+
+        const W = $mini.width, H = $mini.height;
+        miniCtx.clearRect(0,0,W,H);
+
+        // background
+        miniCtx.fillStyle = "rgba(255,255,255,0.85)";
+        miniCtx.fillRect(0,0,W,H);
+
+        const b = computeBounds(m);
+        const spanX = Math.max(1e-6, b.maxX - b.minX);
+        const spanY = Math.max(1e-6, b.maxY - b.minY);
+        const sx = W / spanX;
+        const sy = H / spanY;
+        const s = Math.min(sx, sy);
+        const ox = (W - spanX*s) * 0.5;
+        const oy = (H - spanY*s) * 0.5;
+
+        const toX = x => ox + (x - b.minX) * s;
+        const toY = y => H - (oy + (y - b.minY) * s);
+
+        // grid
+        const step = Math.max(0.5, state.grid);
+        miniCtx.strokeStyle = "rgba(0,0,0,0.06)";
+        miniCtx.lineWidth = 1;
+        miniCtx.beginPath();
+        for(let x = Math.floor(b.minX/step)*step; x <= b.maxX+1e-6; x += step){
+          const px = toX(x);
+          miniCtx.moveTo(px, 0);
+          miniCtx.lineTo(px, H);
+        }
+        for(let y = Math.floor(b.minY/step)*step; y <= b.maxY+1e-6; y += step){
+          const py = toY(y);
+          miniCtx.moveTo(0, py);
+          miniCtx.lineTo(W, py);
+        }
+        miniCtx.stroke();
+
+        // ground + platforms
+        miniCtx.fillStyle = "rgba(0,0,0,0.20)";
+        const g = m.ground;
+        const groundTop = g.y + g.h;
+        const stripH = Math.max(2, Math.min(4, g.h*s*0.15));
+        miniCtx.fillRect(toX(g.x), toY(groundTop) - stripH, g.w*s, stripH);
+
+        miniCtx.fillStyle = "rgba(0,0,0,0.26)";
+        for(const p of m.platforms){
+          miniCtx.fillRect(toX(p.x), toY(p.y+p.h), p.w*s, p.h*s);
+        }
+
+        // ladders
+        miniCtx.fillStyle = "rgba(45,123,255,0.25)";
+        for(const l of m.ladders){
+          miniCtx.fillRect(toX(l.x), toY(l.y+l.h), l.w*s, l.h*s);
+        }
+
+        // points
+        function dot(x,y,r,fill){
+          miniCtx.beginPath();
+          miniCtx.arc(toX(x), toY(y), r, 0, Math.PI*2);
+          miniCtx.closePath();
+          miniCtx.fillStyle = fill;
+          miniCtx.fill();
+        }
+        for(const c of m.coins) dot(c.x,c.y, 3.2, "rgba(255,170,0,0.85)");
+        for(const e of m.enemies) dot(e.x,e.y, 3.2, "rgba(255,70,70,0.85)");
+        for(const s of m.springs) dot(s.x,s.y, 3.2, "rgba(135,70,255,0.85)");
+
+        dot(m.spawn.x, m.spawn.y, 4.2, "rgba(0,180,90,0.88)");
+        dot(m.goal.x,  m.goal.y,  4.2, "rgba(0,0,0,0.75)");
+
+        // camera viewport
+        const viewW = (camera.right - camera.left) / camera.zoom;
+        const viewH = (camera.top - camera.bottom) / camera.zoom;
+
+        const cx = state.freeCam ? state.camX : camX;
+        const cy = state.freeCam ? state.camY : camY;
+
+        const vx = cx - viewW/2;
+        const vy = cy - viewH/2;
+
+        miniCtx.strokeStyle = "rgba(0,0,0,0.70)";
+        miniCtx.lineWidth = 2;
+        miniCtx.strokeRect(toX(vx), toY(vy+viewH), viewW*s, viewH*s);
+      }
+
+      function pickAt(x, y){
+        const m = state.map;
+        if(!m) return null;
+
+        // 우선: spawn/goal
+        const dist2 = (ax,ay,bx,by)=>{ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; };
+        const thr2 = (state.grid*0.7)*(state.grid*0.7);
+
+        if(dist2(x,y,m.spawn.x,m.spawn.y) < thr2) return { kind:"spawn" };
+        if(dist2(x,y,m.goal.x,m.goal.y) < thr2) return { kind:"goal" };
+
+        // points
+        const findPoint = (arr, kind)=>{
+          let best = -1, bestD = Infinity;
+          for(let i=0;i<arr.length;i++){
+            const d = dist2(x,y,arr[i].x,arr[i].y);
+            if(d < bestD){ bestD = d; best = i; }
+          }
+          if(best >= 0 && bestD < thr2*2.5) return { kind, i: best };
+          return null;
+        };
+        let hit = findPoint(m.coins, "coin");
+        if(hit) return hit;
+        hit = findPoint(m.enemies, "enemy");
+        if(hit) return hit;
+        hit = findPoint(m.springs, "spring");
+        if(hit) return hit;
+
+        // rects (platform, ladder)
+        const inRect = (r)=> x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h;
+        for(let i=m.platforms.length-1;i>=0;i--){
+          const p = m.platforms[i];
+          if(inRect(p)) return { kind:"platform", i };
+        }
+        for(let i=m.ladders.length-1;i>=0;i--){
+          const l = m.ladders[i];
+          if(inRect(l)) return { kind:"ladder", i };
+        }
+        return null;
+      }
+
+      function setSelection(sel){
+        state.sel = sel;
+        renderProps();
+      }
+
+      function renderProps(){
+        const sel = state.sel;
+        const m = state.map;
+
+        if(!sel || !m){
+          $props.innerHTML = `<div class="tag">선택된 오브젝트가 없습니다.</div>`;
+          return;
+        }
+
+        function row(label, value, onChange){
+          const div = document.createElement("div");
+          div.className = "propRow";
+          const lab = document.createElement("label");
+          lab.textContent = label;
+          const input = document.createElement("input");
+          input.type = "number";
+          input.step = String(state.grid);
+          input.value = String(value);
+          input.addEventListener("change", ()=>{
+            const v = Number(input.value);
+            if(Number.isFinite(v)) onChange(v);
+          });
+          div.appendChild(lab);
+          div.appendChild(input);
+          return div;
+        }
+
+        $props.innerHTML = "";
+        const box = document.createElement("div");
+        box.className = "tag";
+        box.textContent = `${sel.kind}` + (Number.isFinite(sel.i) ? ` #${sel.i}` : "");
+        $props.appendChild(box);
+
+        const apply = ()=>{
+          // ladder topLow/topHigh 자동 정합(기본)
+          if(sel.kind === "ladder"){
+            const l = m.ladders[sel.i];
+            if(l){
+              l.topLow = (Number.isFinite(l.topLow) ? l.topLow : l.y);
+              l.topHigh = (Number.isFinite(l.topHigh) ? l.topHigh : (l.y+l.h));
+            }
+          }
+          rebuild(false);
+        };
+
+        if(sel.kind === "platform"){
+          const p = m.platforms[sel.i];
+          $props.appendChild(row("x", p.x, v=>{ p.x=v; apply(); }));
+          $props.appendChild(row("y", p.y, v=>{ p.y=v; apply(); }));
+          $props.appendChild(row("w", p.w, v=>{ p.w=Math.max(0.2,v); apply(); }));
+          $props.appendChild(row("h", p.h, v=>{ p.h=Math.max(0.2,v); apply(); }));
+        }else if(sel.kind === "ladder"){
+          const l = m.ladders[sel.i];
+          $props.appendChild(row("x", l.x, v=>{ l.x=v; apply(); }));
+          $props.appendChild(row("y", l.y, v=>{ l.y=v; apply(); }));
+          $props.appendChild(row("w", l.w, v=>{ l.w=Math.max(0.2,v); apply(); }));
+          $props.appendChild(row("h", l.h, v=>{ l.h=Math.max(0.2,v); apply(); }));
+          $props.appendChild(row("topLow", l.topLow, v=>{ l.topLow=v; apply(); }));
+          $props.appendChild(row("topHigh", l.topHigh, v=>{ l.topHigh=v; apply(); }));
+        }else if(sel.kind === "coin"){
+          const c = m.coins[sel.i];
+          $props.appendChild(row("x", c.x, v=>{ c.x=v; apply(); }));
+          $props.appendChild(row("y", c.y, v=>{ c.y=v; apply(); }));
+        }else if(sel.kind === "enemy"){
+          const e = m.enemies[sel.i];
+          $props.appendChild(row("x", e.x, v=>{ e.x=v; apply(); }));
+          $props.appendChild(row("y", e.y, v=>{ e.y=v; apply(); }));
+        }else if(sel.kind === "spring"){
+          const s = m.springs[sel.i];
+          $props.appendChild(row("x", s.x, v=>{ s.x=v; apply(); }));
+          $props.appendChild(row("y", s.y, v=>{ s.y=v; apply(); }));
+        }else if(sel.kind === "spawn"){
+          $props.appendChild(row("x", m.spawn.x, v=>{ m.spawn.x=v; apply(); }));
+          $props.appendChild(row("y", m.spawn.y, v=>{ m.spawn.y=v; apply(); }));
+        }else if(sel.kind === "goal"){
+          $props.appendChild(row("x", m.goal.x, v=>{ m.goal.x=v; apply(); }));
+          $props.appendChild(row("y", m.goal.y, v=>{ m.goal.y=v; apply(); }));
+        }
+      }
+
+      function rebuild(alsoUpdateList=true){
+        // 현재 맵을 빌드(게임 월드로 반영)
+        buildLevelFromJson(state.map, state.mapIndex+1, state.mapIndex, state.pack.maps.length);
+
+        // DEV 모드에서는 플레이어를 멀리 보내서 코인/충돌 영향 최소화
+        player.x = 9999;
+        player.y = 9999;
+        player.vx = 0; player.vy = 0;
+
+        // 카메라
+        if(state.freeCam){
+          camera.position.set(state.camX, state.camY, 10);
+          camX = state.camX; camY = state.camY;
+        }
+
+        setGhostRect(0,0,1,1,false);
+        ensureGridLinesForMap(state.map);
+
+        if(alsoUpdateList) renderMapList();
+        drawMiniMap();
+      }
+
+      function openDev(){
+        syncToggles();
+        state.pack = ensurePack();
+        state.mapIndex = Math.max(0, Math.min(state.mapIndex, state.pack.maps.length-1));
+        state.map = deepClone(state.pack.maps[state.mapIndex]);
+        state.sel = null;
+
+        state.prevGameState = game.state;
+        game.state = "dev";
+
+        // 정책 영향 최소화(DEV 중 코인 누적 등)
+        state.prevPolicy = { ...policy };
+        policy.keepCoins = false;
+        policy.keepHP = true;
+
+        state.enabled = true;
+        $panel.style.display = "block";
+        $panel.setAttribute("aria-hidden","false");
+        $status.textContent = "ON";
+        $status.style.background = "rgba(45,123,255,.14)";
+        $mapInfo.textContent = `maps:${state.pack.maps.length}`;
+
+        // 카메라 초기
+        state.camX = camX;
+        state.camY = camY;
+
+        // 툴바 렌더
+        if(!$tools.dataset.ready){
+          $tools.dataset.ready = "1";
+          $tools.innerHTML = "";
+          for(const t of TOOLSET){
+            const b = document.createElement("button");
+            b.className = "tool";
+            b.textContent = t.label;
+            b.dataset.id = t.id;
+            b.addEventListener("click", ()=>{
+              setTool(t.id);
+              toast2(`도구: ${t.label}`, 700);
+            });
+            $tools.appendChild(b);
+          }
+        }
+        setTool(state.tool);
+
+        rebuild(true);
+        toast2("DEV 맵 에디터 ON (F2로 종료)", 1100);
+      }
+
+      function closeDev(restart=true){
+        if(!state.enabled) return;
+
+        state.enabled = false;
+        $panel.style.display = "none";
+        $panel.setAttribute("aria-hidden","true");
+        $status.textContent = "OFF";
+        $status.style.background = "";
+
+        // 정책 복원
+        if(state.prevPolicy){
+          Object.assign(policy, state.prevPolicy);
+        }
+
+        // DEV 보조 오브젝트 정리(ghost는 남겨도 무방하나, 깔끔히)
+        if(state.gridLines){
+          scene.remove(state.gridLines);
+          state.gridLines.geometry.dispose();
+          state.gridLines.material.dispose();
+          state.gridLines = null;
+        }
+        setGhostRect(0,0,1,1,false);
+        renderer.domElement.style.cursor = "";
+
+        // 게임 복원
+        game.state = state.prevGameState || "play";
+        playerSprite.visible = true;
+
+        if(restart){
+          // 현재 레벨 다시 빌드해서 즉시 플레이 테스트 가능
+          startLevel(game.level, false, game.levelSeed);
+        }
+
+        toast2("DEV OFF", 700);
+      }
+
+      function toggleDev(){
+        if(state.enabled) closeDev(true);
+        else openDev();
+      }
+
+      // 캔버스 입력
+      renderer.domElement.addEventListener("contextmenu", (e)=>{ if(state.enabled) e.preventDefault(); });
+
+      renderer.domElement.addEventListener("pointerdown", (e)=>{
+        if(!state.enabled) return;
+
+        syncToggles();
+
+        // 우클릭: 삭제
+        if(e.button === 2){
+          const p = worldFromScreen(e.clientX, e.clientY);
+          const wx = snapVal(p.x), wy = snapVal(p.y);
+          const sel = pickAt(wx, wy);
+          if(sel){
+            removeSelection(sel);
+            setSelection(null);
+            rebuild(false);
+            toast2("삭제", 500);
+          }else{
+            toast2("삭제 대상 없음", 500);
+          }
+          e.preventDefault();
+          return;
+        }
+
+        // 미니맵 드래그는 별도
+        if(e.target === $mini){
+          return;
+        }
+
+        const p = worldFromScreen(e.clientX, e.clientY);
+        const wx = snapVal(p.x), wy = snapVal(p.y);
+        if(state.tool === "select"){
+          const sel = pickAt(wx, wy);
+          setSelection(sel);
+          toast2(sel ? `선택: ${sel.kind}` : "선택 없음", 650);
+          e.preventDefault();
+          return;
+        }
+
+        if(state.tool === "platform" || state.tool === "ladder"){
+          state.drag = { x0: wx, y0: wy, x1: wx, y1: wy, kind: state.tool };
+          setGhostRect(wx, wy, 0.001, 0.001, true);
+          e.preventDefault();
+          return;
+        }
+
+        if(state.tool === "delete"){
+          const sel = pickAt(wx, wy);
+          if(sel){
+            removeSelection(sel);
+            setSelection(null);
+            rebuild(false);
+            toast2("삭제", 500);
+          }else{
+            toast2("삭제 대상 없음", 500);
+          }
+          e.preventDefault();
+          return;
+        }
+
+        // 포인트 배치
+        placePoint(state.tool, wx, wy);
+        e.preventDefault();
+      });
+
+      renderer.domElement.addEventListener("pointermove", (e)=>{
+        if(!state.enabled) return;
+        if(!state.drag) return;
+        const p = worldFromScreen(e.clientX, e.clientY);
+        const wx = snapVal(p.x), wy = snapVal(p.y);
+        state.drag.x1 = wx;
+        state.drag.y1 = wy;
+
+        const x = Math.min(state.drag.x0, state.drag.x1);
+        const y = Math.min(state.drag.y0, state.drag.y1);
+        const w = Math.max(0.001, Math.abs(state.drag.x1 - state.drag.x0));
+        const h = Math.max(0.001, Math.abs(state.drag.y1 - state.drag.y0));
+        setGhostRect(x, y, w, h, true);
+      });
+
+      renderer.domElement.addEventListener("pointerup", (e)=>{
+        if(!state.enabled) return;
+        if(!state.drag) return;
+
+        const d = state.drag;
+        state.drag = null;
+
+        const x = Math.min(d.x0, d.x1);
+        const y = Math.min(d.y0, d.y1);
+        const w = Math.abs(d.x1 - d.x0);
+        const h = Math.abs(d.y1 - d.y0);
+
+        if(w < 0.15 || h < 0.15){
+          setGhostRect(0,0,1,1,false);
+          toast2("너무 작아서 취소", 650);
+          return;
+        }
+
+        if(d.kind === "platform"){
+          state.map.platforms.push({ x, y, w, h });
+          setSelection({ kind:"platform", i: state.map.platforms.length-1 });
+          rebuild(false);
+          toast2("플랫폼 추가", 650);
+        }else if(d.kind === "ladder"){
+          state.map.ladders.push({ x, y, w, h, topLow:y, topHigh:(y+h) });
+          setSelection({ kind:"ladder", i: state.map.ladders.length-1 });
+          rebuild(false);
+          toast2("사다리 추가", 650);
+        }
+      });
+
+      function removeSelection(sel){
+        const m = state.map;
+        if(!m || !sel) return;
+        if(sel.kind === "platform") m.platforms.splice(sel.i,1);
+        else if(sel.kind === "ladder") m.ladders.splice(sel.i,1);
+        else if(sel.kind === "coin") m.coins.splice(sel.i,1);
+        else if(sel.kind === "enemy") m.enemies.splice(sel.i,1);
+        else if(sel.kind === "spring") m.springs.splice(sel.i,1);
+        else if(sel.kind === "spawn") { /* noop: spawn은 삭제 대신 이동 */ }
+        else if(sel.kind === "goal") { /* noop */ }
+      }
+
+      function placePoint(kind, x, y){
+        const m = state.map;
+        if(!m) return;
+
+        if(kind === "coin"){
+          m.coins.push({ x, y });
+          setSelection({ kind:"coin", i: m.coins.length-1 });
+          rebuild(false);
+          toast2("코인 추가", 600);
+          return;
+        }
+        if(kind === "enemy"){
+          m.enemies.push({ x, y });
+          setSelection({ kind:"enemy", i: m.enemies.length-1 });
+          rebuild(false);
+          toast2("적 추가", 600);
+          return;
+        }
+        if(kind === "spring"){
+          m.springs.push({ x, y });
+          setSelection({ kind:"spring", i: m.springs.length-1 });
+          rebuild(false);
+          toast2("스프링 추가", 600);
+          return;
+        }
+        if(kind === "spawn"){
+          m.spawn.x = x; m.spawn.y = y;
+          setSelection({ kind:"spawn" });
+          rebuild(false);
+          toast2("스폰 이동", 600);
+          return;
+        }
+        if(kind === "goal"){
+          m.goal.x = x; m.goal.y = y;
+          setSelection({ kind:"goal" });
+          rebuild(false);
+          toast2("깃발 이동", 600);
+          return;
+        }
+
+        // 기타: 선택
+        const sel = pickAt(x, y);
+        if(sel){
+          setSelection(sel);
+          toast2(`선택: ${sel.kind}`, 600);
+        }else{
+          setSelection(null);
+        }
+      }
+
+      // 미니맵 드래그로 카메라 이동
+      $mini.addEventListener("pointerdown", (e)=>{
+        if(!state.enabled) return;
+        syncToggles();
+
+        const pos = miniMapWorldFromEvent(e);
+        if(pos && state.freeCam){
+          state.camX = pos.worldX;
+          state.camY = pos.worldY;
+          camX = pos.worldX; camY = pos.worldY;
+          camera.position.set(camX, camY, 10);
+          drawMiniMap();
+        }
+
+        const rect = $mini.getBoundingClientRect();
+        state.miniDrag = { x0: e.clientX - rect.left, y0: e.clientY - rect.top };
+        $mini.setPointerCapture(e.pointerId);
+      });
+      function miniMapWorldFromEvent(e){
+        const m = state.map;
+        if(!m) return null;
+        const rect = $mini.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * ($mini.width / rect.width);
+        const my = (e.clientY - rect.top) * ($mini.height / rect.height);
+
+        const b = computeBounds(m);
+        const spanX = Math.max(1e-6, b.maxX - b.minX);
+        const spanY = Math.max(1e-6, b.maxY - b.minY);
+        const sx = $mini.width / spanX;
+        const sy = $mini.height / spanY;
+        const s = Math.min(sx, sy);
+        const ox = ($mini.width - spanX*s) * 0.5;
+        const oy = ($mini.height - spanY*s) * 0.5;
+
+        const worldX = b.minX + (mx - ox) / s;
+        const worldY = b.minY + (($mini.height - my) - oy) / s;
+        return { worldX, worldY };
+      }
+
+      $mini.addEventListener("pointermove", (e)=>{
+        if(!state.enabled || !state.miniDrag) return;
+        const pos = miniMapWorldFromEvent(e);
+        if(!pos) return;
+        const { worldX, worldY } = pos;
+
+        if(state.freeCam){
+          state.camX = worldX;
+          state.camY = worldY;
+          camX = worldX; camY = worldY;
+          camera.position.set(camX, camY, 10);
+          drawMiniMap();
+        }
+      });
+      $mini.addEventListener("pointerup", (e)=>{
+        if(!state.enabled) return;
+        state.miniDrag = null;
+      });
+
+      // 버튼/파일 이벤트
+      $toggle.addEventListener("click", ()=> toggleDev());
+      $test.addEventListener("click", ()=>{
+        // 현재 맵을 팩에 반영(메모리) 후 플레이
+        commitCurrentMapToPack();
+        closeDev(true);
+      });
+
+      $snap.addEventListener("change", ()=>{ syncToggles(); drawMiniMap(); });
+      $grid.addEventListener("change", ()=>{ syncToggles(); rebuild(false); });
+      $freeCam.addEventListener("change", ()=>{ syncToggles(); drawMiniMap(); });
+
+      function commitCurrentMapToPack(){
+        state.pack = ensurePack();
+        state.pack.maps[state.mapIndex] = normalizeMap(state.map);
+        activePack = normalizePack(state.pack);
+      }
+
+      $btnSave.addEventListener("click", ()=>{
+        commitCurrentMapToPack();
+        const ok = savePackToLocalStorage(activePack);
+        toast2(ok ? "저장 완료 (LocalStorage)" : "저장 실패", 1000);
+        if(ok){
+          $mapInfo.textContent = `maps:${activePack.maps.length}`;
+        }
+      });
+
+      $btnNew.addEventListener("click", ()=>{
+        commitCurrentMapToPack();
+        const nm = normalizeMap({ name:"새 맵" });
+        activePack.maps.push(nm);
+        state.pack = activePack;
+        state.mapIndex = activePack.maps.length - 1;
+        state.map = deepClone(activePack.maps[state.mapIndex]);
+        setSelection(null);
+        rebuild(true);
+        toast2("새 맵 생성", 900);
+        $mapInfo.textContent = `maps:${activePack.maps.length}`;
+      });
+
+      $btnDup.addEventListener("click", ()=>{
+        commitCurrentMapToPack();
+        const cur = activePack.maps[state.mapIndex];
+        const copy = normalizeMap(deepClone(cur));
+        copy.id = `copy-${Date.now().toString(36)}`;
+        copy.name = `${cur.name || "맵"} (copy)`;
+        activePack.maps.splice(state.mapIndex+1, 0, copy);
+        state.mapIndex++;
+        state.map = deepClone(copy);
+        setSelection(null);
+        rebuild(true);
+        toast2("복제 완료", 900);
+        $mapInfo.textContent = `maps:${activePack.maps.length}`;
+      });
+
+      $btnDel.addEventListener("click", ()=>{
+        commitCurrentMapToPack();
+        if(activePack.maps.length <= 1){
+          toast2("최소 1개 맵은 필요합니다.", 900);
+          return;
+        }
+        activePack.maps.splice(state.mapIndex, 1);
+        state.mapIndex = Math.max(0, state.mapIndex-1);
+        state.map = deepClone(activePack.maps[state.mapIndex]);
+        setSelection(null);
+        rebuild(true);
+        toast2("삭제 완료", 900);
+        $mapInfo.textContent = `maps:${activePack.maps.length}`;
+      });
+
+      $btnExportMap.addEventListener("click", ()=>{
+        commitCurrentMapToPack();
+        downloadJson(`${state.map.id || "map"}.json`, normalizeMap(state.map));
+      });
+      $btnExportPack.addEventListener("click", ()=>{
+        commitCurrentMapToPack();
+        downloadJson(`map_pack.json`, normalizePack(activePack));
+      });
+
+      $importFile.addEventListener("change", async ()=>{
+        const f = $importFile.files && $importFile.files[0];
+        $importFile.value = "";
+        if(!f) return;
+        try{
+          const txt = await f.text();
+          const obj = JSON.parse(txt);
+
+          // pack or single map
+          if(obj && typeof obj === "object" && Array.isArray(obj.maps)){
+            activePack = normalizePack(obj);
+            state.pack = activePack;
+            state.mapIndex = 0;
+            state.map = deepClone(activePack.maps[0] || normalizeMap({ name:"새 맵" }));
+            setSelection(null);
+            rebuild(true);
+            toast2("맵팩 불러오기 완료", 1000);
+            $mapInfo.textContent = `maps:${activePack.maps.length}`;
+          }else{
+            const m = normalizeMap(obj);
+            commitCurrentMapToPack();
+            activePack.maps.push(m);
+            state.mapIndex = activePack.maps.length-1;
+            state.map = deepClone(m);
+            setSelection(null);
+            rebuild(true);
+            toast2("맵 추가 완료", 1000);
+            $mapInfo.textContent = `maps:${activePack.maps.length}`;
+          }
+        }catch(_e){
+          toast2("JSON 파싱 실패", 1000);
+        }
+      });
+
+      function renderMapList(){
+        $mapList.innerHTML = "";
+        for(let i=0;i<state.pack.maps.length;i++){
+          const m = state.pack.maps[i];
+          const el = document.createElement("div");
+          el.className = "item" + (i===state.mapIndex ? " on" : "");
+          el.innerHTML = `<span>${i+1}. ${m.name || m.id}</span><span class="tag">${m.coins.length}c</span>`;
+          el.addEventListener("click", ()=>{
+            commitCurrentMapToPack();
+            state.mapIndex = i;
+            state.map = deepClone(state.pack.maps[i]);
+            setSelection(null);
+            rebuild(true);
+            toast2(`맵 선택: ${state.map.name || state.map.id}`, 700);
+          });
+          $mapList.appendChild(el);
+        }
+      }
+
+      function stepDev(dt){
+        // 카메라 고정 모드일 때만 state.camX/Y 사용
+        if(state.enabled && state.freeCam){
+          camera.position.set(state.camX, state.camY, 10);
+          camX = state.camX; camY = state.camY;
+        }
+        // ghost는 pointer 이벤트로 갱신됨
+        drawMiniMap();
+      }
+
+      // 외부에서 접근 가능한 핸들
+      window.__DEV_EDITOR = {
+        get enabled(){ return state.enabled; },
+        step: stepDev,
+        toggle: toggleDev
+      };
+
+      // 키 바인딩
+      document.addEventListener("keydown", (e)=>{
+        if(e.code === "F2"){
+          e.preventDefault();
+          toggleDev();
+        }
+      });
+
+      // 초기 안내(한 번만)
+      toast2("F2: DEV 맵 에디터", 1400);
+    })();
+
+
     // 시작
     syncPolicyUI(); // 초기 반영
     startLevel(1, true);
     animate();
   </script>
+
+  <!-- DEV MAP EDITOR UI -->
+  <div id="devToast2"></div>
+  <div id="devPanel" aria-hidden="true">
+    <h3>DEV 맵 에디터 <span class="tag" id="devMapInfo">F2</span></h3>
+
+    <div class="row2">
+      <button class="btn primary" id="devToggle">DEV 종료(F2)</button>
+      <button class="btn" id="devTest">현재 맵 테스트</button>
+      <span class="tag" id="devStatus">OFF</span>
+    </div>
+
+    <div class="tabPage on" data-tab="edit">
+      <canvas id="devMiniMap" width="640" height="320"></canvas>
+    </div>
+
+    <div id="devTabs">
+      <button class="tab on" data-tab-target="edit">편집</button>
+      <button class="tab" data-tab-target="map">맵</button>
+      <button class="tab" data-tab-target="save">저장</button>
+    </div>
+
+    <div class="tabPage on" data-tab="edit">
+      <div class="row2">
+        <label class="tag">스냅</label>
+        <input type="checkbox" id="devSnap" checked />
+        <label class="tag">격자</label>
+        <input type="number" id="devGrid" value="0.5" step="0.1" min="0.1" style="width:86px;border-radius:10px;border:1px solid rgba(0,0,0,.12);padding:6px 8px;font-size:12px;" />
+        <label class="tag">카메라 고정</label>
+        <input type="checkbox" id="devFreeCam" checked />
+      </div>
+
+      <div id="devTools"></div>
+
+      <div class="row2">
+        <span class="tag">선택 속성</span>
+      </div>
+      <div id="devProps">
+        <div class="tag">선택된 오브젝트가 없습니다.</div>
+      </div>
+
+      <div class="row2">
+        <span class="tag">TIP</span>
+        <span class="tag">플랫폼/사다리: 좌클릭 드래그</span>
+        <span class="tag">코인/적/스프링/스폰/깃발: 좌클릭</span>
+        <span class="tag">삭제: 우클릭</span>
+      </div>
+    </div>
+
+    <div class="tabPage" data-tab="map">
+      <div class="row2">
+        <span class="tag">맵 목록</span>
+      </div>
+      <div id="devMapList"></div>
+
+      <div class="row2">
+        <button class="btn" id="devNew">새 맵</button>
+        <button class="btn" id="devDup">복제</button>
+        <button class="btn danger" id="devDel">삭제</button>
+      </div>
+    </div>
+
+    <div class="tabPage" data-tab="save">
+      <div class="row2">
+        <button class="btn" id="devSave">저장(LocalStorage)</button>
+      </div>
+
+      <div class="row2">
+        <button class="btn" id="devExportMap">JSON 다운로드(맵)</button>
+        <button class="btn" id="devExportPack">JSON 다운로드(팩)</button>
+        <label class="btn" for="devImportFile" style="cursor:pointer;">JSON 불러오기</label>
+        <input id="devImportFile" type="file" accept="application/json" style="display:none;" />
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
