@@ -110,7 +110,7 @@
       color:white;
       border-radius: 999px;
       padding: 8px 12px;
-      font-size: 12px;
+      font-size: 18px;
       opacity:0;
       transition: opacity .12s ease;
       white-space:nowrap;
@@ -123,10 +123,10 @@
       transform: translate(-50%,-50%);
       padding: 18px 22px;
       border-radius: 18px;
-      background: rgba(0,0,0,.58);
+      background: rgba(255.171.195,.58);
       color: #fff;
-      font-weight: 900;
-      font-size: 34px;
+      font-weight: 700;
+      font-size: 32px;
       letter-spacing: .5px;
       box-shadow: 0 18px 60px rgba(0,0,0,.25);
       opacity: 0;
@@ -250,7 +250,7 @@
         </div>
         <div class="pill small" id="stageText">레벨 1</div>
 
-        <div class="pill small clickable" id="policyPill" title="클릭해서 토글 (단축키: H/C)">
+        <div class="pill small clickable" id="policyPill" title="클릭해서 토글 (단축키: H/C)" style="display:none">
           <span style="font-weight:900">정책</span>
           <span>HP</span><span id="hpPolicyTag" class="onTag">유지</span>
           <span>코인</span><span id="coinPolicyTag" class="onTag">유지</span>
@@ -275,7 +275,7 @@
       <div class="right">
         <div class="pill clickable" id="infoPill" title="조작/설명 보기">ℹ️</div>
         <div class="pill" id="heartWrap" aria-label="생명">
-          <span id="hearts">❤❤❤❤❤❤</span>
+          <span id="hearts" style="color:red">❤❤❤❤❤❤</span>
         </div>
       </div>
     </div>
@@ -286,8 +286,8 @@
       이동 <span class="kbd">A</span><span class="kbd">D</span> / <span class="kbd">←</span><span class="kbd">→</span> ·
       점프 <span class="kbd">Space</span> ·
       숙이기 <span class="kbd">S</span>/<span class="kbd">↓</span> (충돌 박스↓) ·
-      대시 <span class="kbd">Shift</span> (8방향, 공중 1회) ·
-      슬라이드 <span class="kbd">↓</span>+<span class="kbd">Shift</span> ·
+      대시 <span class="kbd">X</span> (대체: <span class="kbd">K</span>, 8방향, 공중 1회) ·
+      슬라이드 <span class="kbd">↓</span>+<span class="kbd">X</span> ·
       벽슬라이드(벽에 붙으면) → <span class="kbd">Space</span> 벽점프 ·
       사다리 <span class="kbd">W</span><span class="kbd">S</span> / <span class="kbd">↑</span><span class="kbd">↓</span> ·
       정책 토글 <span class="kbd">H</span>(HP) <span class="kbd">C</span>(코인) · 재시작 <span class="kbd">R</span> · 사운드 <span class="kbd">M</span>(뮤직) <span class="kbd">N</span>(SFX) <span class="kbd">+</span>/<span class="kbd">-</span>(볼륨)
@@ -318,12 +318,45 @@
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.module.js";
 
     // ----------------------------
+    // 게임 상태
+    // ----------------------------
+    // (사용자 선택) 사망 리스폰 딜레이: 1.5초
+    const RESPAWN_DELAY = 2.5;
+    // 시작/리스폰 시 "뿅" 등장 모션
+    const SPAWN_DUR = 0.42;
+
+    const game = {
+      level: 1,
+      levelSeed: 1,
+      difficulty: 1.0,
+      bossDifficulty: 1,
+      pendingNextLevel: 2,
+      respawnBoss: false,
+      // (사용자 선택) 사망하면 무조건 HP 5로 회복
+      forceFullHP: false,
+      state: "play",     // play | celebrate | bossIntro | boss | bossDefeat | next | respawn
+      t: 0,
+      // 연출 스폰 타이머
+      flowerRainT: 0,
+      fireworkT: 0,
+    };
+	
+	
+	// ----------------------------
     // 유틸
     // ----------------------------
 
     const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
     const lerp = (a,b,t)=>a+(b-a)*t;
     const sign = (v)=> (v>0)-(v<0);
+
+    // 이징(등장/사망 연출)
+    const easeOutCubic = (t)=>1 - Math.pow(1-t, 3);
+    const easeOutBack = (t)=>{
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2);
+    };
 
     // ----------------------------
     // 난수(시드 기반)
@@ -863,6 +896,27 @@
           playOsc({ t: t+dt, freq: 1200 + i*320, dur: 0.06, type:"sine", gain: 0.06, bus: sound.sfxBus });
         }
       },
+      spawn(){
+        // 리스폰/시작 "뿅"(가벼운 반짝)
+        if(!sound.enabled || !sound.sfxEnabled) return;
+        unlockAudio();
+        if(!sound.ctx || limit("spawn", 0.10)) return;
+        const t = sound.ctx.currentTime;
+        playOsc({ t, freq: 880, slideTo: 1320, slideTime: 0.08, dur: 0.12, type:"sine", gain: 0.11, bus: sound.sfxBus });
+        playOsc({ t: t+0.03, freq: 1760, dur: 0.08, type:"triangle", gain: 0.06, bus: sound.sfxBus });
+      },
+      death(){
+        // 사망 "삐용 삐용 삐용~" (아쉬운 톤)
+        if(!sound.enabled || !sound.sfxEnabled) return;
+        unlockAudio();
+        if(!sound.ctx || limit("death", 0.30)) return;
+        const t = sound.ctx.currentTime;
+        const seq = [780, 640, 520];
+        for(let i=0;i<3;i++){
+          playOsc({ t: t+i*0.11, freq: seq[i], slideTo: seq[i]*0.72, slideTime: 0.14, dur: 0.24, type:"triangle", gain: 0.16, filterHz: 2200, bus: sound.sfxBus });
+        }
+        playNoise({ t: t+0.02, dur: 0.18, gain: 0.05, band:"high", hz: 5200, bus: sound.sfxBus });
+      },
       clear(){
         if(!sound.enabled || !sound.sfxEnabled) return;
         unlockAudio();
@@ -908,17 +962,25 @@
       faceLock:false
     };
 
-    const keyMap = {
+   const keyMap = {
       "ArrowLeft":"left","KeyA":"left",
       "ArrowRight":"right","KeyD":"right",
       "ArrowUp":"up","KeyW":"up",
       "ArrowDown":"down","KeyS":"down",
       "Space":"jump",
-      "ShiftLeft":"dash","ShiftRight":"dash",
+      // ✅ Windows '고정키(Sticky Keys)' 팝업을 근본적으로 피하려면
+      //    'Shift' 같은 모디파이어 키를 대시로 쓰지 않는 게 가장 확실합니다.
+      //    기본 대시 키: X (대체: K)
+      "KeyX":"dash",
+      "KeyK":"dash",
       "AltLeft":"faceLock","AltRight":"faceLock",
-      "KeyR":"restart"
+      "KeyR":"restart",
+	  "KeyZ":"boss"
     };
-    
+
+    // Shift 키를 연타/길게 누를 때 Windows 고정키/필터키 팝업이 뜰 수 있어서,
+    // 게임 내에서는 Shift를 '대시'로 사용하지 않도록 차단하고 안내 토스트만 띄웁니다.
+    let _shiftWarned = false;    
 	
 	
 	
@@ -934,10 +996,21 @@
 		  }
 		  return;
 		}
-	  
-	  
-	  
+
+	  // ✅ Shift 차단(윈도우 고정키/필터키 팝업 방지)
+	  // 브라우저 코드로 OS 팝업 자체를 '완전 차단'할 수는 없어서(Windows 기능),
+	  // 게임 조작에서는 Shift를 쓰지 않고 X/K로 대시하도록 유도합니다.
+	  if(e.code === "ShiftLeft" || e.code === "ShiftRight"){
+		if(!_shiftWarned){
+		  showToast("윈도우 고정키 팝업 방지: 대시는 X(또는 K) 키!", 1600);
+		  _shiftWarned = true;
+		}
+		e.preventDefault();
+		return;
+	  }
+
       // 사운드(첫 입력 시 오디오 언락)
+
       if(sound.enabled) unlockAudio();
 
       // 사운드 단축키
@@ -983,6 +1056,11 @@
       if(e.code==="KeyC"){
         policy.keepCoins = !policy.keepCoins;
         syncPolicyUI();
+        return;
+      }
+	  
+	  if(e.code==="KeyZ"){
+        jumpGoal();
         return;
       }
 
@@ -1214,6 +1292,8 @@
       "character_green_jump.png",
       "character_green_jump_back.png",
       "character_green_hit.png",
+      // 사망/추락 스프라이트 시트(3프레임)
+      "character_green_down.png",
       "character_green_duck.png",
       "character_green_front.png",
       "character_green_climb_a.png",
@@ -1280,12 +1360,13 @@
 
     let TEX = {};
     let BOSS_TEX = {};
+    let PLAYER_DOWN = { frames:[], fw:0, fh:0 };
     try{
       const texPs = required.map(loadTex);
       const bgmEl = await loadBGM(BGM_URL);
-      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale] = await Promise.all(texPs);
+      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale] = await Promise.all(texPs);
 
-      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale };
+      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale };
 
       // ----------------------------
       // 보스(고래) 스프라이트 시트 분할(4x4, 타일 256px)
@@ -1320,6 +1401,30 @@
         hurt:   sliceSheet(bossWhale, 2, 2),
         eyeB:   sliceSheet(bossWhale, 3, 2),
       };
+
+      // ----------------------------
+      // 플레이어 사망/추락 스프라이트 시트(가로 3프레임)
+      //  - 파일: character_green_down.png
+      // ----------------------------
+      function sliceStrip(sheet, frames=3){
+        const img = sheet.image;
+        const fw = Math.floor(img.width / frames);
+        const fh = img.height;
+        const out = [];
+        for(let i=0;i<frames;i++){
+          const c = document.createElement("canvas");
+          c.width = fw; c.height = fh;
+          const g = c.getContext("2d");
+          g.clearRect(0,0,fw,fh);
+          g.drawImage(img, i*fw, 0, fw, fh, 0, 0, fw, fh);
+          const t = new THREE.CanvasTexture(c);
+          t.colorSpace = THREE.SRGBColorSpace;
+          t.needsUpdate = true;
+          out.push(t);
+        }
+        return { frames: out, fw, fh };
+      }
+      PLAYER_DOWN = sliceStrip(downSheet, 3);
 
 
       // 사운드에 BGM MP3 주입
@@ -1569,6 +1674,26 @@
       g.fillStyle = grd;
       g.beginPath(); g.arc(cx,cy, w*0.45, 0, Math.PI*2); g.fill();
     }, 128, 128);
+
+    // "뿅" 링(등장/리폰)
+    const texSpawnRing = makeCanvasTexture((g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      const cx=w/2, cy=h/2;
+      // 외곽 링
+      g.strokeStyle = "rgba(255,255,255,0.85)";
+      g.lineWidth = w*0.08;
+      g.beginPath();
+      g.arc(cx, cy, w*0.34, 0, Math.PI*2);
+      g.stroke();
+      // 잔광
+      const grd = g.createRadialGradient(cx,cy, w*0.08, cx,cy, w*0.48);
+      grd.addColorStop(0, "rgba(255,255,255,0.35)");
+      grd.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = grd;
+      g.beginPath();
+      g.arc(cx, cy, w*0.48, 0, Math.PI*2);
+      g.fill();
+    }, 192, 192);
 
     // ----------------------------
     // 엔티티 생성
@@ -1910,6 +2035,87 @@
       }
     }
 
+    // 시작/리스폰 "뿅" 연출(링 + 작은 반짝)
+    function spawnAppear(x, y){
+      // 링
+      const mat = new THREE.MeshBasicMaterial({
+        map: texSpawnRing,
+        color: 0xffffff,
+        transparent:true,
+        opacity: 0.95,
+        depthWrite:false,
+        blending: THREE.AdditiveBlending
+      });
+      const mesh = new THREE.Mesh(geoSpark, mat);
+      mesh.position.set(x, y, 3.15);
+      mesh.scale.set(0.85, 0.85, 1);
+      scene.add(mesh);
+      world.particles.push({
+        kind:"spawnRing",
+        x, y,
+        vx:0, vy:0,
+        life: 0.34,
+        mesh,
+        spin: rand(-6, 6)
+      });
+
+      // 작은 스파클
+      for(let i=0;i<10;i++){
+        const ang = rand(0, Math.PI*2);
+        const spd = rand(2.8, 5.2);
+        const mat2 = new THREE.MeshBasicMaterial({
+          map: texSpark,
+          color: 0xffffff,
+          transparent:true,
+          opacity: 0.75,
+          depthWrite:false,
+          blending: THREE.AdditiveBlending
+        });
+        const m2 = new THREE.Mesh(geoSpark, mat2);
+        m2.position.set(x, y, 3.1);
+        m2.scale.set(0.55, 0.55, 1);
+        scene.add(m2);
+        world.particles.push({
+          kind:"popSpark",
+          x, y,
+          vx: Math.cos(ang)*spd,
+          vy: Math.sin(ang)*spd + rand(0.8, 2.2),
+          life: rand(0.20, 0.30),
+          mesh: m2,
+          spin: rand(-10, 10)
+        });
+      }
+    }
+
+    // 사망 "아쉬운" 연출(과한 폭발 대신 작은 잔광)
+    function spawnDeathPoof(x, y){
+      // 작은 링
+      const mat = new THREE.MeshBasicMaterial({
+        map: texSpawnRing,
+        color: 0xffffff,
+        transparent:true,
+        opacity: 0.70,
+        depthWrite:false,
+        blending: THREE.AdditiveBlending
+      });
+      const mesh = new THREE.Mesh(geoSpark, mat);
+      mesh.position.set(x, y, 3.12);
+      mesh.scale.set(0.55, 0.55, 1);
+      scene.add(mesh);
+      world.particles.push({
+        kind:"spawnRingSmall",
+        x, y,
+        vx:0, vy:0,
+        life: 0.26,
+        mesh,
+        spin: rand(-6, 6)
+      });
+
+      // 최소한의 파편
+      spawnParticles(x, y, 12, 0.85);
+      spawnDust(x, y, 8);
+    }
+
 // ----------------------------
     // Celeste 느낌 플레이어(핵심: 8방향 1회 에어대시)
     // ----------------------------
@@ -1964,6 +2170,91 @@
     const playerSprite = new THREE.Sprite(playerMat);
     scene.add(playerSprite);
 
+    // 사망/추락 스프라이트(PLAYER_DOWN: 3프레임)
+    const deathMat = new THREE.SpriteMaterial({
+      map: (PLAYER_DOWN.frames && PLAYER_DOWN.frames[0]) ? PLAYER_DOWN.frames[0] : TEX.hit,
+      transparent:true,
+      opacity: 1.0
+    });
+    const deathSprite = new THREE.Sprite(deathMat);
+    deathSprite.visible = false;
+    deathSprite.frustumCulled = false;
+    scene.add(deathSprite);
+
+    const deathAnim = {
+      active: false,
+      t: 0,
+      x: 0,
+      y: 0,
+      facing: 1,
+      dur: RESPAWN_DELAY,
+    };
+	
+	
+	
+	
+
+    function beginDeathAnim(x, y, facing){
+      deathAnim.active = true;
+      deathAnim.t = 0;
+      deathAnim.x = x;
+      deathAnim.y = y;
+      deathAnim.facing = (facing||1);
+      deathAnim.dur = RESPAWN_DELAY;
+
+      // 첫 프레임에서 시작
+      if(PLAYER_DOWN.frames && PLAYER_DOWN.frames[0]){
+        deathSprite.material.map = PLAYER_DOWN.frames[0];
+      }
+      deathSprite.material.opacity = 1.0;
+      deathSprite.visible = true;
+      deathSprite.position.set(x, y, 3.25);
+      // 플레이어 스케일과 유사하게(가로/세로 비율 보정)
+      const asp = (PLAYER_DOWN.fw && PLAYER_DOWN.fh) ? (PLAYER_DOWN.fw / PLAYER_DOWN.fh) : 1;
+      const baseY = 1.75;
+      deathSprite.scale.set(baseY*asp * (deathAnim.facing>=0 ? 1 : -1), baseY, 1);
+      deathSprite.rotation.z = 0;
+    }
+
+    function endDeathAnim(){
+      deathAnim.active = false;
+      deathSprite.visible = false;
+    }
+
+    function updateDeathAnim(dt){
+      if(!deathAnim.active) return;
+      deathAnim.t += dt;
+
+      const t = deathAnim.t;
+      // 프레임: 0 -> 1 -> 2 후 유지
+      let fi = 0;
+      if(t >= 0.12) fi = 1;
+      if(t >= 0.24) fi = 2;
+      if(PLAYER_DOWN.frames && PLAYER_DOWN.frames[fi]){
+        deathSprite.material.map = PLAYER_DOWN.frames[fi];
+      }
+
+      // 살짝 위로 "툭" + 아래로 가라앉기
+      const hop = Math.exp(-t*10) * 0.55;
+      const fall = t * 0.95;
+      const yy = deathAnim.y + hop - fall;
+      deathSprite.position.set(deathAnim.x, yy, 3.25);
+
+      // 살짝 기울기
+      deathSprite.rotation.z = Math.sin(t*7.0) * 0.06;
+
+      // 페이드 아웃
+      const fadeStart = Math.min(0.55, RESPAWN_DELAY*0.55);
+      if(t > fadeStart){
+        const k = clamp((t - fadeStart) / Math.max(0.0001, (RESPAWN_DELAY - fadeStart)), 0, 1);
+        deathSprite.material.opacity = 1 - easeOutCubic(k);
+      }
+
+      if(t >= RESPAWN_DELAY){
+        endDeathAnim();
+      }
+    }
+
     const player = {
       x: 0, y: 2.5,
       vx: 0, vy: 0,
@@ -1983,6 +2274,9 @@
       invuln: 0,
       hurtT: 0,
       hp: 3,
+
+      // 시작/리스폰 "뿅" 모션 타이머(시각 효과)
+      spawnT: 0,
 
       isDucking: false,
       onLadder: false,
@@ -2141,22 +2435,7 @@ function resolveCollisions(nextX, nextY){
 }
 
 
-    // ----------------------------
-    // 게임 상태
-    // ----------------------------
-    const game = {
-      level: 1,
-      levelSeed: 1,
-      difficulty: 1.0,
-      bossDifficulty: 1,
-      pendingNextLevel: 2,
-      respawnBoss: false,
-      state: "play",     // play | celebrate | bossIntro | boss | bossDefeat | next | respawn
-      t: 0,
-      // 연출 스폰 타이머
-      flowerRainT: 0,
-      fireworkT: 0,
-    };
+    
 
     // ----------------------------
     // 월드 정리
@@ -2483,7 +2762,7 @@ function resolveCollisions(nextX, nextY){
       if(canControl && input.jumpPressed) player.jumpBuf = JUMP_BUF;
       else player.jumpBuf = Math.max(0, player.jumpBuf - dt);
 
-      // 슬라이드(↓+Shift)
+      // 슬라이드(↓+대시 키: 기본 X)
       if(canControl && player.onGround && !player.isClimbing && player.dashT<=0){
         if(input.dashPressed && input.down && player.slideCd<=0 && player.slideT<=0){
           player.slideT = SLIDE_TIME;
@@ -2769,6 +3048,17 @@ function resolveCollisions(nextX, nextY){
         player.duckStepT = 0;
       }
 
+      // 시작/리스폰 "뿅" 모션(스케일 0→1 + 약간의 오버슈트)
+      if(player.spawnT > 0){
+        player.spawnT = Math.max(0, player.spawnT - dt);
+        const k = 1 - clamp(player.spawnT / SPAWN_DUR, 0, 1);
+        const s = clamp(easeOutBack(k), 0, 1.25);
+        baseScaleX *= s;
+        baseScaleY *= s;
+        // 약간 위로 뜨는 느낌
+        yBob += (1 - easeOutCubic(clamp(k,0,1))) * 0.18;
+      }
+
       playerSprite.position.set(player.x, player.y + 0.08 + yBob, 3);
       playerSprite.scale.set(baseScaleX, baseScaleY, 1);
       {
@@ -2895,8 +3185,15 @@ function resolveCollisions(nextX, nextY){
 	
     function hurtPlayer(fromX){
       if(player.invuln > 0 || (game.state !== "play" && game.state !== "boss" && game.state !== "bossIntro")) return;
-      player.hp--;
+      player.hp = Math.max(0, player.hp - 1);
       $hearts.textContent = "❤".repeat(Math.max(0, player.hp)) + "♡".repeat(Math.max(0, 5-player.hp));
+
+      // HP가 0이 되면 즉시 사망 연출(스프라이트 시트 + 사운드) 후 리스폰
+      if(player.hp <= 0){
+        startRespawn("체력이 다했어…");
+        return;
+      }
+
       player.invuln = 1.0;
       player.hurtT = 0.22;
 
@@ -2908,12 +3205,6 @@ function resolveCollisions(nextX, nextY){
       spawnDust(player.x, player.y - player.h/2 + 0.05, 10);
       SFX.hurt();
       showToast("피격!", 700);
-
-      if(player.hp <= 0){
-        showToast("게임 오버! (R로 재시작)", 1800);
-        game.state = "next";
-        game.t = 1.2;
-      }
     }
 
     function updateEnemies(dt){
@@ -3020,7 +3311,30 @@ const ex = e.x - e.w/2;
         startBossFight();
       }
     }
+    
+	function jumpGoal(){
+	    const g = world.goal;
 
+      // 레벨 코인 다 모으면 활성화(퍼즐/탐색 느낌)
+      
+        g.active = true;
+        g.mesh.material.map = texFlagOn;
+        g.mesh.material.needsUpdate = true;
+        showToast("골 활성화!", 900);
+      
+
+      
+
+      const px = player.x - player.w*0.5;
+      const py = player.y - player.h*0.5;
+      const gx = g.x - g.w/2;
+      const gy = g.y - g.h/2;
+
+     
+        startBossFight();
+      
+	}
+	
     // ----------------------------
     // 보스전(거대한 고래)
     //  - 코인 전부 수집 후 깃발 도착 → 보스전 진입
@@ -3035,8 +3349,8 @@ const ex = e.x - e.w/2;
       g.beginPath();
       g.arc(w/2,h/2,w*0.34,0,Math.PI*2);
       g.closePath();
-      g.strokeStyle = "rgba(255,255,255,0.70)";
-      g.lineWidth = w*0.06;
+      g.strokeStyle = "rgba(9,9,9,0.50)";
+      g.lineWidth = w*0.03;
       g.stroke();
 
       // 내부 그라데이션
@@ -3090,6 +3404,20 @@ const ex = e.x - e.w/2;
       player.y = 2.6;
       resetPlayer();
       playerSprite.visible = true;
+
+      // (사망 리스폰) HP 정책: 무조건 5로 회복
+      if(game.forceFullHP){
+        player.hp = 5;
+        $hearts.textContent = "❤❤❤❤❤";
+        game.forceFullHP = false;
+      }else{
+        $hearts.textContent = "❤".repeat(Math.max(0, player.hp)) + "♡".repeat(Math.max(0, 5-player.hp));
+      }
+
+      // "뿅" 등장 이펙트 + 모션
+      player.spawnT = SPAWN_DUR;
+      spawnAppear(player.x, player.y);
+      SFX.spawn();
 
       // 보스 생성
       const bossW = 7.2;
@@ -3253,7 +3581,7 @@ const ex = e.x - e.w/2;
         // 다음부터 더 어려움
         game.bossDifficulty = (game.bossDifficulty|0) + 1;
 
-        showBigMsg(true, `격파! 다음 보스 Lv ${game.bossDifficulty}`);
+        showBigMsg(true, `격파 성공! 다음 보스 Lv ${game.bossDifficulty}`);
         showToast("보스 격파! 다음 레벨로...", 1200);
 
         // 탄 제거
@@ -3431,17 +3759,21 @@ const ex = e.x - e.w/2;
       if(game.state !== "play" && !wasBoss) return;
       game.respawnBoss = wasBoss;
       game.state = "respawn";
-      game.t = 0.70;
+      game.t = RESPAWN_DELAY;
 
-      // 팡! 연출
-      spawnPop(player.x, player.y);
-      SFX.pop();
-      screenShake(0.14, 0.18);
+      // (사용자 선택) 사망하면 무조건 HP 5로 회복
+      game.forceFullHP = true;
 
-      // 잠깐 숨김(셀레스트 느낌)
+      // 과한 폭발 대신 "아쉬운" 연출 + 스프라이트 시트 모션
+      spawnDeathPoof(player.x, player.y);
+      SFX.death();
+      screenShake(0.08, 0.12);
+
+      // 플레이어 숨기고 사망 스프라이트 표시
       playerSprite.visible = false;
+      beginDeathAnim(player.x, player.y + 0.08, player.facing);
 
-      showToast(reason || "팡!", 900);
+      showToast(reason || "사망...", 900);
     }
 
     function checkFallDeath(){
@@ -3485,6 +3817,10 @@ const ex = e.x - e.w/2;
           p.vx += sway * dt;
         }else if(p.kind==="popFlash"){
           // 플래시: 위치 고정(중력 X)
+        }else if(p.kind==="spawnRing"){
+          // 등장 링: 위치 고정(중력 X)
+        }else if(p.kind==="spawnRingSmall"){
+          // 사망 잔광 링: 위치 고정(중력 X)
         }else if(p.kind==="popSpark"){
           // 팡! 스파크: 짧게 튕기고 사라짐
           p.vx *= 0.96;
@@ -3503,12 +3839,20 @@ const ex = e.x - e.w/2;
         if(p.kind==="popFlash"){
           const k = 1 - clamp(p.life/0.22, 0, 1);
           p.mesh.scale.setScalar(2.1 + k*6.0);
+        }else if(p.kind==="spawnRing"){
+          const k = 1 - clamp(p.life/0.34, 0, 1);
+          p.mesh.scale.setScalar(0.85 + k*2.4);
+        }else if(p.kind==="spawnRingSmall"){
+          const k = 1 - clamp(p.life/0.26, 0, 1);
+          p.mesh.scale.setScalar(0.55 + k*1.6);
         }
 
         let fadeBase = 0.55;
         if(p.kind==="petal" || p.kind==="petalRain") fadeBase = 2.2;
         else if(p.kind==="firework") fadeBase = 1.6;
         else if(p.kind==="popFlash") fadeBase = 0.22;
+        else if(p.kind==="spawnRing") fadeBase = 0.34;
+        else if(p.kind==="spawnRingSmall") fadeBase = 0.26;
         else if(p.kind==="popSpark") fadeBase = 0.45;
         p.mesh.material.opacity = clamp(p.life/fadeBase, 0, 1);
       }
@@ -3623,9 +3967,10 @@ const ex = e.x - e.w/2;
       game.fireworkT = 0;
 
       // 정책: HP
-      if(hardReset || !policy.keepHP){
+      if(hardReset || !policy.keepHP || game.forceFullHP){
         player.hp = 5;
         $hearts.textContent = "❤❤❤❤❤";
+        game.forceFullHP = false;
       }else{
         // 유지 시 현재 hp 그대로
         $hearts.textContent = "❤".repeat(Math.max(0, player.hp)) + "♡".repeat(Math.max(0, 5-player.hp));
@@ -3661,6 +4006,11 @@ const ex = e.x - e.w/2;
       player.y = 2.6;
       resetPlayer();
       playerSprite.visible = true;
+
+      // "뿅" 등장 이펙트 + 모션
+      player.spawnT = SPAWN_DUR;
+      spawnAppear(player.x, player.y);
+      SFX.spawn();
 
       $dashText.textContent = `${player.dashCharges}/${DASH_CHARGES_MAX}`;
       showToast(fromDeath ? "리스타트!" : `레벨 ${level} 시작!`, fromDeath ? 650 : 900);
@@ -3765,7 +4115,8 @@ const ex = e.x - e.w/2;
         player.vy *= 0.88;
 
         if(game.t <= 0){
-          playerSprite.visible = true;
+          // 사망 스프라이트 정리(혹시 남아있으면)
+          endDeathAnim();
 
           if(game.respawnBoss){
             const diff = Math.max(1, (game.bossDifficulty|0));
@@ -3792,6 +4143,7 @@ const ex = e.x - e.w/2;
 
       updateParticles(dt);
       updateAfterimages(dt);
+      updateDeathAnim(dt);
 
       input.jumpPressed = false;
       input.jumpReleased = false;
