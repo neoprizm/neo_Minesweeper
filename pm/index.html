@@ -123,10 +123,10 @@
       transform: translate(-50%,-50%);
       padding: 18px 22px;
       border-radius: 18px;
-      background: rgba(255.171.195,.58);
+      background: rgba(253, 47, 143, .71); //rgba(253, 47, 143, 0.71)
       color: #fff;
       font-weight: 700;
-      font-size: 32px;
+      font-size: 30px;
       letter-spacing: .5px;
       box-shadow: 0 18px 60px rgba(0,0,0,.25);
       opacity: 0;
@@ -321,9 +321,9 @@
     // 게임 상태
     // ----------------------------
     // (사용자 선택) 사망 리스폰 딜레이: 1.5초
-    const RESPAWN_DELAY = 2.5;
+    const RESPAWN_DELAY = 3.5;
     // 시작/리스폰 시 "뿅" 등장 모션
-    const SPAWN_DUR = 0.42;
+    const SPAWN_DUR = 2.82;
 
     const game = {
       level: 1,
@@ -438,7 +438,7 @@
     const $coinPolicyTag = document.getElementById("coinPolicyTag");
 
     let toastT = 0;
-    function showToast(msg, ms=900){
+    function showToast(msg, ms=1000){
       $toast.textContent = msg;
       toastT = ms/1000;
       $toast.style.opacity = "1";
@@ -2036,14 +2036,14 @@
     }
 
     // 시작/리스폰 "뿅" 연출(링 + 작은 반짝)
-    function spawnAppear(x, y){
+    function spawnAppear_origin(x, y){
       // 링
       const mat = new THREE.MeshBasicMaterial({
         map: texSpawnRing,
         color: 0xffffff,
         transparent:true,
         opacity: 0.95,
-        depthWrite:false,
+        depthWrite:false, //falsse
         blending: THREE.AdditiveBlending
       });
       const mesh = new THREE.Mesh(geoSpark, mat);
@@ -2054,7 +2054,7 @@
         kind:"spawnRing",
         x, y,
         vx:0, vy:0,
-        life: 0.34,
+        life: 0.8, //0.34,
         mesh,
         spin: rand(-6, 6)
       });
@@ -2081,6 +2081,60 @@
           vx: Math.cos(ang)*spd,
           vy: Math.sin(ang)*spd + rand(0.8, 2.2),
           life: rand(0.20, 0.30),
+          mesh: m2,
+          spin: rand(-10, 10)
+        });
+      }
+    }
+	    // 변경한 시작/리스폰 "뿅" 연출(링 + 작은 반짝)
+    function spawnAppear(x, y){
+      // 플래시
+      const mat = new THREE.MeshBasicMaterial({
+        map: texSpark,
+        color: 0xffffff,
+        transparent:true,
+        opacity: 0.95,
+        depthWrite:false,
+        blending: THREE.AdditiveBlending
+      });
+      const mesh = new THREE.Mesh(geoSpark, mat);
+      mesh.position.set(x, y, 3.2);
+      mesh.scale.set(2.1, 2.1, 1);
+      scene.add(mesh);
+      world.particles.push({
+        kind:"popFlash",
+        x, y,
+        vx:0, vy:0,
+        life: 0.22,
+        mesh,
+        spin: rand(-10, 10)
+      });
+
+      // 파편/먼지
+      spawnParticles(x, y, 28, 1.35);
+      spawnDust(x, y, 16);
+
+      // 추가 스파크
+      for(let i=0;i<18;i++){
+        const ang = rand(0, Math.PI*2);
+        const spd = rand(5.5, 10.5);
+        const mat2 = new THREE.MeshBasicMaterial({
+          map: texSpark,
+          color: 0xffffff,
+          transparent:true,
+          opacity: 0.85,
+          depthWrite:false,
+          blending: THREE.AdditiveBlending
+        });
+        const m2 = new THREE.Mesh(geoSpark, mat2);
+        m2.position.set(x, y, 3.1);
+        scene.add(m2);
+        world.particles.push({
+          kind:"popSpark",
+          x, y,
+          vx: Math.cos(ang)*spd,
+          vy: Math.sin(ang)*spd,
+          life: rand(0.28, 0.45),
           mesh: m2,
           spin: rand(-10, 10)
         });
@@ -3472,8 +3526,11 @@ const ex = e.x - e.w/2;
       $stageText.textContent = `BOSS Lv ${diff}`;
 
       showBigMsg(true, `BOSS 등장! 거대한 고래 (Lv ${diff})`);
-      showToast("보스전! 거품 미사일을 피하고 대시로 공격!", 1400);
-      screenShake(0.18, 0.20);
+      showToast("보스전! 거품 미사일을 피하고 대시로 공격!", 15000);
+	  showToast("대시!! ", 15000);
+      //screenShake(0.18, 0.20);
+	  screenShake(0.99, 0.99);
+	  screenShake(0.18, 0.20);
       SFX.clear();
     }
 
