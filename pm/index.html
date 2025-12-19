@@ -160,33 +160,50 @@
     #touch .rightCluster{ right: 16px; }
     #touch .col{ display:flex; flex-direction:column; gap:10px; }
   
-    /* 로딩 오버레이 */
+    /* 타이틀/로딩 오버레이 */
     #loader{
       position:fixed; inset:0;
       display:flex; align-items:center; justify-content:center;
-      background:rgba(10,12,18,.70);
       z-index:9999;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      color:#fff;
+      overflow:hidden;
+    }
+    #loader .bg{
+      position:absolute; inset:-40px;
+      background:url("title_image.png") center/cover no-repeat;
+      filter: blur(18px) brightness(0.88) saturate(1.05);
+      transform: scale(1.10);
+    }
+    #loader .shade{
+      position:absolute; inset:0;
+      background: radial-gradient(circle at 50% 35%, rgba(0,0,0,.25), rgba(0,0,0,.72));
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
     }
     #loader .panel{
-      width:min(420px, 86vw);
-      padding:18px 18px 14px;
-      border-radius:16px;
-      background:rgba(255,255,255,.92);
-      box-shadow: 0 18px 60px rgba(0,0,0,.35);
-      border:1px solid rgba(0,0,0,.10);
-    }
-    #loader .title{
-      font-weight:900;
-      letter-spacing:.4px;
+      position:relative;
+      width:min(760px, 92vw);
+      padding:18px 18px 16px;
+      border-radius:24px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 20px 70px rgba(0,0,0,.46);
       text-align:center;
-      margin-bottom:12px;
+    }
+    #loader .titleArt{
+      display:block;
+      width:min(680px, 86vw);
+      max-height:52vh;
+      object-fit:contain;
+      margin: 0 auto 14px;
+      border-radius:22px;
+      box-shadow: 0 16px 55px rgba(0,0,0,.50);
+      background: rgba(255,255,255,.05);
     }
     #loader .bar{
       height:12px;
       border-radius:999px;
-      background:rgba(0,0,0,.10);
+      background:rgba(255,255,255,.20);
       overflow:hidden;
     }
     #barFill{
@@ -196,6 +213,39 @@
       background:linear-gradient(90deg, rgba(0,255,200,.95), rgba(120,220,255,.95), rgba(180,120,255,.95));
       transition: width .12s ease;
     }
+    #loader .small{
+      font-size: 12px;
+      opacity: .92;
+      text-align:center;
+      margin-top: 10px;
+      color: rgba(255,255,255,.92);
+    }
+    #loader .actions{
+      display:flex;
+      justify-content:center;
+      margin-top: 12px;
+    }
+    #btnStart{
+      pointer-events:auto;
+      font-weight: 900;
+      font-size: 18px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      border: 0;
+      color: #0c1020;
+      background: rgba(255,255,255,.93);
+      box-shadow: 0 14px 40px rgba(0,0,0,.35);
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    #btnStart:active{ transform: scale(0.98); }
+    #btnStart:disabled{
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(0.55);
+      box-shadow: none;
+    }
+
 
 
     /* 모바일 가변 UI */
@@ -421,14 +471,20 @@
 <body>
   <div id="wrap"></div>
 
-  <!-- 로딩 오버레이: 모든 리소스 로딩 완료 후 시작 -->
+  <!-- 타이틀/로딩 오버레이: 리소스 로딩 완료 후 "Dash & Run" 버튼으로 시작 -->
   <div id="loader" aria-label="로딩">
+    <div class="bg" aria-hidden="true"></div>
+    <div class="shade" aria-hidden="true"></div>
     <div class="panel">
-      <div class="title">Loading...</div>
+      <img class="titleArt" src="title_image.png" alt="Tiny Hero: Dash & Run" />
       <div class="bar"><div id="barFill"></div></div>
-      <div id="loadText" class="small" style="opacity:.85; text-align:center; margin-top:10px;">리소스 로딩 중</div>
+      <div id="loadText" class="small">리소스 로딩 중...</div>
+      <div class="actions">
+        <button id="btnStart" disabled>Dash &amp; Run</button>
+      </div>
     </div>
   </div>
+
 
   <div id="hud">
     <div class="row">
@@ -1341,6 +1397,36 @@
     const $loader = document.getElementById("loader");
     const $barFill = document.getElementById("barFill");
     const $loadText = document.getElementById("loadText");
+    const $btnStart = document.getElementById("btnStart");
+
+    let __canStart = false;
+    let __started = false;
+
+    function showReadyToStart(){
+      __canStart = true;
+      if($btnStart) $btnStart.disabled = false;
+      if($loadText) $loadText.textContent = "준비 완료! Dash & Run 버튼을 눌러 시작하세요.";
+    }
+
+    function startFromTitle(){
+      if(__started || !__canStart) return;
+      __started = true;
+
+      // 버튼을 눌렀을 때만 오디오 언락(브라우저 정책)
+      try{ if(typeof unlockAudio === 'function') unlockAudio(); }catch(_){ }
+
+      hideLoader();
+      syncPolicyUI(); // 정책(HP/코인 유지 등) 반영
+      startLevel(1, true);
+      animate();
+    }
+
+    if($btnStart){
+      $btnStart.addEventListener("click", (ev)=>{
+        ev.preventDefault();
+        startFromTitle();
+      });
+    }
     function setLoading(done, total, label){
       const pct = total > 0 ? Math.round((done/total)*100) : 0;
       if($barFill) $barFill.style.width = pct + "%";
@@ -1787,7 +1873,7 @@ function sliceStripAuto(sheet, expected=5){
       sound.bgmEl = bgmEl;
       try{ applySoundGains(); }catch(_){}
 
-      hideLoader();
+      showReadyToStart();
     }catch(err){
       console.error(err);
       if($loadText) $loadText.textContent = "로딩 실패: 파일 누락/경로 문제";
@@ -6249,9 +6335,9 @@ if(b.patternCd <= 0){
 
 
     // 시작
-    syncPolicyUI(); // 초기 반영
-    startLevel(1, true);
-    animate();
+    // - 리소스 로딩 완료 후: showReadyToStart()에서 Start 버튼 활성화
+    // - 게임 시작: Start 버튼 클릭 → startFromTitle()
+    syncPolicyUI(); // 초기 UI 반영(게임 시작은 버튼 클릭 후)
   </script>
 
   <!-- DEV MAP EDITOR UI -->
