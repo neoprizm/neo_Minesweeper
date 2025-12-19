@@ -1585,7 +1585,7 @@
     ];
 
     // ✅ BGM: 첨부 MP3 사용(파일명 변경 시 여기만 수정)
-    const BGM_URL = encodeURI("반짝이는 모험.mp3");
+    const BGM_URL = encodeURI("fun challenge.mp3");
 
     let _loadDone = 0;
     const _loadTotal = required.length + 1; // + BGM
@@ -1619,7 +1619,7 @@
         };
         const fail = ()=>{
           cleanup();
-          reject(new Error("BGM 로딩 실패: MP3 파일(반짝이는 모험.mp3)이 index.html과 같은 폴더에 있는지 확인하세요."));
+          reject(new Error("BGM Loading Failed: MP3 File(fun challenge.mp3) check File Path."));
         };
         const cleanup = ()=>{
           a.removeEventListener("canplaythrough", done);
