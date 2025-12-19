@@ -472,7 +472,7 @@
     <div id="toast">준비!</div>
 
     <div id="subtitle">
-      이동 <span class="kbd">A</span><span class="kbd">D</span> / <span class="kbd">←</span><span class="kbd">→</span> ·
+      보스전 <span class="kbd">Z</span> / 맵만들기 <span class="kbd">F2</span> / 이동 <span class="kbd">A</span><span class="kbd">D</span> / <span class="kbd">←</span><span class="kbd">→</span> ·
       점프 <span class="kbd">Space</span> ·
       숙이기 <span class="kbd">S</span>/<span class="kbd">↓</span> (충돌 박스↓) ·
       대시 <span class="kbd">X</span> (대체: <span class="kbd">K</span>, 8방향, 공중 1회) ·
@@ -1492,7 +1492,9 @@
       "slime_normal_rest.png",
       "slime_normal_walk_a.png",
 	  "slime_normal_walk_b.png",
-      "boss_whale_image.png"
+      "boss_whale_image.png",
+      "boss_dragon_image.png",
+      "boss_octopus_image.png"
     ];
 
     // ✅ BGM: 첨부 MP3 사용(파일명 변경 시 여기만 수정)
@@ -1549,13 +1551,16 @@
 
     let TEX = {};
     let BOSS_TEX = {};
+    let BOSS_TEX_WHALE = null;
+    let BOSS_TEX_DRAGON = null;
+    let BOSS_TEX_OCTOPUS = null;
     let PLAYER_DOWN = { frames:[], fw:0, fh:0 };
     try{
       const texPs = required.map(loadTex);
       const bgmEl = await loadBGM(BGM_URL);
-      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale] = await Promise.all(texPs);
+      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale, bossDragon, bossOctopus] = await Promise.all(texPs);
 
-      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale };
+      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale, bossDragon, bossOctopus };
 
       // ----------------------------
       // 보스(고래) 스프라이트 시트 분할(4x4, 타일 256px)
@@ -1591,6 +1596,168 @@
         eyeB:   sliceSheet(bossWhale, 3, 2),
       };
 
+
+// 고래 텍스처를 보관(드래곤/고래 전환용)
+BOSS_TEX_WHALE = BOSS_TEX;
+
+// ----------------------------
+// 보스(드래곤) 스프라이트 분할(자동 5프레임 감지)
+//  - 파일: boss_dragon_image.png
+//  - 현재 첨부 이미지는 가로 2048px로 5등분이 딱 떨어지지 않아(2048/5=409.6),
+//    투명 알파를 기반으로 프레임 구간을 자동 감지합니다.
+// ----------------------------
+function sliceStripAuto(sheet, expected=5){
+  const img = sheet.image;
+  const cw = img.width, ch = img.height;
+
+  const c0 = document.createElement("canvas");
+  c0.width = cw; c0.height = ch;
+  const g0 = c0.getContext("2d");
+  g0.clearRect(0,0,cw,ch);
+  g0.drawImage(img, 0,0);
+
+  let boxes = [];
+  try{
+    const data = g0.getImageData(0,0,cw,ch).data;
+    const colHas = new Uint8Array(cw);
+
+    // alpha 투영(열 단위)
+    for(let x=0; x<cw; x++){
+      let hit = 0;
+      for(let y=0; y<ch; y++){
+        const a = data[(y*cw + x)*4 + 3];
+        if(a > 10){ hit = 1; break; }
+      }
+      colHas[x] = hit;
+    }
+
+    // 연속 구간(프레임 후보) 찾기
+    let inSeg=false, s=0;
+    for(let x=0; x<cw; x++){
+      if(!inSeg && colHas[x]){
+        inSeg=true; s=x;
+      }else if(inSeg && !colHas[x]){
+        const e = x-1;
+        if(e-s > 10) boxes.push([s, e]);
+        inSeg=false;
+      }
+    }
+    if(inSeg){
+      const e = cw-1;
+      if(e-s > 10) boxes.push([s, e]);
+    }
+
+    // 세로 바운딩(각 구간별)
+    const refined = [];
+    for(const [sx, ex] of boxes){
+      let top = ch-1, bot = 0;
+      for(let y=0; y<ch; y++){
+        for(let x=sx; x<=ex; x++){
+          const a = data[(y*cw + x)*4 + 3];
+          if(a > 10){
+            if(y < top) top = y;
+            if(y > bot) bot = y;
+            break;
+          }
+        }
+      }
+      // 여백 조금
+      const pad = 2;
+      const x0 = Math.max(0, sx - pad);
+      const x1 = Math.min(cw-1, ex + pad);
+      const y0 = Math.max(0, top - pad);
+      const y1 = Math.min(ch-1, bot + pad);
+      if(x1-x0 > 12 && y1-y0 > 12) refined.push({x:x0, y:y0, w:(x1-x0+1), h:(y1-y0+1)});
+    }
+
+    // 좌→우 정렬
+    refined.sort((a,b)=>a.x-b.x);
+
+    // 기대 프레임 수보다 많으면, 면적 큰 것 위주로 고르고 다시 좌→우 정렬
+    if(refined.length > expected){
+      refined.sort((a,b)=>(b.w*b.h)-(a.w*a.h));
+      refined.length = expected;
+      refined.sort((a,b)=>a.x-b.x);
+    }
+
+    if(refined.length === expected){
+      boxes = refined;
+    }else{
+      boxes = [];
+    }
+  }catch(_){
+    boxes = [];
+  }
+
+  // 감지 실패 시 균등 분할 폴백(마지막 안전장치)
+  if(!boxes || boxes.length !== expected){
+    const fw = Math.floor(cw / expected);
+    const fh = ch;
+    const out = [];
+    for(let i=0;i<expected;i++){
+      const c = document.createElement("canvas");
+      c.width = fw; c.height = fh;
+      const g = c.getContext("2d");
+      g.clearRect(0,0,fw,fh);
+      g.drawImage(img, i*fw, 0, fw, fh, 0, 0, fw, fh);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.needsUpdate = true;
+      out.push(t);
+    }
+    return out;
+  }
+
+  // 감지 성공: 각 bbox로 캔버스 텍스처 생성
+  const out = [];
+  for(const b of boxes){
+    const c = document.createElement("canvas");
+    c.width = b.w; c.height = b.h;
+    const g = c.getContext("2d");
+    g.clearRect(0,0,b.w,b.h);
+    g.drawImage(img, b.x, b.y, b.w, b.h, 0,0, b.w, b.h);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.needsUpdate = true;
+    out.push(t);
+  }
+  return out;
+}
+
+   const dragonFrames = sliceStripAuto(bossDragon, 5);
+
+	// 드래곤 5포즈를 idle/attack에 매핑
+	// (추측) 좌→우 순서: roarA, roarB, glide, cute, calm
+	BOSS_TEX_DRAGON = {
+	  attackA: dragonFrames[0] || dragonFrames[1] || dragonFrames[2],
+	  attackB: dragonFrames[1] || dragonFrames[0] || dragonFrames[2],
+	  idleA:   dragonFrames[3] || dragonFrames[2] || dragonFrames[4],
+	  idleB:   dragonFrames[4] || dragonFrames[3] || dragonFrames[2],
+	  charge:  dragonFrames[2] || dragonFrames[0],
+	  hurt:    dragonFrames[2] || dragonFrames[1],
+	};
+
+  // ----------------------------
+  // 보스(문어) 스프라이트 분할(5프레임)
+  //  - 파일: boss_octopus_image.png
+  //  - 첨부 이미지는 5개의 포즈가 가로로 이어진 스트립입니다.
+  //    (안전하게 알파 기반 자동 감지 로직 재사용)
+  // ----------------------------
+  const octoFrames = sliceStripAuto(bossOctopus, 5);
+
+  // 문어 5포즈를 idle/attack에 매핑
+  // (추측) 좌→우: 졸린/미소/기쁨/놀람/분노
+  BOSS_TEX_OCTOPUS = {
+    idleA:   octoFrames[0] || octoFrames[1] || octoFrames[2],
+    idleB:   octoFrames[1] || octoFrames[0] || octoFrames[2],
+    attackA: octoFrames[2] || octoFrames[3] || octoFrames[4],
+    attackB: octoFrames[3] || octoFrames[2] || octoFrames[4],
+    charge:  octoFrames[3] || octoFrames[2],
+    hurt:    octoFrames[4] || octoFrames[3],
+  };
+
+	// 기본 보스는 고래
+	BOSS_TEX = BOSS_TEX_WHALE;
       // ----------------------------
       // 플레이어 사망/추락 스프라이트 시트(가로 3프레임)
       //  - 파일: character_green_down.png
@@ -2611,7 +2778,7 @@ function resolveCollisions(nextX, nextY){
   {
     const ax = x - hw;
     const aw = player.w;
-
+    /*
     if(player.vy < 0){
       let best = -Infinity;
       for(const p of world.platforms){
@@ -2625,8 +2792,26 @@ function resolveCollisions(nextX, nextY){
         y = best;
         player.vy = 0;
         onGround = true;
+      }*/
+	   if(player.vy < 0){
+      // ✅ 사다리 클라임 중(특히 내려갈 때)은 플랫폼 바닥 스냅이 걸리면 못 내려감
+      if(!(player.isClimbing && player.onLadder)){
+        let best = -Infinity;
+        for(const p of world.platforms){
+          const ay = y - hh;
+          if(aabbIntersect(ax, ay, aw, player.h, p.x, p.y, p.w, p.h)){
+            const candidate = p.y + p.h + hh + SKIN; // 바닥 위로 스냅
+            if(candidate > best) best = candidate;
+          }
+        }
+        if(best > -Infinity){
+          y = best;
+          player.vy = 0;
+          onGround = true;
+        }
       }
-    }else if(player.vy > 0){
+    
+   /* }else if(player.vy > 0){
       let best = Infinity;
       for(const p of world.platforms){
         const ay = y - hh;
@@ -2638,7 +2823,27 @@ function resolveCollisions(nextX, nextY){
       if(best < Infinity){
         y = best;
         player.vy = 0;
-      }
+      }*/
+	 }else if(player.vy > 0){
+  // ✅ 사다리(CLIMB)로 위로 올라가는 중에는 플랫폼 천장 충돌을 무시해야
+  //    "사다리 + 플랫폼 상단이 맞닿는" 구조에서도 위로 빠져나올 수 있음
+		  if(!(player.isClimbing && player.onLadder)){
+			let best = Infinity;
+			for(const p of world.platforms){
+			  const ay = y - hh;
+			  if(aabbIntersect(ax, ay, aw, player.h, p.x, p.y, p.w, p.h)){
+				const candidate = p.y - hh - SKIN; // 천장 아래로 스냅
+				if(candidate < best) best = candidate;
+			  }
+			}
+			if(best < Infinity){
+			  y = best;
+			  player.vy = 0;
+			}
+		  }
+		
+		 
+	  
     }else if((player.onGround || player.coyote > 0) && !player.isClimbing){
       // ✅ "가만히 있을 때 떨림" + "벽/점프벽 닿을 때 좌측 끝으로 워프"의 원인인
       //    바닥의 '아주 미세한 겹침'을 매 프레임 제거
@@ -3251,7 +3456,8 @@ function resolveCollisions(nextX, nextY){
       if(player.dashT > 0) player.dashT = Math.max(0, player.dashT - dt);
 
       // 사다리 오버랩
-      let ladder = null;
+      /*
+	  let ladder = null;
       player.onLadder = false;
       if(player.ladderLock <= 0){
         const margin = 0.18;
@@ -3261,6 +3467,50 @@ function resolveCollisions(nextX, nextY){
         const ph = player.h;
         for(const l of world.ladders){
           if(aabbIntersect(px, py, pw, ph, l.x, l.y, l.w, l.h)){
+            ladder = l;
+            player.onLadder = true;
+            break;
+          }
+        }
+      }*/
+	  let ladder = null;
+      player.onLadder = false;
+      if(player.ladderLock <= 0){
+        const margin = 0.18;
+        const px = (player.x - player.w*0.5) - margin;
+        const py = (player.y - player.h*0.5);
+        const pw = player.w + margin*2;
+        const ph = player.h;
+        for(const l of world.ladders){
+          if(aabbIntersect(px, py, pw, ph, l.x, l.y, l.w, l.h)){
+            ladder = l;
+            player.onLadder = true;
+            break;
+          }
+        }
+      }
+
+      // ✅ [추가] 플랫폼 위에서 ↓ 누르면, 발밑에 있는 사다리를 "프로브"로 잡기
+      if(!ladder && player.ladderLock <= 0 && canControl && player.onGround && input.down && player.dashT<=0){
+        const GRAB_DEPTH = 0.65;     // 발밑으로 얼마나 내려다볼지(필요시 0.45~0.9 튜닝)
+        const X_MARGIN   = 0.12;     // 좌우 판정 여유
+        const hw = player.w*0.5;
+        const hh = player.h*0.5;
+
+        const bottom = player.y - hh;
+
+        // 발밑 얕은 직사각형 프로브(몸통이 아니라 "발 아래"만 검사)
+        const px2 = (player.x - hw) - X_MARGIN;
+        const py2 = bottom - GRAB_DEPTH;
+        const pw2 = player.w + X_MARGIN*2;
+        const ph2 = GRAB_DEPTH + 0.02;
+
+        for(const l of world.ladders){
+          // (선택) 사다리 최상단이 발밑 근처일 때만 잡히게 필터
+          const dTop = bottom - l.topHigh;
+          if(dTop < -0.10 || dTop > GRAB_DEPTH + 0.10) continue;
+
+          if(aabbIntersect(px2, py2, pw2, ph2, l.x, l.y, l.w, l.h)){
             ladder = l;
             player.onLadder = true;
             break;
@@ -3525,14 +3775,26 @@ function resolveCollisions(nextX, nextY){
         screenShake(0.09, 0.10);
       }
 
-      // 벽 슬라이드
-      const wantsWall = (dir !== 0) ? dir : player.facing;
+      // 벽 슬라이드 
+      /*const wantsWall = (dir !== 0) ? dir : player.facing;
       if(!player.onGround && player.wallGrace > 0 && player.vy < 0 && !player.isClimbing){
         if(wantsWall === player.wallDir){
           player.vy = Math.max(player.vy, WALL_SLIDE_MAXFALL);
           if(rng() < 0.08) spawnDust(player.x + player.wallDir*0.22, player.y - player.h/2 + 0.35, 2);
         }
-      }
+      }*/
+	  // 벽 슬라이드
+		const wantsWall = (dir !== 0) ? dir : player.facing;
+		if(!player.onGround && player.wallGrace > 0 && player.vy < 0 && !player.isClimbing){
+		  if(wantsWall === player.wallDir){
+			const maxFall = -Math.abs(WALL_SLIDE_MAXFALL); // ★ 핵심
+			player.vy = Math.max(player.vy, maxFall);
+
+			if(rng() < 0.08) spawnDust(player.x + player.wallDir*0.22, player.y - player.h/2 + 0.35, 2);
+		  }
+		}
+		
+		
 
       // 애니 상태
       const isMoving = Math.abs(player.vx) > 0.65;
@@ -3930,7 +4192,107 @@ const ex = e.x - e.w/2;
       g.fill();
     });
 
-    function setBossHUD(on, boss){
+    // 문어용 "초록 물방울" 텍스처(캔버스)
+    const texDropletGreen = makeCanvasTexture((g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      const cx = w/2, cy = h/2;
+
+      // 물방울 본체(눈에 띄는 초록 그라데이션)
+      const grd = g.createRadialGradient(cx - w*0.16, cy - h*0.18, w*0.06, cx, cy, w*0.52);
+      grd.addColorStop(0.00, "rgba(230,255,230,0.95)");
+      grd.addColorStop(0.35, "rgba(90,235,140,0.85)");
+      grd.addColorStop(1.00, "rgba(20,120,60,0.35)");
+      g.fillStyle = grd;
+      g.beginPath();
+      // teardrop path
+      g.moveTo(cx, h*0.08);
+      g.bezierCurveTo(w*0.18, h*0.34, w*0.18, h*0.78, cx, h*0.92);
+      g.bezierCurveTo(w*0.82, h*0.78, w*0.82, h*0.34, cx, h*0.08);
+      g.closePath();
+      g.fill();
+
+      // 외곽
+      g.strokeStyle = "rgba(10,10,10,0.45)";
+      g.lineWidth = w*0.03;
+      g.stroke();
+
+      // 하이라이트
+      g.fillStyle = "rgba(255,255,255,0.52)";
+      g.beginPath();
+      g.ellipse(cx - w*0.14, cy - h*0.12, w*0.10, h*0.08, -0.85, 0, Math.PI*2);
+      g.fill();
+    });
+
+
+		
+// 드래곤용 파이어볼 텍스처(캔버스) - 검정 바탕 + 빨강 포인트 (흰 배경 대비 최강)
+const texFireball = makeCanvasTexture((g,w,h)=>{
+  g.clearRect(0,0,w,h);
+  g.globalCompositeOperation = "source-over";
+
+  const cx = w/2, cy = h/2;
+
+  // 0) 완전 불투명 검정 원(형태 고정, 흰 배경에서도 무조건 보임)
+  g.fillStyle = "rgba(0,0,0,1.0)";
+  g.beginPath();
+  g.arc(cx, cy, w*0.44, 0, Math.PI*2);
+  g.fill();
+
+  // 1) 빨강 코어(중심부)
+  const core = g.createRadialGradient(cx, cy, w*0.02, cx, cy, w*0.22);
+  core.addColorStop(0.00, "rgba(255, 60, 60, 1.0)");
+  core.addColorStop(0.35, "rgba(180, 0, 0, 1.0)");
+  core.addColorStop(1.00, "rgba(80, 0, 0, 1.0)");
+  g.fillStyle = core;
+  g.beginPath();
+  g.arc(cx, cy, w*0.22, 0, Math.PI*2);
+  g.fill();
+
+  // 2) 빨강 링(검정 위에 선명하게)
+  g.strokeStyle = "rgba(255, 30, 30, 1.0)";
+  g.lineWidth = w*0.06;
+  g.beginPath();
+  g.arc(cx, cy, w*0.32, 0, Math.PI*2);
+  g.stroke();
+
+  // 3) 외곽 테두리(아주 얇은 진회색) - 경계가 더 또렷해짐
+  g.strokeStyle = "rgba(40,40,40,1.0)";
+  g.lineWidth = w*0.035;
+  g.beginPath();
+  g.arc(cx, cy, w*0.46, 0, Math.PI*2);
+  g.stroke();
+
+  // 4) 빨강 스파크(요란하게, 대비 확실)
+  for(let i=0;i<12;i++){
+    const a = (i/12)*Math.PI*2;
+    const r1 = w*0.10 + (i%3)*w*0.02;
+    const r2 = w*0.46;
+
+    const x1 = cx + Math.cos(a)*r1;
+    const y1 = cy + Math.sin(a)*r1;
+    const x2 = cx + Math.cos(a)*r2;
+    const y2 = cy + Math.sin(a)*r2;
+
+    // 검정 스파크(굵게)
+    g.strokeStyle = "rgba(0,0,0,0.8)";
+    g.lineWidth = w*0.02;
+    g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+
+    // 빨강 하이라이트(얇게)
+    g.strokeStyle = "rgba(255, 40, 40, 1.0)";
+    g.lineWidth = w*0.012;
+    g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+  }
+
+  // 5) 중심 하이라이트 점(빨강/흰빛 약간)
+  g.fillStyle = "rgba(255,120,120,1.0)";
+  g.beginPath();
+  g.arc(cx - w*0.05, cy - h*0.05, w*0.06, 0, Math.PI*2);
+  g.fill();
+});
+    
+
+function setBossHUD(on, boss){
       if(!$bossHpWrap) return;
       $bossHpWrap.style.display = on ? "" : "none";
       if(on && boss){
@@ -3939,7 +4301,7 @@ const ex = e.x - e.w/2;
       }
     }
 
-    function buildBossArena(diff){
+    function buildBossArena(diff, kind='whale'){
       clearWorld();
 
       // 바닥/벽: 벽점프 가능하게 간단한 기둥 제공
@@ -3952,8 +4314,18 @@ const ex = e.x - e.w/2;
       // 작은 발판
       addPlatform(-8, 3.0, 5.0, 0.8);
       addPlatform( 2, 4.6, 4.2, 0.8);
-      addPlatform(14, 3.8, 4.8, 0.8);
-
+	 
+	  addPlatform(14, 1.8, 1.8, 0.5);
+	  addPlatform(14, 2.8, 2.8, 0.5);
+      addPlatform(14, 3.8, 1.8, 0.5);
+	  addPlatform(14, 4.8, 2.8, 0.5);
+	  addPlatform(14, 5.8, 1.8, 0.5);
+	  addPlatform(14, 6.8, 2.8, 0.5);
+	  addPlatform(14, 7.8, 1.8, 0.5);
+	  addPlatform(14, 8.8, 1.8, 0.5);
+	  addPlatform(14, 9.8, 1.8, 0.5);
+	  addPlatform(14, 10.8, 1.8, 0.5);
+      //addPlatform(14, 5.8, 4.8, 0.8);
       // 플레이어 위치
       player.x = -15.5;
       player.y = 2.6;
@@ -3974,6 +4346,16 @@ const ex = e.x - e.w/2;
       spawnAppear(player.x, player.y);
       SFX.spawn();
 
+	// 보스 종류에 따라 텍스처 교체(로딩 실패 시 고래로 폴백)
+	if(kind === 'dragon' && BOSS_TEX_DRAGON){
+	  BOSS_TEX = BOSS_TEX_DRAGON;
+	}else if(kind === 'octopus' && BOSS_TEX_OCTOPUS){
+	  BOSS_TEX = BOSS_TEX_OCTOPUS;
+	}else{
+	  BOSS_TEX = BOSS_TEX_WHALE || BOSS_TEX;
+	  kind = 'whale';
+	}
+
       // 보스 생성
       const bossW = 7.2;
       const bossH = 5.2;
@@ -3990,12 +4372,17 @@ const ex = e.x - e.w/2;
 
       world.boss = {
         diff,
+        kind,
+        // 드래곤: 더 빠르고 요란함 / 문어: 고래 패턴 기반이지만 20% 느림
+        speedMul: (kind === 'dragon') ? 1.2 : (kind === 'octopus' ? 0.8 : 1.0),
+        rateMul:  (kind === 'dragon') ? 1.2 : (kind === 'octopus' ? 0.8 : 1.0),
+        shotMul:  1.0,
         hp: 5,
         maxHp: 5,
         x: mesh.position.x,
         y: mesh.position.y,
-		baseX: mesh.position.x-15,   // ✅ 추가
-        baseY: mesh.position.y-5,   // ✅ 추가
+		baseX: mesh.position.x-12,   //15 ✅ 추가
+        baseY: mesh.position.y-4,   //5 ✅ 추가
         w: bossW, h: bossH,
         hitW, hitH,
         mesh,
@@ -4011,31 +4398,50 @@ const ex = e.x - e.w/2;
       setBossHUD(true, world.boss);
     }
 
-    function startBossFight(){
-      // 다음 레벨은 보스 격파 후 진행
-      game.pendingNextLevel = game.level + 1;
+    
+function startBossFight(){
+  // 다음 레벨은 보스 격파 후 진행
+  game.pendingNextLevel = game.level + 1;
 
-      // 누적 난이도(보스 패턴)
-      const diff = Math.max(1, (game.bossDifficulty|0));
+  // 누적 난이도(=보스 레벨)
+  const diff = Math.max(1, (game.bossDifficulty|0));
 
-      // 보스전으로 전환
-      game.state = "bossIntro";
-      game.t = 1.2;
+  // ✅ 게임 레벨 기준 보스 종류
+  // - 3의 배수 레벨: 문어
+  // - 그 외: 1(고래) → 2(드래곤) → 3(문어) 반복
+  let kind = 'whale';
+  if((game.level % 3) === 0) kind = 'octopus';
+  else if((game.level % 3) === 2) kind = 'dragon';
 
-      // arena 구성
-      buildBossArena(diff);
-      $stageText.textContent = `BOSS Lv ${diff}`;
+  // 보스전으로 전환
+  game.state = "bossIntro";
+  game.t = 1.2;
 
-      showBigMsg(true, `BOSS 등장! 거대한 고래 (Lv ${diff})`);
-      showToast("보스전! 거품 미사일을 피하고 대시로 공격!", 15000);
-	  showToast("대시!! ", 15000);
-      //screenShake(0.18, 0.20);
-	  screenShake(0.99, 0.99);
-	  screenShake(0.18, 0.20);
-      SFX.clear();
-    }
+  // arena 구성
+  buildBossArena(diff, kind);
+  const kindLabel = (kind === 'dragon') ? '드래곤' : (kind === 'octopus' ? '문어' : '고래');
+  $stageText.textContent = `BOSS Lv ${diff} (${kindLabel})`;
 
-    function spawnBubble(x,y, vx,vy, r=0.42, homing=0){
+  showBigMsg(true,
+    kind === 'dragon' ? `BOSS 등장! 요란한 드래곤 (Lv ${diff})`
+    : (kind === 'octopus' ? `BOSS 등장! 느릿느릿 문어 (Lv ${diff})` : `BOSS 등장! 거대한 고래 (Lv ${diff})`)
+  );
+
+  if(kind === 'dragon'){
+    showToast("보스전! 불꽃을 피하고 대시로 공격! (드래곤은 빠름)", 15000);
+  }else if(kind === 'octopus'){
+    showToast("보스전! 초록 물방울을 피하고 대시로 공격! (문어는 느림)", 15000);
+  }else{
+    showToast("보스전! 거품 미사일을 피하고 대시로 공격!", 15000);
+  }
+
+  showToast("대시!! ", 15000);
+  screenShake(0.99, 0.99);
+  screenShake(0.18, 0.20);
+  SFX.clear();
+}
+
+function spawnBubble(x,y, vx,vy, r=0.42, homing=0){
       const geo = new THREE.PlaneGeometry(r*2, r*2);
       const mat = new THREE.MeshBasicMaterial({ map: texBubble, transparent:true, opacity:0.95 });
       const mesh = new THREE.Mesh(geo, mat);
@@ -4044,6 +4450,7 @@ const ex = e.x - e.w/2;
       scene.add(mesh);
 
       world.bossBullets.push({
+        type:'bubble',
         x,y,r,vx,vy, homing,
         life: 8.0,
         spin: rand(-5,5),
@@ -4051,6 +4458,64 @@ const ex = e.x - e.w/2;
         mesh
       });
     }
+
+function spawnGreenDroplet(x,y, vx,vy, r=0.42, homing=0){
+      const geo = new THREE.PlaneGeometry(r*2, r*2);
+      const mat = new THREE.MeshBasicMaterial({ map: texDropletGreen, transparent:true, opacity:0.97 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, 1.1);
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+
+      world.bossBullets.push({
+        type:'droplet',
+        x,y,r,vx,vy, homing,
+        life: 8.0,
+        spin: rand(-5,5),
+        wob: rand(-Math.PI,Math.PI),
+        mesh
+      });
+    }
+
+    
+
+function spawnFireball(x,y, vx,vy, r=0.38, homing=0){
+  const geo = new THREE.PlaneGeometry(r*2, r*2);
+  const mat = new THREE.MeshBasicMaterial({
+    map: texFireball,
+    transparent:true,
+    //opacity:0.92,
+	opacity:0.92,
+    //blending: THREE.AdditiveBlending,
+    depthWrite:false
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, 1.12);
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+
+  world.bossBullets.push({
+    type:'fire',
+    x,y,r,vx,vy, homing,
+    life: 7.0,
+    spin: rand(-9,9),
+    wob: rand(0,Math.PI*2),
+    mesh
+  });
+}
+
+function spawnBossShot(b, x,y, vx,vy, r, homing){
+  if(b && b.kind === "dragon"){
+    spawnFireball(x,y, vx,vy, r*0.92, homing);
+    // 요란함: 발사 순간 작은 흔들림/파편
+    screenShake(0.04, 0.05);
+    spawnParticles(x, y, 10, 0.9);
+  }else if(b && b.kind === "octopus"){
+    spawnGreenDroplet(x,y, vx,vy, r, homing);
+  }else{
+    spawnBubble(x,y, vx,vy, r, homing);
+  }
+}
 
     function chooseBossPattern(diff){
       // diff가 올라갈수록 패턴 풀 확대
@@ -4064,12 +4529,15 @@ const ex = e.x - e.w/2;
 
     function fireBoss(b){
       // 공통 파라미터(난이도 스케일)
-      const spd = 7.8 + b.diff*0.85;
-      const rateBase = Math.max(0.34, 1.05 - b.diff*0.06);
+      const spd = (7.8 + b.diff*0.85) * (b.speedMul || 1.0);
+      const rateBase = Math.max(0.34, 1.05 - b.diff*0.06) / (b.rateMul || 1.0);
       b.fireCd = rateBase * rand(0.85, 1.15);
 
       // 공격 연출: 잠깐 charge 프레임
       b.chargeT = 0.14;
+
+      // 드래곤은 더 빠르게 재충전(요란함)
+      if(b.kind === 'dragon') b.chargeT = 0.15;
 
       const dx0 = (player.x - b.x);
       const dy0 = (player.y - b.y);
@@ -4077,26 +4545,26 @@ const ex = e.x - e.w/2;
       const ux = dx0/len, uy = dy0/len;
 
       if(b.pattern === "aim"){
-        spawnBubble(b.x - 2.1, b.y + 0.2, ux*spd, uy*spd, 0.44, 0);
+        spawnBossShot(b, b.x - 2.1, b.y + 0.2, ux*spd, uy*spd, 0.44, 0);
       }else if(b.pattern === "triple"){
         const a = Math.atan2(uy, ux);
         for(const da of [-0.18, 0, 0.18]){
           const vx = Math.cos(a+da)*spd;
           const vy = Math.sin(a+da)*spd;
-          spawnBubble(b.x - 2.1, b.y + 0.2, vx, vy, 0.42, 0);
+          spawnBossShot(b, b.x - 2.1, b.y + 0.2, vx, vy, 0.42, 0);
         }
       }else if(b.pattern === "wave"){
         // 좌→우 파도처럼 흔들리는 5발
         for(let i=0;i<5;i++){
           const vy = (i-2)*1.25 + Math.sin((b.t+i)*1.1)*0.6;
-          spawnBubble(b.x - 2.1, b.y + 0.2 + (i-2)*0.25, -spd*(0.95+0.05*i), vy, 0.40, 0);
+          spawnBossShot(b, b.x - 2.1, b.y + 0.2 + (i-2)*0.25, -spd*(0.95+0.05*i), vy, 0.40, 0);
         }
       }else if(b.pattern === "homing"){
         // 느리지만 추적
-        spawnBubble(b.x - 2.1, b.y + 0.2, ux*(spd*0.75), uy*(spd*0.75), 0.50, 1);
+        spawnBossShot(b, b.x - 2.1, b.y + 0.2, ux*(spd*0.75), uy*(spd*0.75), 0.50, 1);
         // 보조탄 1발(난이도 높을수록)
         if(b.diff >= 5){
-          spawnBubble(b.x - 2.1, b.y - 0.5, ux*(spd*0.70), uy*(spd*0.70), 0.46, 1);
+          spawnBossShot(b, b.x - 2.1, b.y - 0.5, ux*(spd*0.70), uy*(spd*0.70), 0.46, 1);
         }
       }else if(b.pattern === "spray"){
         // 넓은 부채꼴 연사
@@ -4107,7 +4575,7 @@ const ex = e.x - e.w/2;
           const t = (count<=1)?0:(i/(count-1));
           const da = (t-0.5)*spread;
           const s = spd*(0.85 + 0.25*Math.random());
-          spawnBubble(b.x - 2.1, b.y + 0.2, Math.cos(base+da)*s, Math.sin(base+da)*s, 0.38, 0);
+          spawnBossShot(b, b.x - 2.1, b.y + 0.2, Math.cos(base+da)*s, Math.sin(base+da)*s, 0.38, 0);
         }
       }
     }
@@ -4163,17 +4631,30 @@ const ex = e.x - e.w/2;
       b.invuln = Math.max(0, b.invuln - dt);
       b.hurtT  = Math.max(0, b.hurtT  - dt);
       b.chargeT= Math.max(0, b.chargeT- dt);
-
-      // 뷰 크기
-      b.x = b.baseX;
+		// 이동(드래곤은 빠르고 요란하게 / 문어는 고래 패턴 기반이지만 20% 느릿느릿)
+		const isDragon = (b.kind === 'dragon');
+		const isOctopus = (b.kind === 'octopus');
+		const baseX = b.baseX;
 		const baseY = b.baseY;
 
-		const amp  = 1.6 + b.diff*0.10;
-		const spdY = 0.8 + b.diff*0.05;
-		b.y = baseY + Math.sin(b.t * spdY) * amp;
+		let amp  = 1.6 + b.diff*0.10;
+		let spdY = 0.8 + b.diff*0.05;
 
-      b.mesh.position.x = b.x;
-      b.mesh.position.y = b.y;
+		if(isDragon){
+		  amp  *= 1.35;
+		  spdY *= (b.speedMul || 2.0);
+		  b.x = baseX + Math.sin(b.t*2.7) * (0.85 + b.diff*0.05) + Math.sin(b.t*12.0) * 0.08;
+		}else{
+		  // 고래/문어: 우측 고정 + 상하 사인 이동
+		  b.x = baseX;
+		  spdY *= (b.speedMul || 1.0); // 문어는 speedMul=0.8로 느리게
+		  if(isOctopus) amp *= 0.92;
+		}
+
+		b.y = baseY + Math.sin(b.t * spdY) * amp;
+		if(isOctopus) b.y += Math.sin(b.t * 0.35) * 0.12; // 느릿느릿 2차 흔들림
+		b.mesh.position.x = b.x;
+		b.mesh.position.y = b.y;
 
       // 프레임(연출)
 	  
@@ -4223,12 +4704,14 @@ const ex = e.x - e.w/2;
 	
       mat.needsUpdate = true;
 
-      // 패턴 갱신(난이도↑일수록 더 자주/더 다양)
-      b.patternCd -= dt;
-      if(b.patternCd <= 0){
-        b.pattern = chooseBossPattern(b.diff);
-        b.patternCd = Math.max(2.0, 3.6 - b.diff*0.12) * rand(0.85, 1.2);
-      }
+      
+// 패턴 갱신(난이도↑일수록 더 자주/더 다양)
+const rateMul = (b.rateMul || 1.0);
+b.patternCd -= dt * rateMul;
+if(b.patternCd <= 0){
+  b.pattern = chooseBossPattern(b.diff);
+  b.patternCd = (Math.max(2.0, 3.6 - b.diff*0.12) * rand(0.85, 1.2)) / rateMul;
+}
 
       // 발사
       if(game.state === "boss"){
@@ -4689,15 +5172,50 @@ const ex = e.x - e.w/2;
           endDeathAnim();
 
           if(game.respawnBoss){
-            const diff = Math.max(1, (game.bossDifficulty|0));
-            game.respawnBoss = false;
-            game.state = "bossIntro";
-            game.t = 0.9;
-            buildBossArena(diff);
-            $stageText.textContent = `BOSS Lv ${diff}`;
-            showBigMsg(true, `BOSS 재도전! 거대한 고래 (Lv ${diff})`);
-            showToast("다시 도전!", 900);
-            return;
+
+				/*const diff = Math.max(1, (game.bossDifficulty|0));
+				const kind = (diff % 2 === 0) ? 'dragon' : 'whale';
+				game.respawnBoss = false;
+				game.state = "bossIntro";
+				game.t = 0.9;
+
+				buildBossArena(diff, kind);
+				$stageText.textContent = `BOSS Lv ${diff} (${kind === 'dragon' ? '드래곤' : '고래'})`;
+				showBigMsg(true, kind === 'dragon' ? `BOSS 재도전! 요란한 드래곤 (Lv ${diff})` : `BOSS 재도전! 거대한 고래 (Lv ${diff})`);
+				showToast(kind === 'dragon' ? "다시 도전! 불꽃을 조심!" : "다시 도전!", 900);
+				return;
+				*/
+				const diff = Math.max(1, (game.bossDifficulty|0));
+
+				// 1: 고래, 2: 드래곤, 3: 문어(3의 배수)
+				const kind =
+				  (diff % 3 === 1) ? 'whale' :
+				  (diff % 3 === 2) ? 'dragon' :
+									'octopus';
+
+				game.respawnBoss = false;
+				game.state = "bossIntro";
+				game.t = 0.9;
+
+				buildBossArena(diff, kind);
+
+				const kindKo = (kind === 'dragon') ? '드래곤' : (kind === 'octopus') ? '문어' : '고래';
+				$stageText.textContent = `BOSS Lv ${diff} (${kindKo})`;
+
+				const introMsg =
+				  (kind === 'dragon')  ? `BOSS 재도전! 요란한 드래곤 (Lv ${diff})` :
+				  (kind === 'octopus') ? `BOSS 재도전! 느릿느릿 문어 (Lv ${diff})` :
+										 `BOSS 재도전! 거대한 고래 (Lv ${diff})`;
+
+				showBigMsg(true, introMsg);
+
+				const toastMsg =
+				  (kind === 'dragon')  ? "다시 도전! 불꽃을 조심!" :
+				  (kind === 'octopus') ? "다시 도전! 초록 물방울 조심!" :
+										 "다시 도전!";
+
+				showToast(toastMsg, 900);
+				return;
           }
 
           startLevel(game.level, false, game.levelSeed, true);
