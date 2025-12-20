@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,  viewport-fit=cover ,initial-scale=1 , maximum-scale=1, minimum-scale=1, user-scalable=no" />
   <title>Tiny Hero : Dash & Run</title>
 	<!-- Copyright © 2025 Kwak Nae Hun. All rights reserved. -->
   <style>
@@ -137,6 +137,29 @@
       white-space:nowrap;
     }
     #bigMsg.on{
+      opacity: 1;
+      transform: translate(-50%,-50%) scale(1.02);
+    }
+
+    #pauseMsg{
+      position:fixed;
+      left:50%; top:42%;
+      transform: translate(-50%,-50%);
+      padding: 14px 20px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.62);
+      color: #fff;
+      font-weight: 800;
+      font-size: 26px;
+      letter-spacing: .4px;
+      box-shadow: 0 16px 50px rgba(0,0,0,.28);
+      opacity: 0;
+      transition: opacity .16s ease, transform .16s ease;
+      pointer-events:none;
+      text-align:center;
+      white-space:nowrap;
+    }
+    #pauseMsg.on{
       opacity: 1;
       transform: translate(-50%,-50%) scale(1.02);
     }
@@ -541,6 +564,7 @@
   </div>
 
   <div id="bigMsg">Congratuation !!</div>
+  <div id="pauseMsg">일시정지</div>
 
   <div id="touch">
     <div class="cluster leftCluster">
@@ -567,9 +591,9 @@
     // 게임 상태
     // ----------------------------
     // (사용자 선택) 사망 리스폰 딜레이: 1.5초
-    const RESPAWN_DELAY = 3.5;
+    const RESPAWN_DELAY = 1.3;
     // 시작/리스폰 시 "뿅" 등장 모션
-    const SPAWN_DUR = 2.82;
+    const SPAWN_DUR = 1.62;
 
     const game = {
       level: 1,
@@ -581,6 +605,7 @@
       // (사용자 선택) 사망하면 무조건 HP 5로 회복
       forceFullHP: false,
       state: "play",     // play | celebrate | bossIntro | boss | bossDefeat | next | respawn
+      paused: false,
       t: 0,
       // 연출 스폰 타이머
       flowerRainT: 0,
@@ -668,6 +693,7 @@
     const $toast = document.getElementById("toast");
     const $stageText = document.getElementById("stageText");
     const $bigMsg = document.getElementById("bigMsg");
+    const $pauseMsg = document.getElementById("pauseMsg");
     const $dashText = document.getElementById("dashText");
     const $bossHpWrap = document.getElementById("bossHpWrap");
     const $bossHpText = document.getElementById("bossHpText");
@@ -747,6 +773,7 @@
 
       last: Object.create(null),
     };
+
 
     // 로컬 저장(선택)
     (function loadSoundSettings(){
@@ -1106,6 +1133,14 @@
         playNoise({ t, dur: 0.11, gain: 0.16, band:"band", hz: 1300, bus: sound.sfxBus });
         playOsc({ t, freq: 220, slideTo: 90, slideTime: 0.10, dur: 0.12, type:"sawtooth", gain: 0.10, filterHz: 900, bus: sound.sfxBus });
       },
+      fastRun(){
+        if(!sound.enabled || !sound.sfxEnabled) return;
+        unlockAudio();
+        if(!sound.ctx || limit("fastRun", 0.08)) return;
+        const t = sound.ctx.currentTime;
+        playNoise({ t, dur: 0.09, gain: 0.07, band:"band", hz: 1800, bus: sound.sfxBus });
+        playOsc({ t, freq: 260, slideTo: 140, slideTime: 0.10, dur: 0.12, type:"sawtooth", gain: 0.05, filterHz: 1200, bus: sound.sfxBus });
+      },
       spring(){
         if(!sound.enabled || !sound.sfxEnabled) return;
         unlockAudio();
@@ -1197,6 +1232,7 @@
         showToast(sound.enabled ? "사운드 ON" : "사운드 OFF", 800);
       });
     }
+
 
     // ----------------------------
     // 입력
@@ -1306,7 +1342,21 @@
       }
 	  
 	  if(e.code==="KeyZ"){
-        jumpGoal();
+        if(game.state === "boss" || game.state === "bossIntro" || game.state === "bossDefeat"){
+          game.level += 1;
+          game.bossDifficulty = (game.bossDifficulty|0) + 1;
+          startBossFight();
+        }else{
+          jumpGoal();
+        }
+        return;
+      }
+
+
+      if(e.code==="KeyP"){
+        game.paused = !game.paused;
+        if($pauseMsg) $pauseMsg.classList.toggle("on", game.paused);
+        showToast(game.paused ? "Paused" : "Resume", 600);
         return;
       }
 
@@ -1581,7 +1631,12 @@
 	  "slime_normal_walk_b.png",
       "boss_whale_image.png",
       "boss_dragon_image.png",
-      "boss_octopus_image.png"
+      "boss_octopus_image.png",
+      "boss_golem_image.png",
+      "boss_peng_image.png",
+      "water.png",
+      "water_top.png",
+      "water_top_low.png"
     ];
 
     // ✅ BGM: 첨부 MP3 사용(파일명 변경 시 여기만 수정)
@@ -1641,13 +1696,43 @@
     let BOSS_TEX_WHALE = null;
     let BOSS_TEX_DRAGON = null;
     let BOSS_TEX_OCTOPUS = null;
+    let BOSS_TEX_GOLEM = null;
+    let BOSS_TEX_PENG = null;
     let PLAYER_DOWN = { frames:[], fw:0, fh:0 };
+    const WATER_H = 16;
+    let waterTexs = [];
+    let waterMeshes = [];
     try{
       const texPs = required.map(loadTex);
       const bgmEl = await loadBGM(BGM_URL);
-      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale, bossDragon, bossOctopus] = await Promise.all(texPs);
+      const [bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale, bossDragon, bossOctopus, bossGolem, bossPeng, waterBase, waterTop, waterTopLow] = await Promise.all(texPs);
 
-      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale, bossDragon, bossOctopus };
+      TEX = { bg, idle, walkA, walkB, walkABack, walkBBack, jump, jumpBack, hit, downSheet, duck, front, climbA, climbB, hudCoin, slimeFlat, slimeRest, slimeWalkA, slimeWalkB, bossWhale, bossDragon, bossOctopus, bossGolem, bossPeng };
+
+      waterTexs = [waterBase, waterTop, waterTopLow];
+      for(const t of waterTexs){
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      }
+      waterTexs[0].repeat.set(3, 1.2);
+      waterTexs[1].repeat.set(3.5, 1.2);
+      waterTexs[2].repeat.set(4, 1.2);
+
+      const waterGeo = new THREE.PlaneGeometry(280, WATER_H);
+      const waterMats = [
+        new THREE.MeshBasicMaterial({ map: waterTexs[0], transparent:true, opacity:0.92 }),
+        new THREE.MeshBasicMaterial({ map: waterTexs[1], transparent:true, opacity:0.80 }),
+        new THREE.MeshBasicMaterial({ map: waterTexs[2], transparent:true, opacity:0.72 }),
+      ];
+      const waterYs = [-6.7, -6.3, -6.5];
+      const waterZs = [-2.8, -2.7, -2.75];
+      waterMeshes = waterMats.map((mat, i)=>{
+        const m = new THREE.Mesh(waterGeo, mat);
+        m.position.set(0, waterYs[i], waterZs[i]);
+        m.userData.baseY = waterYs[i];
+        m.frustumCulled = false;
+        scene.add(m);
+        return m;
+      });
 
       // ----------------------------
       // 보스(고래) 스프라이트 시트 분할(4x4, 타일 256px)
@@ -1843,6 +1928,34 @@ function sliceStripAuto(sheet, expected=5){
     hurt:    octoFrames[4] || octoFrames[3],
   };
 
+  // ----------------------------
+  // 보스(골렘) 스프라이트 시트 분할(4프레임)
+  //  - 파일: boss_golem_image.png
+  // ----------------------------
+  const golemFrames = sliceStripAuto(bossGolem, 4);
+  BOSS_TEX_GOLEM = {
+    idleA:   golemFrames[0] || golemFrames[1] || golemFrames[2],
+    idleB:   golemFrames[1] || golemFrames[0] || golemFrames[2],
+    attackA: golemFrames[2] || golemFrames[3] || golemFrames[1],
+    attackB: golemFrames[3] || golemFrames[2] || golemFrames[1],
+    charge:  golemFrames[2] || golemFrames[3] || golemFrames[1],
+    hurt:    golemFrames[1] || golemFrames[0],
+  };
+
+  // ----------------------------
+  // 보스(펭귄) 스프라이트 시트 분할(4프레임)
+  //  - 파일: boss_peng_image.png
+  // ----------------------------
+  const pengFrames = sliceStripAuto(bossPeng, 4);
+  BOSS_TEX_PENG = {
+    idleA:   pengFrames[0] || pengFrames[1] || pengFrames[2],
+    idleB:   pengFrames[1] || pengFrames[0] || pengFrames[2],
+    attackA: pengFrames[2] || pengFrames[3] || pengFrames[1],
+    attackB: pengFrames[3] || pengFrames[2] || pengFrames[1],
+    charge:  pengFrames[2] || pengFrames[3] || pengFrames[1],
+    hurt:    pengFrames[1] || pengFrames[0],
+  };
+
 	// 기본 보스는 고래
 	BOSS_TEX = BOSS_TEX_WHALE;
       // ----------------------------
@@ -1882,6 +1995,17 @@ function sliceStripAuto(sheet, expected=5){
       throw err;
     }
 
+    function alignWaterToGround(bottomY){
+      if(!waterMeshes.length) return;
+      const baseY = bottomY - (WATER_H * 0.5);
+      const offsets = [0.0, 0.35, 0.18];
+      for(let i=0;i<waterMeshes.length;i++){
+        const m = waterMeshes[i];
+        m.userData.baseY = baseY + (offsets[i] || 0);
+        m.position.y = m.userData.baseY;
+      }
+    }
+
 
     // ----------------------------
     // CanvasTexture 생성기
@@ -1912,30 +2036,6 @@ function sliceStripAuto(sheet, expected=5){
     bgPlane.position.set(0, 6, -5);
     scene.add(bgPlane);
 
-    const waterTex = makeCanvasTexture((g,w,h)=>{
-      g.clearRect(0,0,w,h);
-      g.fillStyle = "rgba(120,190,255,.85)";
-      g.fillRect(0, h*0.30, w, h*0.70);
-      g.strokeStyle = "rgba(255,255,255,.55)";
-      g.lineWidth = 10; g.lineCap = "round";
-      for(let i=0;i<8;i++){
-        const y = h*0.32 + i*22;
-        g.beginPath();
-        for(let x=-40;x<=w+40;x+=40){
-          g.lineTo(x, y + Math.sin((x+i*10)*0.08)*8);
-        }
-        g.stroke();
-      }
-    }, 512, 256);
-    waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping;
-    waterTex.repeat.set(10, 2);
-
-    const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(280, 16),
-      new THREE.MeshBasicMaterial({ map: waterTex, transparent:true, opacity:.92 })
-    );
-    water.position.set(0, -6.7, -2.8);
-    scene.add(water);
 
     // ----------------------------
     // 월드 데이터
@@ -1948,6 +2048,7 @@ function sliceStripAuto(sheet, expected=5){
       ladders: [],
       particles: [],
       afterimages: [],
+      bossAfterimages: [],
       bossBullets: [],
       boss: null,
       goal: null,
@@ -2304,11 +2405,30 @@ function sliceStripAuto(sheet, expected=5){
     const geoPetal = new THREE.PlaneGeometry(0.28,0.28);
     const geoSpark = new THREE.PlaneGeometry(0.18,0.18);
 
+    const MAX_PARTICLES = 800;
+    const MAX_BOSS_AFTERIMAGES = 40;
+
+    const matSpark = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:.85 });
+    const matDust = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:.45 });
+    const matDirt = [
+      new THREE.MeshBasicMaterial({ color: 0x8a6a3c, transparent:true, opacity:.55 }),
+      new THREE.MeshBasicMaterial({ color: 0x7a4f2a, transparent:true, opacity:.55 }),
+      new THREE.MeshBasicMaterial({ color: 0x9b7a4a, transparent:true, opacity:.55 }),
+    ];
+    const matIce = [
+      new THREE.MeshBasicMaterial({ color: 0xbfe9ff, transparent:true, opacity:.7 }),
+      new THREE.MeshBasicMaterial({ color: 0x8fd2ff, transparent:true, opacity:.7 }),
+      new THREE.MeshBasicMaterial({ color: 0x6fb6ff, transparent:true, opacity:.7 }),
+    ];
+
     function spawnParticles(x,y,n=10, power=1){
-      for(let i=0;i<n;i++){
+      const room = Math.max(0, MAX_PARTICLES - world.particles.length);
+      if(room <= 0) return;
+      const count = Math.min(n, room);
+      for(let i=0;i<count;i++){
         const mesh = new THREE.Mesh(
           geoTiny,
-          new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:.85 })
+          matSpark
         );
         mesh.position.set(x + rand(-0.2,0.2), y + rand(-0.1,0.1), 2.6);
         scene.add(mesh);
@@ -2324,10 +2444,13 @@ function sliceStripAuto(sheet, expected=5){
     }
 
     function spawnDust(x,y, n=6){
-      for(let i=0;i<n;i++){
+      const room = Math.max(0, MAX_PARTICLES - world.particles.length);
+      if(room <= 0) return;
+      const count = Math.min(n, room);
+      for(let i=0;i<count;i++){
         const mesh = new THREE.Mesh(
           geoDust,
-          new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:.45 })
+          matDust
         );
         mesh.position.set(x + rand(-0.25,0.25), y + rand(-0.05,0.15), 2.55);
         scene.add(mesh);
@@ -2341,6 +2464,51 @@ function sliceStripAuto(sheet, expected=5){
         });
       }
     }
+
+    function spawnDirt(x,y, n=8){
+      const room = Math.max(0, MAX_PARTICLES - world.particles.length);
+      if(room <= 0) return;
+      const count = Math.min(n, room);
+      for(let i=0;i<count;i++){
+        const mesh = new THREE.Mesh(
+          geoDust,
+          choice(matDirt)
+        );
+        mesh.position.set(x + rand(-0.28,0.28), y + rand(-0.08,0.18), 2.56);
+        scene.add(mesh);
+        world.particles.push({
+          kind:"dirt",
+          x: mesh.position.x, y: mesh.position.y,
+          vx: rand(-2.2,2.2),
+          vy: rand(0.8,2.6),
+          life: rand(0.18,0.36),
+          mesh, spin: rand(-5,5)
+        });
+      }
+    }
+
+    function spawnIceShards(x,y, n=10){
+      const room = Math.max(0, MAX_PARTICLES - world.particles.length);
+      if(room <= 0) return;
+      const count = Math.min(n, room);
+      for(let i=0;i<count;i++){
+        const mesh = new THREE.Mesh(
+          geoDust,
+          choice(matIce)
+        );
+        mesh.position.set(x + rand(-0.3,0.3), y + rand(-0.10,0.22), 2.57);
+        scene.add(mesh);
+        world.particles.push({
+          kind:"ice",
+          x: mesh.position.x, y: mesh.position.y,
+          vx: rand(-2.6,2.6),
+          vy: rand(1.0,3.0),
+          life: rand(0.16,0.32),
+          mesh, spin: rand(-6,6)
+        });
+      }
+    }
+
 
     function spawnFlowerBurst(x,y, n=90){
       const colors = [0xff7eb6,0xffa7d6,0xffd1f0,0xfff1b8,0xb8ffdf,0xa0e7ff,0xffffff];
@@ -2442,13 +2610,34 @@ function sliceStripAuto(sheet, expected=5){
     }
 
     // Afterimage
-    function spawnAfterimage(x,y, tex, sx, sy){
-      const mat = new THREE.SpriteMaterial({ map: tex, transparent:true, opacity:0.35 });
+    function spawnAfterimage(x,y, tex, sx, sy, opts = {}){
+      const life = (opts.life ?? 0.22);
+      const opacity = (opts.opacity ?? 0.35);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent:true, opacity });
       const sp = new THREE.Sprite(mat);
       sp.position.set(x, y, 2.9);
       sp.scale.set(sx, sy, 1);
       scene.add(sp);
-      world.afterimages.push({ sp, life: 0.22 });
+      world.afterimages.push({ sp, life, lifeMax: life, opacity });
+    }
+
+    function spawnBossAfterimage(b, tex){
+      if(!b || !b.mesh) return;
+      if(world.bossAfterimages.length >= MAX_BOSS_AFTERIMAGES) return;
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent:true,
+        opacity: 0.26,
+        color: 0xaad9ff,
+        blending: THREE.AdditiveBlending,
+        depthWrite:false
+      });
+      const mesh = new THREE.Mesh(b.mesh.geometry, mat);
+      mesh.position.set(b.x, b.y, 1.05);
+      mesh.scale.set(b.mesh.scale.x || 1, b.mesh.scale.y || 1, 1);
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+      world.bossAfterimages.push({ mesh, life: 0.26, lifeMax: 0.26, opacity: 0.26 });
     }
 
     // 화면 흔들림
@@ -2655,12 +2844,19 @@ function sliceStripAuto(sheet, expected=5){
     const APEX_VY        =  1.25;
     const APEX_GRAV_MULT =  0.65;
 
-    const MOVE_MAX       =  8.8;
+    const MOVE_MAX       =  11.0;
     const GROUND_ACCEL   =  26.0;
     const GROUND_BRAKE   =  30.0;
     const AIR_ACCEL      =  14.0;
     const AIR_BRAKE      =  10.0;
     const TURN_BOOST     =  1.40;
+    const RUN_HOLD_TIME  =  1.0;
+    const RUN_SPEED_MAX  =  MOVE_MAX * 2.45; //1.45
+    const RUN_ACCEL_MULT =  2.35;
+    const RUN_TRAIL_INTERVAL = 0.025;
+    const RUN_TRAIL_LIFE =  0.18;
+    const RUN_TRAIL_OPACITY = 0.28;
+    const RUN_SFX_INTERVAL = 0.28;
 
     const JUMP_V         =  14.6;
     const JUMP_CUT       =  0.55;
@@ -2800,6 +2996,10 @@ function sliceStripAuto(sheet, expected=5){
       dashCd: 0,
       dashTrailT: 0,
       dashCharges: DASH_CHARGES_MAX,
+      runHold: 0,
+      runBoost: false,
+      runTrailT: 0,
+      runSfxT: 0,
 
       invuln: 0,
       hurtT: 0,
@@ -3009,7 +3209,7 @@ function resolveCollisions(nextX, nextY){
     // 월드 정리
     // ----------------------------
     function clearWorld(){
-      for(const key of ["platforms","coins","enemies","springs","ladders","particles","afterimages","bossBullets"]){
+      for(const key of ["platforms","coins","enemies","springs","ladders","particles","afterimages","bossAfterimages","bossBullets"]){
         for(const o of world[key]){
           if(o.mesh) scene.remove(o.mesh);
           if(o.sp) scene.remove(o.sp);
@@ -3366,6 +3566,7 @@ function resolveCollisions(nextX, nextY){
       addPlatform(g.x, g.y, g.w, g.h);
       world.groundTop = groundTop;
       world.killY = g.y - 10.5;
+      alignWaterToGround(g.y);
 
       // platforms
       for(const p of m.platforms){
@@ -3431,6 +3632,7 @@ function resolveCollisions(nextX, nextY){
 
       world.groundTop = groundTop;
       world.killY = groundY - 10.5;
+      alignWaterToGround(groundY);
 
       // 시작 지면
       addPlatform(-80, groundY, 160, groundH);
@@ -3678,13 +3880,23 @@ function resolveCollisions(nextX, nextY){
       if(dir !== 0 && !input.faceLock) player.facing = dir;
       else if(player.facing === 0) player.facing = 1;
 
+      const runEligible = canControl && player.onGround && !player.isClimbing && player.dashT<=0 && player.slideT<=0 && !player.isDucking && dir !== 0;
+      if(runEligible){
+        player.runHold = Math.min(RUN_HOLD_TIME, player.runHold + dt);
+      }else{
+        player.runHold = 0;
+      }
+      player.runBoost = player.runHold >= RUN_HOLD_TIME;
+
       const speedMul = (player.isDucking ? DUCK_SPEED_MUL : 1.0);
-      const targetVx = dir * MOVE_MAX * speedMul;
+      const maxVx = (player.runBoost ? RUN_SPEED_MAX : MOVE_MAX) * speedMul;
+      const targetVx = dir * maxVx;
 
       if(!player.isClimbing && player.dashT <= 0 && player.slideT<=0){
         const reversing = (dir !== 0) && (player.vx !== 0) && (Math.sign(player.vx) !== Math.sign(targetVx));
         if(player.onGround){
-          const accel = (dir!==0 ? GROUND_ACCEL : GROUND_BRAKE) * (reversing ? TURN_BOOST : 1.0);
+          const baseAccel = (dir!==0 ? GROUND_ACCEL : GROUND_BRAKE) * (reversing ? TURN_BOOST : 1.0);
+          const accel = player.runBoost ? baseAccel * RUN_ACCEL_MULT : baseAccel;
           const before = player.vx;
           player.vx = moveTowards(player.vx, targetVx, accel * dt);
           if(reversing && Math.abs(before) > 5.5) spawnDust(player.x - sign(before)*0.15, player.y - player.h/2 + 0.02, 4);
@@ -3835,6 +4047,28 @@ function resolveCollisions(nextX, nextY){
           const sx = 1.65 * (player.facing>=0 ? 1 : -1);
           spawnAfterimage(player.x, player.y+0.08, playerSprite.material.map, sx, 1.65);
         }
+      }
+
+      // 고속 질주 잔상 + 효과음
+      if(player.runBoost){
+        player.runTrailT -= dt;
+        if(player.runTrailT <= 0){
+          player.runTrailT = RUN_TRAIL_INTERVAL;
+          const sx = 1.55 * (player.facing>=0 ? 1 : -1);
+          spawnAfterimage(player.x, player.y+0.08, playerSprite.material.map, sx, 1.55, {
+            life: RUN_TRAIL_LIFE,
+            opacity: RUN_TRAIL_OPACITY
+          });
+        }
+
+        player.runSfxT -= dt;
+        if(player.runSfxT <= 0){
+          player.runSfxT = RUN_SFX_INTERVAL;
+          SFX.fastRun();
+        }
+      }else{
+        player.runTrailT = 0;
+        player.runSfxT = 0;
       }
 
       // 적분 + 충돌
@@ -4377,6 +4611,109 @@ const texFireball = makeCanvasTexture((g,w,h)=>{
   g.arc(cx - w*0.05, cy - h*0.05, w*0.06, 0, Math.PI*2);
   g.fill();
 });
+
+
+// 골렘용 돌덩어리 텍스처
+const texRock = makeCanvasTexture((g,w,h)=>{
+  g.clearRect(0,0,w,h);
+  const cx = w/2, cy = h/2;
+
+  const base = g.createRadialGradient(cx - w*0.12, cy - h*0.12, w*0.08, cx, cy, w*0.5);
+  base.addColorStop(0.0, "rgba(210,210,210,0.95)");
+  base.addColorStop(0.5, "rgba(150,150,150,0.95)");
+  base.addColorStop(1.0, "rgba(80,80,80,0.95)");
+  g.fillStyle = base;
+  const rx = w*0.42;
+  const ry = h*0.36;
+  const r = Math.min(rx, ry) * 0.35;
+  const x0 = cx - rx;
+  const y0 = cy - ry;
+  const x1 = cx + rx;
+  const y1 = cy + ry;
+  g.beginPath();
+  g.moveTo(x0 + r, y0);
+  g.lineTo(x1 - r, y0);
+  g.quadraticCurveTo(x1, y0, x1, y0 + r);
+  g.lineTo(x1, y1 - r);
+  g.quadraticCurveTo(x1, y1, x1 - r, y1);
+  g.lineTo(x0 + r, y1);
+  g.quadraticCurveTo(x0, y1, x0, y1 - r);
+  g.lineTo(x0, y0 + r);
+  g.quadraticCurveTo(x0, y0, x0 + r, y0);
+  g.closePath();
+  g.fill();
+
+  g.strokeStyle = "rgba(30,30,30,0.8)";
+  g.lineWidth = w*0.06;
+  g.beginPath();
+  g.moveTo(x0 + r, y0);
+  g.lineTo(x1 - r, y0);
+  g.quadraticCurveTo(x1, y0, x1, y0 + r);
+  g.lineTo(x1, y1 - r);
+  g.quadraticCurveTo(x1, y1, x1 - r, y1);
+  g.lineTo(x0 + r, y1);
+  g.quadraticCurveTo(x0, y1, x0, y1 - r);
+  g.lineTo(x0, y0 + r);
+  g.quadraticCurveTo(x0, y0, x0 + r, y0);
+  g.closePath();
+  g.stroke();
+
+  g.fillStyle = "rgba(255,255,255,0.25)";
+  g.beginPath();
+  g.ellipse(cx - w*0.12, cy - h*0.10, w*0.12, h*0.08, -0.3, 0, Math.PI*2);
+  g.fill();
+});
+
+// 펭귄용 얼음 돌 텍스처
+const texIceRock = makeCanvasTexture((g,w,h)=>{
+  g.clearRect(0,0,w,h);
+  const cx = w/2, cy = h/2;
+
+  const base = g.createRadialGradient(cx - w*0.12, cy - h*0.12, w*0.08, cx, cy, w*0.5);
+  base.addColorStop(0.0, "rgba(220,245,255,0.95)");
+  base.addColorStop(0.5, "rgba(140,210,255,0.92)");
+  base.addColorStop(1.0, "rgba(70,140,200,0.90)");
+  g.fillStyle = base;
+  const rx = w*0.42;
+  const ry = h*0.36;
+  const r = Math.min(rx, ry) * 0.35;
+  const x0 = cx - rx;
+  const y0 = cy - ry;
+  const x1 = cx + rx;
+  const y1 = cy + ry;
+  g.beginPath();
+  g.moveTo(x0 + r, y0);
+  g.lineTo(x1 - r, y0);
+  g.quadraticCurveTo(x1, y0, x1, y0 + r);
+  g.lineTo(x1, y1 - r);
+  g.quadraticCurveTo(x1, y1, x1 - r, y1);
+  g.lineTo(x0 + r, y1);
+  g.quadraticCurveTo(x0, y1, x0, y1 - r);
+  g.lineTo(x0, y0 + r);
+  g.quadraticCurveTo(x0, y0, x0 + r, y0);
+  g.closePath();
+  g.fill();
+
+  g.strokeStyle = "rgba(40,90,140,0.85)";
+  g.lineWidth = w*0.05;
+  g.beginPath();
+  g.moveTo(x0 + r, y0);
+  g.lineTo(x1 - r, y0);
+  g.quadraticCurveTo(x1, y0, x1, y0 + r);
+  g.lineTo(x1, y1 - r);
+  g.quadraticCurveTo(x1, y1, x1 - r, y1);
+  g.lineTo(x0 + r, y1);
+  g.quadraticCurveTo(x0, y1, x0, y1 - r);
+  g.lineTo(x0, y0 + r);
+  g.quadraticCurveTo(x0, y0, x0 + r, y0);
+  g.closePath();
+  g.stroke();
+
+  g.fillStyle = "rgba(255,255,255,0.45)";
+  g.beginPath();
+  g.ellipse(cx - w*0.12, cy - h*0.12, w*0.14, h*0.10, -0.3, 0, Math.PI*2);
+  g.fill();
+});
     
 
 function setBossHUD(on, boss){
@@ -4395,6 +4732,7 @@ function setBossHUD(on, boss){
       const ground = addPlatform(-20, 0, 80, 1.0);
       world.groundTop = ground.y + ground.h;
       world.killY = -12;
+      alignWaterToGround(ground.y);
 
       // 좌측 시작 구역 기둥(벽점프용)
       // (요청) 보스전 시작 구역 기둥 제거
@@ -4438,16 +4776,25 @@ function setBossHUD(on, boss){
 	  BOSS_TEX = BOSS_TEX_DRAGON;
 	}else if(kind === 'octopus' && BOSS_TEX_OCTOPUS){
 	  BOSS_TEX = BOSS_TEX_OCTOPUS;
+	}else if(kind === 'golem' && BOSS_TEX_GOLEM){
+	  BOSS_TEX = BOSS_TEX_GOLEM;
+	}else if(kind === 'penguin' && BOSS_TEX_PENG){
+	  BOSS_TEX = BOSS_TEX_PENG;
 	}else{
 	  BOSS_TEX = BOSS_TEX_WHALE || BOSS_TEX;
 	  kind = 'whale';
 	}
 
       // 보스 생성
-      const bossW = 7.2;
-      const bossH = 5.2;
-      const hitW  = 4.8;
-      const hitH  = 3.4;
+      const BOSS_SCALE = 0.7; // 30% smaller (0.7x)
+      const baseBossW = (kind === 'golem') ? 5 : (kind === 'penguin' ? 5.6 : 7.2);
+      const baseBossH = 5.2;
+      const baseHitW  = (kind === 'golem') ? 5 : (kind === 'penguin' ? 4.2 : 4.8);
+      const baseHitH  = 3.4;
+      const bossW = baseBossW * BOSS_SCALE;
+      const bossH = baseBossH * BOSS_SCALE;
+      const hitW  = baseHitW * BOSS_SCALE;
+      const hitH  = baseHitH * BOSS_SCALE;
 
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(bossW, bossH),
@@ -4461,8 +4808,8 @@ function setBossHUD(on, boss){
         diff,
         kind,
         // 드래곤: 더 빠르고 요란함 / 문어: 고래 패턴 기반이지만 20% 느림
-        speedMul: (kind === 'dragon') ? 1.2 : (kind === 'octopus' ? 0.8 : 1.0),
-        rateMul:  (kind === 'dragon') ? 1.2 : (kind === 'octopus' ? 0.8 : 1.0),
+        speedMul: (kind === 'dragon') ? 1.2 : (kind === 'octopus' ? 0.8 : (kind === 'golem' ? 0.9 : (kind === 'penguin' ? 1.0 : 1.0))),
+        rateMul:  (kind === 'dragon') ? 1.2 : (kind === 'octopus' ? 0.8 : (kind === 'golem' ? 0.85 : (kind === 'penguin' ? 0.95 : 1.0))),
         shotMul:  1.0,
         hp: 5,
         maxHp: 5,
@@ -4480,6 +4827,10 @@ function setBossHUD(on, boss){
         fireCd: 1.1,
         patternCd: 3.2,
         pattern: "aim",
+        trailT: 0,
+        prevX: mesh.position.x,
+        prevY: mesh.position.y,
+        face: 1,
       };
 
       setBossHUD(true, world.boss);
@@ -4497,8 +4848,11 @@ function startBossFight(){
   // - 3의 배수 레벨: 문어
   // - 그 외: 1(고래) → 2(드래곤) → 3(문어) 반복
   let kind = 'whale';
-  if((game.level % 3) === 0) kind = 'octopus';
-  else if((game.level % 3) === 2) kind = 'dragon';
+  const bossCycle = game.level % 5;
+  if(bossCycle === 2) kind = 'dragon';
+  else if(bossCycle === 3) kind = 'octopus';
+  else if(bossCycle === 4) kind = 'golem';
+  else if(bossCycle === 0) kind = 'penguin';
 
   // 보스전으로 전환
   game.state = "bossIntro";
@@ -4506,18 +4860,22 @@ function startBossFight(){
 
   // arena 구성
   buildBossArena(diff, kind);
-  const kindLabel = (kind === 'dragon') ? 'Dragon' : (kind === 'octopus' ? 'Octupus' : 'Whale');
+  const kindLabel = (kind === 'dragon') ? 'Dragon' : (kind === 'octopus' ? 'Octopus' : (kind === 'golem' ? 'Golem' : (kind === 'penguin' ? 'Penguin' : 'Whale')));
   $stageText.textContent = `BOSS Lv ${diff} (${kindLabel})`;
 
   showBigMsg(true,
     kind === 'dragon' ? `BOSS !!! Noisy Dragon (Lv ${diff})`
-    : (kind === 'octopus' ? `BOSS !!! Funny octopus (Lv ${diff})` : `BOSS !!! Big-mouthed Whale (Lv ${diff})`)
+    : (kind === 'octopus' ? `BOSS !!! Funny octopus (Lv ${diff})` : (kind === 'golem' ? `BOSS !!! Stone Golem (Lv ${diff})` : (kind === 'penguin' ? `BOSS !!! Ice Penguin (Lv ${diff})` : `BOSS !!! Big-mouthed Whale (Lv ${diff})`)))
   );
 
   if(kind === 'dragon'){
     showToast("Boss Stage! Attack with a Dash! ", 15000);
   }else if(kind === 'octopus'){
     showToast("Boss Stage! Attack with a Dash! ", 15000);
+  }else if(kind === 'golem'){
+    showToast("Boss Stage! Beware of flying rocks!", 15000);
+  }else if(kind === 'penguin'){
+    showToast("Boss Stage! Beware of ice rocks!", 15000);
   }else{
     showToast("Boss Stage! Attack with a Dash!", 15000);
   }
@@ -4591,12 +4949,65 @@ function spawnFireball(x,y, vx,vy, r=0.38, homing=0){
   });
 }
 
+function spawnRock(x,y, vx,vy, r=0.52){
+  const geo = new THREE.PlaneGeometry(r*2, r*2);
+  const mat = new THREE.MeshBasicMaterial({
+    map: texRock,
+    transparent:true,
+    opacity:0.98
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, 1.12);
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  spawnDirt(x, y - 0.15, 10);
+
+  world.bossBullets.push({
+    type:'rock',
+    x,y,r,vx,vy,
+    life: 6.2,
+    spin: rand(-6,6),
+    wob: 0,
+    gravity: -18.0,
+    mesh
+  });
+}
+
+function spawnIceRock(x,y, vx,vy, r=0.52){
+  const geo = new THREE.PlaneGeometry(r*2, r*2);
+  const mat = new THREE.MeshBasicMaterial({
+    map: texIceRock,
+    transparent:true,
+    opacity:0.98
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, 1.12);
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  spawnIceShards(x, y - 0.12, 12);
+
+  world.bossBullets.push({
+    type:'iceRock',
+    x,y,r,vx,vy,
+    life: 6.2,
+    spin: rand(-7,7),
+    wob: 0,
+    gravity: -18.0,
+    mesh
+  });
+}
+
+
 function spawnBossShot(b, x,y, vx,vy, r, homing){
   if(b && b.kind === "dragon"){
     spawnFireball(x,y, vx,vy, r*0.92, homing);
     // 요란함: 발사 순간 작은 흔들림/파편
     screenShake(0.04, 0.05);
     spawnParticles(x, y, 10, 0.9);
+  }else if(b && b.kind === "golem"){
+    spawnRock(x,y, vx, vy + 1.2, r*1.2);
+  }else if(b && b.kind === "penguin"){
+    spawnIceRock(x,y, vx, vy + 1.2, r*1.2);
   }else if(b && b.kind === "octopus"){
     spawnGreenDroplet(x,y, vx,vy, r, homing);
   }else{
@@ -4625,6 +5036,8 @@ function spawnBossShot(b, x,y, vx,vy, r, homing){
 
       // 드래곤은 더 빠르게 재충전(요란함)
       if(b.kind === 'dragon') b.chargeT = 0.15;
+      if(b.kind === 'golem') b.chargeT = 0.22;
+      if(b.kind === 'penguin') b.chargeT = 0.22;
 
       const dx0 = (player.x - b.x);
       const dy0 = (player.y - b.y);
@@ -4718,9 +5131,11 @@ function spawnBossShot(b, x,y, vx,vy, r, homing){
       b.invuln = Math.max(0, b.invuln - dt);
       b.hurtT  = Math.max(0, b.hurtT  - dt);
       b.chargeT= Math.max(0, b.chargeT- dt);
-		// 이동(드래곤은 빠르고 요란하게 / 문어는 고래 패턴 기반이지만 20% 느릿느릿)
+		// 이동(드래곤은 빠르고 요란하게 / 문어는 고래 패턴 기반이지만 느릿느릿)
 		const isDragon = (b.kind === 'dragon');
 		const isOctopus = (b.kind === 'octopus');
+		const isGolem = (b.kind === 'golem');
+		const isPenguin = (b.kind === 'penguin');
 		const baseX = b.baseX;
 		const baseY = b.baseY;
 
@@ -4731,17 +5146,27 @@ function spawnBossShot(b, x,y, vx,vy, r, homing){
 		  amp  *= 1.35;
 		  spdY *= (b.speedMul || 2.0);
 		  b.x = baseX + Math.sin(b.t*2.7) * (0.85 + b.diff*0.05) + Math.sin(b.t*12.0) * 0.08;
+		  b.y = baseY + Math.sin(b.t * spdY) * amp;
+		}else if(isGolem || isPenguin){
+		  // 골렘/펭귄: 지면에서 좌우 이동만
+		  const ampX = 2.6 + b.diff*0.12;
+		  const spdX = (0.7 + b.diff*0.04) * (isPenguin ? 1.2 : 1.0);
+		  b.x = baseX + Math.sin(b.t * spdX) * ampX;
+		  b.y = (world.groundTop || baseY) + b.h*0.5 - 0.12;
 		}else{
 		  // 고래/문어: 우측 고정 + 상하 사인 이동
 		  b.x = baseX;
 		  spdY *= (b.speedMul || 1.0); // 문어는 speedMul=0.8로 느리게
 		  if(isOctopus) amp *= 0.92;
+		  b.y = baseY + Math.sin(b.t * spdY) * amp;
+		  if(isOctopus) b.y += Math.sin(b.t * 0.35) * 0.12; // 느릿느릿 2차 흔들림
 		}
-
-		b.y = baseY + Math.sin(b.t * spdY) * amp;
-		if(isOctopus) b.y += Math.sin(b.t * 0.35) * 0.12; // 느릿느릿 2차 흔들림
 		b.mesh.position.x = b.x;
 		b.mesh.position.y = b.y;
+
+		const face = (player.x < b.x) ? 1 : -1;
+		b.face = face;
+		b.mesh.scale.x = Math.abs(b.mesh.scale.x || 1) * b.face;
 
       // 프레임(연출)
 	  
@@ -4791,7 +5216,15 @@ function spawnBossShot(b, x,y, vx,vy, r, homing){
 	
       mat.needsUpdate = true;
 
-      
+      b.trailT -= dt;
+      const moved = Math.hypot(b.x - b.prevX, b.y - b.prevY);
+      if(moved > 0.01 && b.trailT <= 0){
+        spawnBossAfterimage(b, mat.map);
+        b.trailT = 0.06;
+      }
+      b.prevX = b.x;
+      b.prevY = b.y;
+
 // 패턴 갱신(난이도↑일수록 더 자주/더 다양)
 const rateMul = (b.rateMul || 1.0);
 b.patternCd -= dt * rateMul;
@@ -4833,9 +5266,14 @@ if(b.patternCd <= 0){
         const bb = world.bossBullets[i];
         bb.life -= dt;
 
-        // 약간 흔들리는 거품 느낌
-        bb.wob += dt * 2.2;
-        const wobV = Math.sin(bb.wob) * 0.55;
+        let wobV = 0;
+        if(bb.type !== 'rock' && bb.type !== 'iceRock'){
+          // 약간 흔들리는 거품 느낌
+          bb.wob += dt * 2.2;
+          wobV = Math.sin(bb.wob) * 0.55;
+        }else if(bb.gravity){
+          bb.vy += bb.gravity * dt;
+        }
 
         if(bb.homing){
           const dy = (player.y - bb.y);
@@ -4849,7 +5287,7 @@ if(b.patternCd <= 0){
           bb.mesh.position.x = bb.x;
           bb.mesh.position.y = bb.y;
           bb.mesh.rotation.z += bb.spin * dt * 0.2;
-          const s = 1.0 + Math.sin(bb.wob*1.7)*0.04;
+          const s = (bb.type === 'rock' || bb.type === 'iceRock') ? 1.0 : (1.0 + Math.sin(bb.wob*1.7)*0.04);
           bb.mesh.scale.set(s,s,1);
         }
 
@@ -4877,6 +5315,7 @@ if(b.patternCd <= 0){
         }
       }
     }
+
 
     
     // ----------------------------
@@ -4995,9 +5434,25 @@ if(b.patternCd <= 0){
           a.dead = true;
           continue;
         }
-        a.sp.material.opacity = clamp(a.life / 0.22, 0, 1) * 0.35;
+        const lifeMax = a.lifeMax || 0.22;
+        const baseOpacity = (a.opacity ?? 0.35);
+        a.sp.material.opacity = clamp(a.life / lifeMax, 0, 1) * baseOpacity;
       }
       world.afterimages = world.afterimages.filter(a=>!a.dead);
+    }
+
+    function updateBossAfterimages(dt){
+      for(const a of world.bossAfterimages){
+        a.life -= dt;
+        if(a.life <= 0){
+          scene.remove(a.mesh);
+          a.dead = true;
+          continue;
+        }
+        const lifeMax = a.lifeMax || 0.26;
+        a.mesh.material.opacity = clamp(a.life / lifeMax, 0, 1) * (a.opacity ?? 0.26);
+      }
+      world.bossAfterimages = world.bossAfterimages.filter(a=>!a.dead);
     }
 
     // ----------------------------
@@ -5014,8 +5469,8 @@ if(b.patternCd <= 0){
       const minCamY = (world.groundTop ?? -0.6) + 1.1;
       if(targetY < minCamY) targetY = minCamY;
 
-      camX = lerp(camX, targetX, 1 - Math.exp(-7.5*dt));
-      camY = lerp(camY, targetY, 1 - Math.exp(-7.0*dt));
+      camX = lerp(camX, targetX, 1 - Math.exp(-12.0*dt));
+      camY = lerp(camY, targetY, 1 - Math.exp(-11.0*dt));
 
       if(shakeT > 0){
         shakeT = Math.max(0, shakeT - dt);
@@ -5039,8 +5494,18 @@ if(b.patternCd <= 0){
       bgTex.offset.x = camX * 0.02;
       bgTex.offset.y = camY * 0.01;
 
-      waterTex.offset.x = camX * 0.04;
-      waterTex.offset.y = Math.sin(perfT*0.8)*0.02;
+      if(waterTexs.length){
+        waterTexs[0].offset.x = camX * 0.04;
+        waterTexs[0].offset.y = Math.sin(perfT*0.7)*0.02;
+        waterTexs[1].offset.x = camX * 0.06;
+        waterTexs[1].offset.y = Math.sin(perfT*0.95)*0.03;
+        waterTexs[2].offset.x = camX * 0.08;
+        waterTexs[2].offset.y = Math.sin(perfT*1.15)*0.035;
+      }
+      if(waterMeshes.length){
+        waterMeshes[1].position.y = waterMeshes[1].userData.baseY + Math.sin(perfT*1.1)*0.08;
+        waterMeshes[2].position.y = waterMeshes[2].userData.baseY + Math.sin(perfT*0.9)*0.06;
+      }
     }
 
     // ----------------------------
@@ -5059,6 +5524,10 @@ if(b.patternCd <= 0){
       player.dashCd = 0;
       player.dashTrailT = 0;
       player.dashCharges = DASH_CHARGES_MAX;
+      player.runHold = 0;
+      player.runBoost = false;
+      player.runTrailT = 0;
+      player.runSfxT = 0;
 
       player.invuln = 0;
       player.hurtT = 0;
@@ -5169,6 +5638,11 @@ if(b.patternCd <= 0){
         return;
       }
 
+      if(game.paused){
+        updateDebugOverlay();
+        return;
+      }
+
       if(game.state === "celebrate"){
         game.t -= dt;
 
@@ -5208,7 +5682,7 @@ if(b.patternCd <= 0){
         if(game.t <= 0){
           showBigMsg(false);
           game.state = "boss";
-          showToast("START! (Headbutt the whale's torso with a dash)", 900);
+          showToast("START! (Dash into the boss to attack)", 900);
         }
       }else if(game.state === "boss"){
         updatePlayer(dt);
@@ -5274,11 +5748,13 @@ if(b.patternCd <= 0){
 				*/
 				const diff = Math.max(1, (game.bossDifficulty|0));
 
-				// 1: 고래, 2: 드래곤, 3: 문어(3의 배수)
+				// 1: 고래, 2: 드래곤, 3: 문어, 4: 골렘, 5: 펭귄
 				const kind =
-				  (diff % 3 === 1) ? 'whale' :
-				  (diff % 3 === 2) ? 'dragon' :
-									'octopus';
+				  (diff % 5 === 1) ? 'whale' :
+				  (diff % 5 === 2) ? 'dragon' :
+				  (diff % 5 === 3) ? 'octopus' :
+				  (diff % 5 === 4) ? 'golem' :
+									'penguin';
 
 				game.respawnBoss = false;
 				game.state = "bossIntro";
@@ -5286,12 +5762,14 @@ if(b.patternCd <= 0){
 
 				buildBossArena(diff, kind);
 
-				const kindKo = (kind === 'dragon') ? 'Dragon' : (kind === 'octopus') ? 'Octopus' : 'Whale';
+				const kindKo = (kind === 'dragon') ? 'Dragon' : (kind === 'octopus') ? 'Octopus' : (kind === 'golem' ? 'Golem' : (kind === 'penguin' ? 'Penguin' : 'Whale'));
 				$stageText.textContent = `BOSS Lv ${diff} (${kindKo})`;
 
 				const introMsg =
 				  (kind === 'dragon')  ? `BOSS Retry! Dragon (Lv ${diff})` :
-				  (kind === 'octopus') ? `BOSS BOSS Retry! Octopus (Lv ${diff})` :
+				  (kind === 'octopus') ? `BOSS Retry! Octopus (Lv ${diff})` :
+				  (kind === 'golem') ? `BOSS Retry! Golem (Lv ${diff})` :
+				  (kind === 'penguin') ? `BOSS Retry! Penguin (Lv ${diff})` :
 										 `BOSS Retry! Whale (Lv ${diff})`;
 
 				showBigMsg(true, introMsg);
@@ -5318,6 +5796,7 @@ if(b.patternCd <= 0){
 
       updateParticles(dt);
       updateAfterimages(dt);
+      updateBossAfterimages(dt);
       updateDeathAnim(dt);
 
       input.jumpPressed = false;
