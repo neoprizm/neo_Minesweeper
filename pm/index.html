@@ -13,7 +13,7 @@
       --hud: rgba(255,255,255,.78);
       --hud2: rgba(255,255,255,.55);
     }
-    html,body{ height:100%; margin:0; background:var(--bg); overflow:hidden; touch-action:none; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
+    html,body{ height:100%; margin:0; background:var(--bg); overflow:hidden; touch-action:none; -webkit-text-size-adjust: 100%; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
     #wrap{ position:fixed; inset:0; }
     canvas{ width:100%; height:100%; display:block; }
 
@@ -1402,6 +1402,16 @@
       if(infoTimer) clearTimeout(infoTimer);
       infoTimer = setTimeout(()=>{ hideHelp(); }, 5000);
     }
+
+    // 더블탭 확대 방지 (iOS Safari)
+    let _lastTouchEnd = 0;
+    addEventListener("touchend", (e)=>{
+      const now = Date.now();
+      if(now - _lastTouchEnd <= 300){
+        e.preventDefault();
+      }
+      _lastTouchEnd = now;
+    }, { passive:false });
 
     // 터치(모바일)
     const touch = ("ontouchstart" in window) || (navigator.maxTouchPoints>0);
