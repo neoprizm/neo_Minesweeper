@@ -1,0 +1,2935 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DDL → Graph Modeler</title>
+
+  <style>
+    :root{
+      /* 기본(다크) */
+      --bg:#0b0e14; --panel:#101522; --line:#1f2a44;
+      --text:#e6e8ef; --muted:#9aa3b2; --accent:#7aa2ff;
+      --warn:#ffcf5a; --ok:#6ee7b7; --bad:#ff6b6b;
+
+      --canvas-bg: rgba(0,0,0,0.20);
+      --canvas-grid: rgba(31,42,68,0.35);
+      --edge: rgba(31,42,68,0.95);
+      --edge-soft: rgba(31,42,68,0.45);
+      --edge-label-bg: rgba(11,14,20,0.70);
+      --edge-label-stroke: rgba(31,42,68,0.9);
+      --edge-label-text: #9aa3b2;
+
+      --table-fill: rgba(122,162,255,0.16);
+      --table-fill-hover: rgba(122,162,255,0.22);
+      --table-fill-sel: rgba(255,207,90,0.25);
+      --table-stroke: #7aa2ff;
+      --table-stroke-sel: #ffcf5a;
+      --table-text: #e6e8ef;
+      --table-text-sel: #ffcf5a;
+
+      --col-fill: rgba(154,163,178,0.12);
+      --col-fill-hover: rgba(154,163,178,0.18);
+      --col-fill-sel: rgba(255,207,90,0.18);
+      --col-stroke: #9aa3b2;
+      --col-stroke-pk: rgba(110,231,183,0.9);
+      --col-stroke-uq: rgba(122,162,255,0.9);
+
+      --col-label-bg: rgba(11,14,20,0.78);
+      --col-label-stroke: rgba(31,42,68,0.9);
+      --col-label-text: #e6e8ef;
+      --col-leader: rgba(154,163,178,0.55);
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", Arial, sans-serif;
+    }
+
+    /* BW-Dark: 완전 흑배경 + 백글씨 */
+    body.theme-bw-dark{
+      --bg:#000; --panel:#0a0a0a; --line:#3a3a3a;
+      --text:#fff; --muted:#d0d0d0; --accent:#fff;
+
+      --canvas-bg: rgba(0,0,0,0.10);
+      --canvas-grid: rgba(255,255,255,0.12);
+      --edge: rgba(255,255,255,0.85);
+      --edge-soft: rgba(255,255,255,0.25);
+      --edge-label-bg: rgba(0,0,0,0.85);
+      --edge-label-stroke: rgba(255,255,255,0.35);
+      --edge-label-text: #fff;
+
+      --table-fill: rgba(255,255,255,0.07);
+      --table-fill-hover: rgba(255,255,255,0.10);
+      --table-fill-sel: rgba(255,255,255,0.16);
+      --table-stroke: #fff;
+      --table-stroke-sel: #fff;
+      --table-text: #fff;
+      --table-text-sel: #fff;
+
+      --col-fill: rgba(255,255,255,0.06);
+      --col-fill-hover: rgba(255,255,255,0.10);
+      --col-fill-sel: rgba(255,255,255,0.14);
+      --col-stroke: rgba(255,255,255,0.85);
+      --col-stroke-pk: rgba(255,255,255,0.95);
+      --col-stroke-uq: rgba(255,255,255,0.95);
+
+      --col-label-bg: rgba(0,0,0,0.88);
+      --col-label-stroke: rgba(255,255,255,0.35);
+      --col-label-text: #fff;
+      --col-leader: rgba(255,255,255,0.35);
+    }
+
+    /* BW-Light: 흰배경 + 흑글씨 */
+    body.theme-bw-light{
+      --bg:#fff; --panel:#f6f6f6; --line:#d0d0d0;
+      --text:#000; --muted:#333; --accent:#000;
+
+      --canvas-bg: rgba(255,255,255,0.0);
+      --canvas-grid: rgba(0,0,0,0.0); /* ✅ 그리드 완전 숨김 */
+      --edge: rgba(0,0,0,0.80);
+      --edge-soft: rgba(0,0,0,0.22);
+      --edge-label-bg: rgba(255,255,255,0.92);
+      --edge-label-stroke: rgba(0,0,0,0.25);
+      --edge-label-text: #000;
+
+      --table-fill: rgba(0,0,0,0.04);
+      --table-fill-hover: rgba(0,0,0,0.06);
+      --table-fill-sel: rgba(0,0,0,0.10);
+      --table-stroke: #000;
+      --table-stroke-sel: #000;
+      --table-text: #000;
+      --table-text-sel: #000;
+
+      --col-fill: rgba(0,0,0,0.03);
+      --col-fill-hover: rgba(0,0,0,0.05);
+      --col-fill-sel: rgba(0,0,0,0.08);
+      --col-stroke: rgba(0,0,0,0.70);
+      --col-stroke-pk: rgba(0,0,0,0.85);
+      --col-stroke-uq: rgba(0,0,0,0.85);
+
+      --col-label-bg: rgba(255,255,255,0.95);
+      --col-label-stroke: rgba(0,0,0,0.22);
+      --col-label-text: #000;
+      --col-leader: rgba(0,0,0,0.28);
+    }
+
+    html{ font-size: clamp(11px, 0.35vw + 10px, 14px); }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);}
+
+    .app{
+      height:100%;
+      display:grid;
+      grid-template-rows: 56px 1fr 26px;
+      gap:8px;
+      padding:8px;
+      box-sizing:border-box;
+      min-height:0;
+    }
+    .top{
+      background:linear-gradient(180deg, rgba(122,162,255,0.12), rgba(122,162,255,0.03));
+      border:1px solid var(--line);
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 10px;
+      box-sizing:border-box;
+      min-height:0;
+    }
+    body.theme-bw-dark .top,
+    body.theme-bw-light .top{
+      background:rgba(0,0,0,0.0);
+    }
+
+    .brand{display:flex; gap:10px; align-items:center; font-weight:800; flex-wrap:wrap;}
+    .pill{
+      font-size:0.85rem; padding:3px 7px; border:1px solid var(--line); border-radius:999px;
+      color:var(--muted); background:rgba(255,255,255,0.02);
+      line-height:1.2;
+    }
+
+    .btns{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center;}
+
+    button{
+      background:rgba(255,255,255,0.03);
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:0.55rem 0.7rem;
+      font-size:0.9rem;
+      cursor:pointer;
+      transition:transform .06s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+      line-height:1.1;
+    }
+    button:hover{background:rgba(122,162,255,0.10); border-color:rgba(122,162,255,0.45);}
+    body.theme-bw-dark button:hover,
+    body.theme-bw-light button:hover{
+      background:rgba(127,127,127,0.10);
+      border-color:rgba(127,127,127,0.55);
+    }
+    button:active{transform:translateY(1px);}
+    button.primary{background:rgba(122,162,255,0.18); border-color:rgba(122,162,255,0.55);}
+    body.theme-bw-dark button.primary,
+    body.theme-bw-light button.primary{
+      background:rgba(127,127,127,0.12);
+      border-color:rgba(127,127,127,0.55);
+    }
+    button.danger:hover{background:rgba(255,107,107,0.15); border-color:rgba(255,107,107,0.5);}
+    button.ok:hover{background:rgba(110,231,183,0.10); border-color:rgba(110,231,183,0.5);}
+
+    .iconBtn{
+      width:34px; height:34px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      padding:0;
+      font-weight:900;
+      font-family:var(--mono);
+    }
+
+    .main{
+      min-height:0;
+      display:flex;
+      gap:0;
+      border-radius:16px;
+      overflow:hidden;
+    }
+
+    .panel{
+      background:rgba(16,21,34,0.9);
+      border:1px solid var(--line);
+      border-radius:16px;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+      min-width:0;
+      box-sizing:border-box;
+    }
+    body.theme-bw-dark .panel,
+    body.theme-bw-light .panel{ background:rgba(255,255,255,0.0); }
+
+    .panelWrap{ min-height:0; display:flex; flex-direction:column; min-width:0; }
+    .panelWrap > .panel{ flex:1 1 auto; min-height:0; }
+    .panelWrap.leftWrap{ padding:0 10px 0 0; }
+    .panelWrap.midWrap{ padding:0 10px; flex:1 1 auto; }
+    .panelWrap.rightWrap{ padding:0 0 0 10px; }
+
+    .panel h3{
+      margin:0;
+      padding:10px 12px;
+      font-size:0.95rem;
+      color:var(--muted);
+      border-bottom:1px solid var(--line);
+      background:rgba(255,255,255,0.02);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      line-height:1.2;
+    }
+    .panel .body{flex:1; min-height:0; display:flex; flex-direction:column;}
+
+    textarea, pre, input[type="text"]{font-family:var(--mono); font-size:0.9rem; line-height:1.5; color:var(--text);}
+    textarea{
+      flex:1;
+      resize:none;
+      border:none;
+      outline:none;
+      padding:12px;
+      background:rgba(0,0,0,0.15);
+      box-sizing:border-box;
+      white-space:pre;
+      tab-size:2;
+      min-height:0;
+    }
+    body.theme-bw-light textarea{ background:rgba(0,0,0,0.04); }
+
+    .splitter{
+      width:10px;
+      cursor:col-resize;
+      position:relative;
+      user-select:none;
+      flex:0 0 10px;
+      background:rgba(0,0,0,0.15);
+      border-left:1px solid rgba(31,42,68,0.85);
+      border-right:1px solid rgba(31,42,68,0.85);
+    }
+    body.theme-bw-dark .splitter,
+    body.theme-bw-light .splitter{
+      background:rgba(127,127,127,0.08);
+      border-left:1px solid var(--line);
+      border-right:1px solid var(--line);
+    }
+    .splitter:before{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:2px;
+      height:42px;
+      border-radius:2px;
+      background:rgba(154,163,178,0.35);
+      box-shadow: -4px 0 0 rgba(154,163,178,0.18), 4px 0 0 rgba(154,163,178,0.18);
+    }
+    .splitter:hover{ background:rgba(122,162,255,0.08); }
+    body.resizing{ cursor:col-resize !important; }
+    body.resizing *{ cursor:col-resize !important; user-select:none !important; }
+
+    .status{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      color:var(--muted);
+      font-size:0.9rem;
+      padding:0 6px;
+      min-height:0;
+    }
+
+    .kbd{
+      font-family:var(--mono);
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.03);
+      padding:2px 6px;
+      border-radius:8px;
+      color:var(--text);
+      font-size:0.85rem;
+      line-height:1.2;
+    }
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+    .hint{color:var(--muted);}
+
+    .mid .canvasWrap{flex:1; position:relative; background:var(--canvas-bg); min-height: 260px;}
+    canvas{display:block; width:100%; height:100%;}
+
+    .tabs{display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid var(--line);
+      background:rgba(255,255,255,0.02); flex-wrap:wrap;}
+    .tab{
+      padding:6px 10px; border:1px solid var(--line); border-radius:999px;
+      font-size:0.9rem; color:var(--muted); cursor:pointer; user-select:none;
+      line-height:1.1;
+    }
+    .tab.active{color:var(--text); border-color:rgba(122,162,255,0.55); background:rgba(122,162,255,0.12);}
+    body.theme-bw-dark .tab.active,
+    body.theme-bw-light .tab.active{
+      border-color:rgba(127,127,127,0.65);
+      background:rgba(127,127,127,0.10);
+    }
+
+    .out{flex:1; min-height:0; overflow:auto; background:rgba(0,0,0,0.15); padding:12px; box-sizing:border-box;}
+    body.theme-bw-light .out{ background:rgba(0,0,0,0.04); }
+    .out pre{margin:0; white-space:pre-wrap; word-break:break-word;}
+
+    .controls{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      background:rgba(0,0,0,0.10);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    body.theme-bw-light .controls{ background:rgba(0,0,0,0.02); }
+
+    .controls .grid{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    .controls label{font-size:0.92rem; color:var(--muted); display:flex; align-items:center; gap:8px; user-select:none;}
+    .controls input[type="checkbox"]{transform:translateY(1px);}
+
+    select, input[type="text"]{
+      background:rgba(255,255,255,0.03);
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:6px 8px;
+      font-size:0.9rem;
+      outline:none;
+    }
+    body.theme-bw-light select,
+    body.theme-bw-light input[type="text"]{
+      background:rgba(0,0,0,0.03);
+    }
+
+    .mini{display:flex; gap:8px; align-items:center; font-family:var(--mono); font-size:0.82rem; color:var(--muted);}
+    .split{height:1px; background:var(--line); opacity:0.8;}
+
+    .inspector{display:flex; flex-direction:column; gap:10px; font-size:0.92rem; color:var(--muted);}
+    .card{border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,0.02); padding:10px;}
+    body.theme-bw-light .card{ background:rgba(0,0,0,0.02); }
+    .card h4{margin:0 0 8px 0; font-size:0.92rem; color:var(--text); display:flex; justify-content:space-between; align-items:center; gap:10px;}
+    .kv{display:grid; grid-template-columns: 120px 1fr; gap:6px 10px; font-family:var(--mono); font-size:0.85rem; color:var(--text); opacity:0.95;}
+    .kv div.key{color:var(--muted); font-family:var(--sans); font-size:0.92rem;}
+    .pill2{font-size:0.82rem; padding:2px 8px; border:1px solid var(--line); border-radius:999px; color:var(--muted); background:rgba(0,0,0,0.15); font-family:var(--mono);}
+    body.theme-bw-light .pill2{ background:rgba(0,0,0,0.04); }
+    .smallBtn{padding:6px 8px; font-size:0.85rem; border-radius:10px;}
+
+    .helpBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.45);
+      display:none;
+      z-index:9999;
+      align-items:flex-end;
+      justify-content:center;
+      padding:12px;
+      box-sizing:border-box;
+    }
+    .helpBackdrop.open{ display:flex; }
+    .helpPanel{
+      width:min(860px, 100%);
+      background:rgba(16,21,34,0.96);
+      border:1px solid rgba(31,42,68,0.95);
+      border-radius:18px;
+      box-shadow:0 20px 80px rgba(0,0,0,0.6);
+      overflow:hidden;
+      transform:translateY(0);
+    }
+    body.theme-bw-dark .helpPanel,
+    body.theme-bw-light .helpPanel{
+      background:rgba(0,0,0,0.92);
+      border:1px solid var(--line);
+    }
+    body.theme-bw-light .helpPanel{
+      background:rgba(255,255,255,0.96);
+    }
+
+    .helpHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--line);
+      background:rgba(255,255,255,0.02);
+    }
+    .helpTitle{
+      font-weight:900;
+      font-size:0.95rem;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .helpBody{
+      padding:12px 14px;
+      color:var(--muted);
+      font-size:0.92rem;
+    }
+    .helpBody b{ color:var(--text); }
+    .helpGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .helpItem{
+      border:1px solid rgba(31,42,68,0.8);
+      border-radius:14px;
+      padding:10px;
+      background:rgba(0,0,0,0.15);
+    }
+    body.theme-bw-light .helpItem{ background:rgba(0,0,0,0.03); }
+    .helpRow{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+    .helpFoot{
+      padding:10px 14px;
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      background:rgba(0,0,0,0.10);
+    }
+    body.theme-bw-light .helpFoot{ background:rgba(0,0,0,0.02); }
+
+    @media (max-width: 1100px){
+      button{ padding:0.5rem 0.62rem; }
+      .panel h3{ padding:9px 10px; }
+      textarea{ padding:10px; }
+      .controls .grid{ grid-template-columns: 1fr; }
+      .helpGrid{ grid-template-columns: 1fr; }
+    }
+	
+	select{
+	  background-color: rgba(30,30,30,0.95);
+	  color: #fff;
+	}
+	select option{
+	  background-color: #2b2b2b;
+	  color: #fff;
+	}
+  </style>
+</head>
+
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <span>DDL → Graph Modeler <!-- <span class="pill">gp3</span></span>
+      <span class="pill">2D</span>
+      <span class="pill">Resizable</span>
+      <span class="pill">Table force</span>
+      <span class="pill">Column spread</span>
+      <span class="pill">Column labels on expand</span>
+      <span class="pill">Theme: B/W</span> -->
+    </div>
+    <div class="btns">
+      <button class="iconBtn" id="btnHelp" title="조작 설명">?</button>
+      <button id="btnToggleLeft">Left</button>
+      <button id="btnToggleRight">Right</button>
+      <button class="primary" id="btnParse">Parse + Generate</button>
+      <button class="ok" id="btnLayout">Auto Layout</button>
+      <button id="btnCopyCypher">Copy Cypher</button>
+      <button id="btnExportJson">Export JSON</button>
+      <button id="btnImportJson">Import JSON</button>
+      <button class="danger" id="btnClear">Clear</button>
+    </div>
+  </div>
+
+  <div class="main" id="mainRow">
+    <div class="panelWrap leftWrap" id="leftWrap">
+      <div class="panel left" id="leftPanel">
+        <h3>
+          <span>SQL DDL (CREATE TABLE)</span>
+          <span class="mini">MySQL/Oracle/MSSQL 일부 대응(복잡 방언은 확실하지 않음)</span>
+        </h3>
+
+        <div class="controls">
+          <div class="grid">
+            <label><input type="checkbox" id="optCollapseJoin" checked> 조인 테이블(M:N) 관계로 접기</label>
+            <label><input type="checkbox" id="optHideColumns" checked> 기본은 “테이블만” 표시</label>
+            <label><input type="checkbox" id="optShowFkOnly"> FK 관계만 강조(비-FK 흐리게)</label>
+            <label><input type="checkbox" id="optAutoUpperRel" checked> 관계 타입 자동 대문자화</label>
+          </div>
+          <div class="row">
+            <span class="hint">Theme:</span>
+            <select id="themeMode">
+              <option value="dark" selected>Dark</option>
+              <option value="bw-dark">BW-Dark (검은배경/흰글씨)</option>
+              <option value="bw-light">BW-Light (흰배경/검은글씨)</option>
+            </select>
+
+            <span class="hint">검색(테이블명):</span>
+            <input type="text" id="search" placeholder="예: order, customer ..." style="flex:1; min-width:220px;">
+          </div>
+          <div class="row">
+            <span class="hint">수동 링크:</span>
+            <select id="relType">
+              <option value="ASSOCIATES" selected>ASSOCIATES</option>
+              <option value="MANUAL_LINK">MANUAL_LINK</option>
+              <option value="DEPENDS_ON">DEPENDS_ON</option>
+            </select>
+			</br>
+			</br>
+            <span class="hint">Cypher 출력:</span>
+            <select id="cypherMode">
+              <option value="META" selected>메타모델(Table/Column 그래프)</option>
+              <option value="DOMAIN">도메인 템플릿(테이블=라벨, FK=관계)</option>
+            </select>
+            <span class="hint">조작 설명은</span><span class="kbd">?</span><span class="hint">에서</span>
+          </div>
+        </div>
+
+        <div class="body">
+          <textarea id="sqlIn" spellcheck="false">
+-- MySQL 예시(Quartz)
+CREATE TABLE `QRTZ_SIMPLE_TRIGGERS` (
+  `SCHED_NAME` varchar(120) COLLATE utf8mb4_general_ci NOT NULL,
+  `TRIGGER_NAME` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `TRIGGER_GROUP` varchar(200) COLLATE utf8mb4_general_ci NOT NULL,
+  `REPEAT_COUNT` bigint NOT NULL,
+  `REPEAT_INTERVAL` bigint NOT NULL,
+  `TIMES_TRIGGERED` bigint NOT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`),
+  CONSTRAINT `QRTZ_SIMPLE_TRIGGERS_IBFK_1`
+    FOREIGN KEY (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`)
+    REFERENCES `QRTZ_TRIGGERS` (`SCHED_NAME`, `TRIGGER_NAME`, `TRIGGER_GROUP`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `QRTZ_TRIGGERS` (
+  `SCHED_NAME` varchar(120) NOT NULL,
+  `TRIGGER_NAME` varchar(200) NOT NULL,
+  `TRIGGER_GROUP` varchar(200) NOT NULL,
+  PRIMARY KEY (`SCHED_NAME`,`TRIGGER_NAME`,`TRIGGER_GROUP`)
+) ENGINE=InnoDB;
+          </textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="splitter" id="splitLeft" title="드래그로 폭 조절 / 더블클릭으로 토글"></div>
+
+    <div class="panelWrap midWrap" id="midWrap">
+      <div class="panel mid" id="midPanel">
+        <h3>
+          <span>Graph Diagram (2D)</span>
+          <span class="mini" id="stats">tables: 0 · nodes: 0 · edges: 0</span>
+        </h3>
+        <div class="body">
+          <div class="canvasWrap" id="canvasWrap">
+            <canvas id="view"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="splitter" id="splitRight" title="드래그로 폭 조절 / 더블클릭으로 토글"></div>
+
+    <div class="panelWrap rightWrap" id="rightWrap">
+      <div class="panel right" id="rightPanel">
+        <h3>
+          <span>Output / Inspector</span>
+          <span class="mini" id="selInfo">selected: none</span>
+        </h3>
+        <div class="tabs">
+          <div class="tab active" data-tab="cypher">Cypher</div>
+          <div class="tab" data-tab="inspect">Inspector</div>
+          <div class="tab" data-tab="json">Model JSON</div>
+          <div class="tab" data-tab="log">Log</div>
+        </div>
+        <div class="body">
+          <div class="out" id="outCypher"><pre id="cypherOut"></pre></div>
+          <div class="out" id="outInspect" style="display:none;">
+            <div class="inspector" id="inspectBody"></div>
+          </div>
+          <div class="out" id="outJson" style="display:none;"><pre id="jsonOut"></pre></div>
+          <div class="out" id="outLog" style="display:none;"><pre id="logOut"></pre></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="row">
+      <span>저장:</span><span class="kbd">LocalStorage</span>
+      <span class="hint"> / 컬럼 확장 시 컬럼 라벨 표시 · Theme(B/W) 지원</span>
+    </div>
+    <div class="row">
+      <span id="statusText">ready</span>
+    </div>
+  </div>
+</div>
+
+<div class="helpBackdrop" id="helpBackdrop" aria-hidden="true">
+  <div class="helpPanel" id="helpPanel" role="dialog" aria-modal="true">
+    <div class="helpHead">
+      <div class="helpTitle">조작 가이드 <span class="pill">Touch Panel</span></div>
+      <button class="iconBtn" id="btnHelpClose" title="닫기">×</button>
+    </div>
+    <div class="helpBody">
+      <div><b>핵심</b>: Table은 Worker force 배치(안정), Column은 확산 배치 + 수동 드래그(고정)입니다.</div>
+      <div class="helpGrid">
+        <div class="helpItem">
+          <div class="helpRow"><span class="kbd">Click</span><span>노드/엣지 선택</span></div>
+          <div class="helpRow"><span class="kbd">Drag</span><span>Table 드래그(핀 고정)</span></div>
+          <div class="helpRow"><span class="kbd">Drag(빈공간)</span><span>화면 패닝</span></div>
+        </div>
+        <div class="helpItem">
+          <div class="helpRow"><span class="kbd">Wheel</span><span>줌</span></div>
+          <div class="helpRow"><span class="kbd">Double Click</span><span>Table 컬럼 펼침/접기</span></div>
+          <div class="helpRow"><span class="kbd">Shift</span> + <span class="kbd">Click</span><span>테이블↔테이블 엣지 추가(화면 이동 없음)</span></div>
+        </div>
+        <div class="helpItem">
+          <div class="helpRow"><span class="kbd">Drag Column</span><span>컬럼 위치 변경(테이블 기준 상대좌표 저장)</span></div>
+          <div class="helpRow"><span class="kbd">Theme</span><span>Dark / BW-Dark / BW-Light</span></div>
+        </div>
+        <div class="helpItem">
+          <div><b>컬럼 라벨</b></div>
+          <div>테이블 확장 시 컬럼 노드 옆에 컬럼명이 라벨로 표시됩니다.</div>
+        </div>
+      </div>
+    </div>
+    <div class="helpFoot">
+      <span class="hint">바깥 클릭 닫기 · <span class="kbd">ESC</span></span>
+      <button class="smallBtn primary" id="btnHelpOk">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function $(sel){ return document.querySelector(sel); }
+
+  var logEl = $("#logOut");
+  var statusEl = $("#statusText");
+  var statsEl = $("#stats");
+  var selInfoEl = $("#selInfo");
+  var inspectBody = $("#inspectBody");
+
+  function log(msg, level){
+    var stamp = new Date().toLocaleTimeString();
+    var prefix = "[INF]";
+    if(level === "error") prefix = "[ERR]";
+    else if(level === "warn") prefix = "[WRN]";
+    logEl.textContent += prefix + " " + stamp + "  " + msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function setStatus(msg, tone){
+    statusEl.textContent = msg;
+    if(tone === "ok") statusEl.style.color = "var(--ok)";
+    else if(tone === "warn") statusEl.style.color = "var(--warn)";
+    else if(tone === "bad") statusEl.style.color = "var(--bad)";
+    else statusEl.style.color = "var(--muted)";
+  }
+
+  // ===== Help Touch Panel =====
+  var helpBackdrop = $("#helpBackdrop");
+  var helpPanel = $("#helpPanel");
+  var btnHelp = $("#btnHelp");
+  var btnHelpClose = $("#btnHelpClose");
+  var btnHelpOk = $("#btnHelpOk");
+  function openHelp(){ helpBackdrop.classList.add("open"); helpBackdrop.setAttribute("aria-hidden","false"); }
+  function closeHelp(){ helpBackdrop.classList.remove("open"); helpBackdrop.setAttribute("aria-hidden","true"); }
+  btnHelp.addEventListener("click", function(e){ e.stopPropagation(); openHelp(); });
+  btnHelpClose.addEventListener("click", closeHelp);
+  btnHelpOk.addEventListener("click", closeHelp);
+  helpBackdrop.addEventListener("pointerdown", function(e){ if(e.target === helpBackdrop) closeHelp(); });
+  helpPanel.addEventListener("pointerdown", function(e){ e.stopPropagation(); });
+  window.addEventListener("keydown", function(e){ if(e.key === "Escape") closeHelp(); });
+
+  // ===== LocalStorage model =====
+  var LS_KEY = "gp3_practical_v9_labels_theme_bw";
+  function makeEmptyModel(){
+    return {
+      version: 9,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      tables: {},
+      manualEdges: [],
+      ui: {
+        expandedTables:{},
+        lastSearch:"",
+        panes: { leftOpen:true, rightOpen:true, leftW:460, rightW:520 }
+      },
+      layout: {
+        seed: Math.random(),
+        lastAutoLayoutAt: null,
+        columnOffsets: {},
+        columnLabelOffsets: {}
+      },
+      options: {
+        collapseJoin:true,
+        hideColumns:true,
+        showFkOnly:false,
+        autoUpperRel:true,
+        cypherMode:"META",
+        theme:"dark"
+      }
+    };
+  }
+  function loadModel(){
+    try{
+      var raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){
+      log("localStorage load failed: " + e.message, "warn");
+      return null;
+    }
+  }
+  function saveModel(){
+    model.updatedAt = new Date().toISOString();
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify(model));
+      setStatus("saved", "ok");
+    }catch(e){
+      setStatus("localStorage save failed", "bad");
+      log("localStorage save failed: " + e.message, "error");
+    }
+  }
+
+  var model = loadModel();
+  if(!model) model = makeEmptyModel();
+  if(!model.ui) model.ui = {};
+  if(!model.ui.panes) model.ui.panes = { leftOpen:true, rightOpen:true, leftW:460, rightW:520 };
+  if(!model.layout) model.layout = { seed: Math.random(), lastAutoLayoutAt:null, columnOffsets:{}, columnLabelOffsets:{} };
+  if(!model.layout.columnOffsets) model.layout.columnOffsets = {};
+  if(!model.layout.columnLabelOffsets) model.layout.columnLabelOffsets = {};
+  if(!model.options) model.options = {};
+  if(!model.options.theme) model.options.theme = "dark";
+
+  // ===== Theme apply =====
+  var themeModeEl = $("#themeMode");
+  function applyTheme(){
+    var t = model.options.theme || "dark";
+    document.body.classList.remove("theme-bw-dark","theme-bw-light");
+    if(t === "bw-dark") document.body.classList.add("theme-bw-dark");
+    else if(t === "bw-light") document.body.classList.add("theme-bw-light");
+  }
+
+  // ===== Pane system =====
+  var leftWrap = $("#leftWrap");
+  var midWrap = $("#midWrap");
+  var rightWrap = $("#rightWrap");
+  var splitLeft = $("#splitLeft");
+  var splitRight = $("#splitRight");
+  var btnToggleLeft = $("#btnToggleLeft");
+  var btnToggleRight = $("#btnToggleRight");
+
+  var MIN_LEFT = 280;
+  var MIN_RIGHT = 320;
+
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+  function applyPanes(){
+    var p = model.ui.panes;
+    var leftOpen = !!p.leftOpen;
+    var rightOpen = !!p.rightOpen;
+
+    var leftW = clamp(Number(p.leftW || 460), MIN_LEFT, Math.max(MIN_LEFT, window.innerWidth * 0.65));
+    var rightW = clamp(Number(p.rightW || 520), MIN_RIGHT, Math.max(MIN_RIGHT, window.innerWidth * 0.65));
+    p.leftW = leftW; p.rightW = rightW;
+
+    leftWrap.style.display = leftOpen ? "flex" : "none";
+    splitLeft.style.display = leftOpen ? "block" : "none";
+    rightWrap.style.display = rightOpen ? "flex" : "none";
+    splitRight.style.display = rightOpen ? "block" : "none";
+
+    if(leftOpen){
+      leftWrap.style.flex = "0 0 " + leftW + "px";
+      leftWrap.style.width = leftW + "px";
+    }
+    if(rightOpen){
+      rightWrap.style.flex = "0 0 " + rightW + "px";
+      rightWrap.style.width = rightW + "px";
+    }
+    midWrap.style.flex = "1 1 auto";
+
+    btnToggleLeft.textContent = leftOpen ? "Left ▸" : "Left ◂";
+    btnToggleRight.textContent = rightOpen ? "Right ◂" : "Right ▸";
+  }
+
+  function toggleLeft(){
+    model.ui.panes.leftOpen = !model.ui.panes.leftOpen;
+    saveModel(); applyPanes();
+    perf.needResize = true; perf.dirty = true;
+  }
+  function toggleRight(){
+    model.ui.panes.rightOpen = !model.ui.panes.rightOpen;
+    saveModel(); applyPanes();
+    perf.needResize = true; perf.dirty = true;
+  }
+  btnToggleLeft.addEventListener("click", toggleLeft);
+  btnToggleRight.addEventListener("click", toggleRight);
+
+  function startResize(which, ev){
+    ev.preventDefault();
+    ev.stopPropagation();
+    document.body.classList.add("resizing");
+
+    var startX = ev.clientX;
+    var p = model.ui.panes;
+    var startLeftW = Number(p.leftW || 460);
+    var startRightW = Number(p.rightW || 520);
+
+    function onMove(e){
+      var dx = e.clientX - startX;
+      if(which === "left"){
+        p.leftW = clamp(startLeftW + dx, MIN_LEFT, Math.max(MIN_LEFT, window.innerWidth * 0.70));
+      }else{
+        p.rightW = clamp(startRightW - dx, MIN_RIGHT, Math.max(MIN_RIGHT, window.innerWidth * 0.70));
+      }
+      applyPanes();
+      perf.needResize = true; perf.dirty = true;
+    }
+    function onUp(){
+      document.body.classList.remove("resizing");
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      saveModel();
+      setStatus("pane resized", "ok");
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  splitLeft.addEventListener("pointerdown", function(e){ startResize("left", e); });
+  splitRight.addEventListener("pointerdown", function(e){ startResize("right", e); });
+  splitLeft.addEventListener("dblclick", toggleLeft);
+  splitRight.addEventListener("dblclick", toggleRight);
+
+  // ===== Options UI =====
+  var optCollapseJoin = $("#optCollapseJoin");
+  var optHideColumns  = $("#optHideColumns");
+  var optShowFkOnly   = $("#optShowFkOnly");
+  var optAutoUpperRel = $("#optAutoUpperRel");
+  var searchEl = $("#search");
+  var cypherModeEl = $("#cypherMode");
+
+  function syncOptionsToUI(){
+    optCollapseJoin.checked = !!model.options.collapseJoin;
+    optHideColumns.checked  = !!model.options.hideColumns;
+    optShowFkOnly.checked   = !!model.options.showFkOnly;
+    optAutoUpperRel.checked = !!model.options.autoUpperRel;
+    searchEl.value = model.ui.lastSearch || "";
+    cypherModeEl.value = model.options.cypherMode || "META";
+    themeModeEl.value = model.options.theme || "dark";
+  }
+  function syncUIToOptions(){
+    model.options.collapseJoin = optCollapseJoin.checked;
+    model.options.hideColumns  = optHideColumns.checked;
+    model.options.showFkOnly   = optShowFkOnly.checked;
+    model.options.autoUpperRel = optAutoUpperRel.checked;
+    model.ui.lastSearch = searchEl.value || "";
+    model.options.cypherMode = cypherModeEl.value || "META";
+    model.options.theme = themeModeEl.value || "dark";
+    saveModel();
+  }
+  function bindOptionChange(el){
+    el.addEventListener("change", function(){
+      syncUIToOptions();
+      if(el === themeModeEl){
+        applyTheme();
+        perf.dirty = true;
+        setStatus("theme changed", "ok");
+        return;
+      }
+      rebuildAll("options changed", { skipWorkerInit:false });
+    });
+  }
+  bindOptionChange(optCollapseJoin);
+  bindOptionChange(optHideColumns);
+  bindOptionChange(optShowFkOnly);
+  bindOptionChange(optAutoUpperRel);
+  bindOptionChange(cypherModeEl);
+  bindOptionChange(themeModeEl);
+
+  searchEl.addEventListener("input", function(){
+    model.ui.lastSearch = searchEl.value || "";
+    saveModel();
+    rebuildAll("search", { skipWorkerInit:true });
+  });
+
+  // ===== SQL parser (동일) =====
+  function stripComments(sql){
+    sql = sql.replace(/--.*$/gm, "");
+    sql = sql.replace(/\/\*[\s\S]*?\*\//g, "");
+    return sql;
+  }
+  function unquoteIdent(x){
+    x = (x || "").trim();
+    if(x.length >= 2){
+      if(x.charAt(0) === "[" && x.charAt(x.length-1) === "]") return x.slice(1,-1);
+      if(x.charAt(0) === "`" && x.charAt(x.length-1) === "`") return x.slice(1,-1);
+      if(x.charAt(0) === '"' && x.charAt(x.length-1) === '"') return x.slice(1,-1);
+    }
+    return x;
+  }
+  function parseTableRef(raw){
+    raw = (raw || "").trim();
+    var parts = raw.split(".").map(function(p){ return unquoteIdent(p.trim()); }).filter(Boolean);
+    if(parts.length >= 2){
+      var schema = parts[parts.length-2];
+      var name = parts[parts.length-1];
+      return { schema:schema, name:name, key:schema + "." + name };
+    }
+    var name2 = unquoteIdent(parts[0] || raw);
+    return { schema:null, name:name2, key:name2 };
+  }
+  function normalizeColList(x){
+    return (x || "").split(",").map(function(s){ return unquoteIdent(s.trim()); }).filter(Boolean);
+  }
+  function splitTopLevelComma(body){
+    var out = [];
+    var cur = "";
+    var depth = 0;
+    var inS=false, inD=false, inB=false;
+    for(var i=0;i<body.length;i++){
+      var ch = body.charAt(i);
+      var prev = i>0 ? body.charAt(i-1) : "";
+      if(ch === "'" && prev !== "\\" && !inD && !inB) inS = !inS;
+      else if(ch === '"' && prev !== "\\" && !inS && !inB) inD = !inD;
+      else if(ch === "`" && prev !== "\\" && !inS && !inD) inB = !inB;
+
+      if(!inS && !inD && !inB){
+        if(ch === "(") depth++;
+        else if(ch === ")") depth = Math.max(0, depth-1);
+      }
+
+      if(ch === "," && depth === 0 && !inS && !inD && !inB){
+        if(cur.trim()) out.push(cur.trim());
+        cur = "";
+      }else{
+        cur += ch;
+      }
+    }
+    if(cur.trim()) out.push(cur.trim());
+    return out;
+  }
+  function extractCreateTableBlocks(sql){
+    var blocks = [];
+    var s = sql;
+    var lower = s.toLowerCase();
+    var pos = 0;
+
+    while(true){
+      var idx = lower.indexOf("create", pos);
+      if(idx < 0) break;
+
+      var slice = lower.slice(idx);
+      if(!/^create\s+table\b/i.test(slice)){ pos = idx + 6; continue; }
+
+      var i = idx + slice.match(/^create\s+table\b/i)[0].length;
+      var rest0 = lower.slice(i);
+      var mm = rest0.match(/^\s+if\s+not\s+exists\b/i);
+      if(mm) i += mm[0].length;
+
+      while(i < s.length && /\s/.test(s.charAt(i))) i++;
+
+      var openParen = s.indexOf("(", i);
+      if(openParen < 0){ pos = i; continue; }
+
+      var rawName = s.slice(i, openParen).trim();
+      if(!rawName){ pos = openParen + 1; continue; }
+
+      var depth = 0;
+      var inS=false, inD=false, inB=false;
+      var j = openParen;
+      for(; j < s.length; j++){
+        var ch = s.charAt(j);
+        var prev = j>0 ? s.charAt(j-1) : "";
+        if(ch === "'" && prev !== "\\" && !inD && !inB) inS = !inS;
+        else if(ch === '"' && prev !== "\\" && !inS && !inB) inD = !inD;
+        else if(ch === "`" && prev !== "\\" && !inS && !inD) inB = !inB;
+
+        if(!inS && !inD && !inB){
+          if(ch === "(") depth++;
+          else if(ch === ")"){
+            depth--;
+            if(depth === 0) break;
+          }
+        }
+      }
+      if(depth !== 0){ pos = openParen + 1; continue; }
+
+      var closeParen = j;
+      var body = s.slice(openParen + 1, closeParen).trim();
+
+      var end = s.indexOf(";", closeParen);
+      if(end < 0) end = s.length;
+
+      blocks.push({ rawName:rawName, body:body });
+      pos = end + 1;
+    }
+    return blocks;
+  }
+  function extractDefaultExpr(restLower, restRaw){
+    var idx = restLower.indexOf("default");
+    if(idx < 0) return null;
+    var i = idx + "default".length;
+    while(i < restRaw.length && /\s/.test(restRaw.charAt(i))) i++;
+    if(i >= restRaw.length) return null;
+
+    if(restRaw.charAt(i) === "("){
+      var depth = 0, inS=false, inD=false, inB=false;
+      var j=i;
+      for(; j<restRaw.length; j++){
+        var ch = restRaw.charAt(j);
+        var prev = j>0 ? restRaw.charAt(j-1) : "";
+        if(ch === "'" && prev !== "\\" && !inD && !inB) inS = !inS;
+        else if(ch === '"' && prev !== "\\" && !inS && !inB) inD = !inD;
+        else if(ch === "`" && prev !== "\\" && !inS && !inD) inB = !inB;
+        if(!inS && !inD && !inB){
+          if(ch === "(") depth++;
+          else if(ch === ")"){
+            depth--;
+            if(depth === 0){ j++; break; }
+          }
+        }
+      }
+      return restRaw.slice(i, j).trim();
+    }
+
+    var q = restRaw.charAt(i);
+    if(q === "'" || q === '"'){
+      var j2 = i + 1;
+      for(; j2<restRaw.length; j2++){
+        if(restRaw.charAt(j2) === q && restRaw.charAt(j2-1) !== "\\"){ j2++; break; }
+      }
+      return restRaw.slice(i, j2).trim();
+    }
+
+    var j3 = i;
+    for(; j3<restRaw.length; j3++){
+      if(/\s/.test(restRaw.charAt(j3))) break;
+    }
+    return restRaw.slice(i, j3).trim();
+  }
+  function parseCreateTables(sql){
+    var cleaned = stripComments(sql || "");
+    if(!cleaned.trim()) return [];
+
+    var lines = cleaned.split(/\r?\n/);
+    for(var i=0;i<lines.length;i++){
+      var t = lines[i].trim();
+      if(/^GO$/i.test(t) || t === "/") lines[i] = ";";
+    }
+    var normalized = lines.join("\n");
+
+    var blocks = extractCreateTableBlocks(normalized);
+    var parsed = [];
+
+    for(var b=0;b<blocks.length;b++){
+      var blk = blocks[b];
+      var tRef = parseTableRef(blk.rawName);
+      var items = splitTopLevelComma(blk.body);
+
+      var table = { key:tRef.key, name:tRef.name, schema:tRef.schema, columns:{}, pk:[], uniques:[], fks:[] };
+
+      for(var k=0;k<items.length;k++){
+        var it = items[k].trim();
+
+        var pm = it.match(/\bprimary\s+key\s*\(([^)]+)\)/i);
+        if(pm){ table.pk = table.pk.concat(normalizeColList(pm[1])); continue; }
+
+        var um = it.match(/\bunique(?:\s+key|\s+index)?(?:\s+[^\s(]+)?\s*\(([^)]+)\)/i);
+        if(um){ table.uniques.push(normalizeColList(um[1])); continue; }
+
+        var dm = it.match(/^(?:constraint\s+([^\s]+)\s+)?default\s*\(([\s\S]+?)\)\s+for\s+(.+)$/i);
+        if(dm){
+          var defExpr = dm[2].trim();
+          var colRaw = dm[3].trim();
+          var colName = unquoteIdent(colRaw.split(/\s+/)[0]);
+          if(!table.columns[colName]) table.columns[colName] = { name:colName, type:"UNKNOWN", nullable:true, pk:false, unique:false, "default":null };
+          table.columns[colName]["default"] = defExpr;
+          continue;
+        }
+
+        var fkm = it.match(/^(?:constraint\s+([^\s]+)\s+)?foreign\s+key\s*\(([^)]+)\)\s+references\s+(.+?)\s*\(([^)]+)\)\s*(.*)$/i);
+        if(fkm){
+          var fkName = fkm[1] ? unquoteIdent(fkm[1]) : null;
+          var cols = normalizeColList(fkm[2]);
+          var ref = parseTableRef(fkm[3]);
+          var refCols = normalizeColList(fkm[4]);
+          var tail = (fkm[5] || "");
+          var onDeleteM = tail.match(/on\s+delete\s+(\w+)/i);
+          var onUpdateM = tail.match(/on\s+update\s+(\w+)/i);
+          table.fks.push({
+            name: fkName,
+            columns: cols,
+            refTableKey: ref.key,
+            refTableName: ref.name,
+            refSchema: ref.schema,
+            refColumns: refCols,
+            onDelete: onDeleteM ? (onDeleteM[1] || "").toUpperCase() : null,
+            onUpdate: onUpdateM ? (onUpdateM[1] || "").toUpperCase() : null
+          });
+          continue;
+        }
+
+        var colm = it.match(/^(.+?)\s+(.+)$/);
+        if(!colm){ continue; }
+
+        var colToken = colm[1].trim();
+        var rest = colm[2].trim();
+
+        var type = "";
+        (function(){
+          var depth=0, inS=false, inD=false, inB=false;
+          var idx2=0;
+          for(; idx2<rest.length; idx2++){
+            var ch2 = rest.charAt(idx2);
+            var prev2 = idx2>0 ? rest.charAt(idx2-1) : "";
+            if(ch2 === "'" && prev2 !== "\\" && !inD && !inB) inS = !inS;
+            else if(ch2 === '"' && prev2 !== "\\" && !inS && !inB) inD = !inD;
+            else if(ch2 === "`" && prev2 !== "\\" && !inS && !inD) inB = !inB;
+
+            if(!inS && !inD && !inB){
+              if(ch2 === "(") depth++;
+              else if(ch2 === ")") depth = Math.max(0, depth-1);
+              else if(ch2 === " " && depth === 0) break;
+            }
+          }
+          type = rest.slice(0, idx2).trim();
+          rest = rest.slice(idx2).trim();
+        })();
+
+        var colName2 = unquoteIdent(colToken);
+        var col = table.columns[colName2] || { name:colName2, type:"UNKNOWN", nullable:true, pk:false, unique:false, "default":null };
+        col.type = type || col.type;
+
+        if(/\bnot\s+null\b/i.test(rest)) col.nullable = false;
+        if(/\bprimary\s+key\b/i.test(rest)) col.pk = true;
+        if(/\bunique\b/i.test(rest)) col.unique = true;
+
+        var restLower = rest.toLowerCase();
+        if(restLower.indexOf("default") >= 0){
+          var de = extractDefaultExpr(restLower, rest);
+          if(de) col["default"] = de;
+        }
+
+        var rm = rest.match(/\breferences\s+(.+?)\s*\(([^)]+)\)\s*(.*)$/i);
+        if(rm){
+          var ref2 = parseTableRef(rm[1]);
+          var refCols2 = normalizeColList(rm[2]);
+          var tail2 = (rm[3] || "");
+          var onDelete2 = tail2.match(/on\s+delete\s+(\w+)/i);
+          var onUpdate2 = tail2.match(/on\s+update\s+(\w+)/i);
+          table.fks.push({
+            name: null,
+            columns: [colName2],
+            refTableKey: ref2.key,
+            refTableName: ref2.name,
+            refSchema: ref2.schema,
+            refColumns: refCols2,
+            onDelete: onDelete2 ? (onDelete2[1] || "").toUpperCase() : null,
+            onUpdate: onUpdate2 ? (onUpdate2[1] || "").toUpperCase() : null
+          });
+        }
+
+        table.columns[colName2] = col;
+      }
+
+      for(var p=0;p<table.pk.length;p++){
+        var cpk = table.pk[p];
+        if(table.columns[cpk]) table.columns[cpk].pk = true;
+      }
+      for(var u=0;u<table.uniques.length;u++){
+        var uu = table.uniques[u];
+        if(uu.length === 1 && table.columns[uu[0]]) table.columns[uu[0]].unique = true;
+      }
+
+      parsed.push(table);
+    }
+    return parsed;
+  }
+
+  // ===== Join table detection =====
+  function isJoinTable(t){
+    var fks = t.fks || [];
+    if(fks.length !== 2) return { ok:false };
+    var r1 = fks[0].refTableKey;
+    var r2 = fks[1].refTableKey;
+    if(!r1 || !r2 || r1 === r2) return { ok:false };
+
+    var fkCols = {};
+    for(var i=0;i<fks[0].columns.length;i++) fkCols[fks[0].columns[i]] = 1;
+    for(i=0;i<fks[1].columns.length;i++) fkCols[fks[1].columns[i]] = 1;
+
+    var pk = t.pk || [];
+    var keySet = null;
+    if(pk.length){
+      keySet = {};
+      for(i=0;i<pk.length;i++) keySet[pk[i]] = 1;
+    }else{
+      var uniques = t.uniques || [];
+      for(i=0;i<uniques.length;i++){
+        var cand = uniques[i];
+        var candSet = {};
+        for(var j=0;j<cand.length;j++) candSet[cand[j]] = 1;
+        var okAll = true;
+        for(var k in fkCols){
+          if(!candSet[k]) { okAll = false; break; }
+        }
+        if(okAll){ keySet = candSet; break; }
+      }
+    }
+    if(!keySet) return { ok:false };
+    for(var k2 in fkCols){
+      if(!keySet[k2]) return { ok:false };
+    }
+    return { ok:true, refs:[r1,r2] };
+  }
+
+  // ===== Merge parsed tables into model =====
+  function upsertTablesToModel(parsedTables){
+    for(var i=0;i<parsedTables.length;i++){
+      var t = parsedTables[i];
+      if(!model.tables[t.key]) model.tables[t.key] = { key:t.key, name:t.name, schema:t.schema, columns:{}, pk:[], uniques:[], fks:[] };
+      var target = model.tables[t.key];
+      target.name = t.name;
+      target.schema = t.schema;
+      target.columns = target.columns || {};
+      for(var cname in t.columns){
+        target.columns[cname] = t.columns[cname];
+      }
+      target.pk = t.pk || [];
+      target.uniques = t.uniques || [];
+      target.fks = t.fks || [];
+    }
+  }
+
+  // ===== Build display graph =====
+  function buildGraphFromModel(){
+    var nodes = {};
+    var edges = {};
+    var hiddenJoin = {};
+    var collapseJoin = !!model.options.collapseJoin;
+    var hideColumns = !!model.options.hideColumns;
+    var q = (model.ui.lastSearch || "").trim().toLowerCase();
+    var expanded = model.ui.expandedTables || {};
+
+    function addNode(id, kind, label, props){
+      if(!nodes[id]) nodes[id] = { id:id, kind:kind, label:label, props:props || {} };
+    }
+    function addEdge(from, to, type, props){
+      var eid = from + "__" + type + "__" + to + "__" + (Object.keys(edges).length);
+      edges[eid] = { id:eid, from:from, to:to, type:type, props:props || {} };
+    }
+
+    var joinInfo = {};
+    for(var tkey in model.tables){
+      var ji = isJoinTable(model.tables[tkey]);
+      if(ji.ok) joinInfo[tkey] = ji;
+    }
+
+    for(var tkey2 in model.tables){
+      var t2 = model.tables[tkey2];
+      if(q){
+        var hay = (tkey2 + " " + (t2.name||"") + " " + (t2.schema||"")).toLowerCase();
+        if(hay.indexOf(q) < 0) continue;
+      }
+      if(collapseJoin && joinInfo[tkey2]){
+        hiddenJoin[tkey2] = 1;
+        continue;
+      }
+      addNode("T:" + tkey2, "Table", t2.name || tkey2, { tableKey:tkey2, schema:t2.schema, name:t2.name || tkey2 });
+    }
+
+    var fkBundle = {};
+    for(var tkey3 in model.tables){
+      var t3 = model.tables[tkey3];
+      if(collapseJoin && joinInfo[tkey3]){
+        var ji3 = joinInfo[tkey3];
+        var aKey = ji3.refs[0];
+        var bKey = ji3.refs[1];
+        var aId = "T:" + aKey;
+        var bId = "T:" + bKey;
+        if(!nodes[aId] || !nodes[bId]) continue;
+        var relType = (t3.name || tkey3 || "REL").replace(/[^\w]/g,"_");
+        if(model.options.autoUpperRel) relType = relType.toUpperCase();
+        addEdge(aId, bId, relType, { kind:"JOIN_COLLAPSE", joinTableKey:tkey3, count:1 });
+        continue;
+      }
+
+      var fromId = "T:" + tkey3;
+      if(!nodes[fromId]) continue;
+
+      var fks = t3.fks || [];
+      for(var f=0;f<fks.length;f++){
+        var fk = fks[f];
+        var toId = "T:" + fk.refTableKey;
+        if(!nodes[toId]) continue;
+
+        var key = fromId + "||" + toId;
+        if(!fkBundle[key]){
+          fkBundle[key] = { from:fromId, to:toId, count:0, samples:[] };
+        }
+        fkBundle[key].count++;
+        if(fkBundle[key].samples.length < 3){
+          fkBundle[key].samples.push({
+            name: fk.name,
+            cols: fk.columns,
+            refCols: fk.refColumns,
+            onDelete: fk.onDelete,
+            onUpdate: fk.onUpdate
+          });
+        }
+      }
+    }
+
+    for(var k in fkBundle){
+      var b = fkBundle[k];
+      var label = (b.count <= 1) ? "FK" : ("FK x" + b.count);
+      addEdge(b.from, b.to, label, { kind:"FK_BUNDLE", count:b.count, samples:b.samples });
+    }
+
+    var me = model.manualEdges || [];
+    for(var m=0;m<me.length;m++){
+      var e = me[m];
+      var fromId2 = "T:" + e.fromTableKey;
+      var toId2 = "T:" + e.toTableKey;
+      if(nodes[fromId2] && nodes[toId2]){
+        var tp = e.type || "ASSOCIATES";
+        if(model.options.autoUpperRel) tp = tp.toUpperCase();
+        addEdge(fromId2, toId2, tp, { kind:"MANUAL" });
+      }
+    }
+
+    if(!hideColumns){
+      expanded = {};
+      for(var tk in model.tables) expanded[tk] = true;
+    }
+
+    for(var tkey4 in model.tables){
+      if(hiddenJoin[tkey4]) continue;
+      if(!expanded[tkey4]) continue;
+      var tid = "T:" + tkey4;
+      if(!nodes[tid]) continue;
+
+      var colsObj = model.tables[tkey4].columns || {};
+      for(var cname2 in colsObj){
+        var cid = "C:" + tkey4 + "." + cname2;
+        addNode(cid, "Column", cname2, {
+          tableKey:tkey4,
+          name:cname2,
+          type:colsObj[cname2].type,
+          nullable:colsObj[cname2].nullable,
+          pk:colsObj[cname2].pk,
+          unique:colsObj[cname2].unique,
+          "default":colsObj[cname2]["default"]
+        });
+        addEdge(tid, cid, "HAS_COLUMN", { kind:"HAS_COLUMN" });
+        if(colsObj[cname2].pk) addEdge(tid, cid, "PK", { kind:"PK" });
+      }
+    }
+
+    return { nodes:nodes, edges:edges };
+  }
+
+  // ===== Cypher generation =====
+  function escStr(s){
+    s = String(s);
+    s = s.replace(/\\/g,"\\\\");
+    s = s.replace(/'/g,"\\'");
+    return s;
+  }
+  function cypherMeta(){
+    var lines = [];
+    lines.push("// META MODEL (Table/Column)");
+    lines.push("CREATE CONSTRAINT table_key_unique IF NOT EXISTS FOR (t:Table) REQUIRE t.key IS UNIQUE;");
+    lines.push("CREATE CONSTRAINT column_key_unique IF NOT EXISTS FOR (c:Column) REQUIRE (c.tableKey, c.name) IS UNIQUE;");
+    lines.push("");
+
+    for(var tkey in model.tables){
+      var t = model.tables[tkey];
+      lines.push("// Table: " + tkey);
+      lines.push("MERGE (t:Table {key:'" + escStr(tkey) + "'})");
+      lines.push("SET t += {name:'" + escStr(t.name || tkey) + "', schema:" + (t.schema ? ("'" + escStr(t.schema) + "'") : "null") + "}");
+
+      var cols = t.columns || {};
+      for(var cname in cols){
+        var c = cols[cname];
+        var props = [];
+        props.push("tableKey:'" + escStr(tkey) + "'");
+        props.push("name:'" + escStr(cname) + "'");
+        props.push("type:'" + escStr(c.type || "UNKNOWN") + "'");
+        props.push("nullable:" + (c.nullable ? "true" : "false"));
+        props.push("pk:" + (c.pk ? "true" : "false"));
+        props.push("unique:" + (c.unique ? "true" : "false"));
+        if(c["default"] !== null && c["default"] !== undefined) props.push("default:'" + escStr(c["default"]) + "'");
+        lines.push("MERGE (c:Column {tableKey:'" + escStr(tkey) + "', name:'" + escStr(cname) + "'})");
+        lines.push("SET c += {" + props.join(", ") + "}");
+        lines.push("MERGE (t)-[:HAS_COLUMN]->(c)");
+        if(c.pk) lines.push("MERGE (t)-[:PK]->(c)");
+      }
+
+      var fks = t.fks || [];
+      for(var i=0;i<fks.length;i++){
+        var fk = fks[i];
+        lines.push("MERGE (rt:Table {key:'" + escStr(fk.refTableKey) + "'})");
+        lines.push("MERGE (t)-[:FK {name:" + (fk.name ? ("'" + escStr(fk.name) + "'") : "null") +
+          ", cols:" + JSON.stringify(fk.columns || []) +
+          ", refCols:" + JSON.stringify(fk.refColumns || []) +
+          ", onDelete:" + (fk.onDelete ? ("'" + fk.onDelete + "'") : "null") +
+          ", onUpdate:" + (fk.onUpdate ? ("'" + fk.onUpdate + "'") : "null") +
+          "}]->(rt)");
+      }
+      lines.push("");
+    }
+    return lines.join("\n");
+  }
+  function cypherDomain(){
+    function labelForTable(t){
+      var base = t.schema ? (t.schema + "__" + t.name) : (t.name || "");
+      return base.replace(/[^\w]/g,"_");
+    }
+    var lines = [];
+    lines.push("// DOMAIN TEMPLATE (Table as Label, FK as Relationship)");
+    lines.push("// 실제 적재/조인키 매핑은 환경별 차이가 커서 템플릿 형태로만 제공");
+    lines.push("");
+
+    lines.push("// Constraints (PK 기반, PK 없으면 생략)");
+    for(var tkey in model.tables){
+      var t = model.tables[tkey];
+      var pk = (t.pk || []).filter(Boolean);
+      if(!pk.length) continue;
+      var lbl = labelForTable(t);
+      if(pk.length === 1){
+        lines.push("CREATE CONSTRAINT " + lbl + "_pk IF NOT EXISTS FOR (n:`" + lbl + "`) REQUIRE n.`" + pk[0] + "` IS UNIQUE;");
+      }else{
+        var props = pk.map(function(p){ return "n.`" + p + "`"; }).join(", ");
+        lines.push("CREATE CONSTRAINT " + lbl + "_pk IF NOT EXISTS FOR (n:`" + lbl + "`) REQUIRE (" + props + ") IS NODE KEY;");
+      }
+    }
+    lines.push("");
+    lines.push("// FK relationships template");
+    for(var fromKey in model.tables){
+      var fromT = model.tables[fromKey];
+      var fromLbl = labelForTable(fromT);
+      var fks = fromT.fks || [];
+      for(var i=0;i<fks.length;i++){
+        var fk = fks[i];
+        var rt = model.tables[fk.refTableKey];
+        if(!rt) continue;
+        var toLbl = labelForTable(rt);
+        var rel = "FK_" + fromLbl + "__" + toLbl;
+        if(model.options.autoUpperRel) rel = rel.toUpperCase();
+        lines.push("// " + fromKey + "(" + (fk.columns||[]).join(",") + ") -> " + fk.refTableKey + "(" + (fk.refColumns||[]).join(",") + ")");
+        lines.push("// MATCH (a:`" + fromLbl + "` {<PK...>}), (b:`" + toLbl + "` {<PK...>}) MERGE (a)-[:" + rel + "]->(b);");
+      }
+    }
+    return lines.join("\n");
+  }
+  function currentCypher(){
+    return (model.options.cypherMode === "DOMAIN") ? cypherDomain() : cypherMeta();
+  }
+
+  // ===== Canvas + Graph State =====
+  var canvas = $("#view");
+  var wrap = $("#canvasWrap");
+  var ctx = canvas.getContext("2d");
+
+  var view = { panX: 0, panY: 0, zoom: 1.0 };
+  var graph = { nodes:{}, edges:{} };
+
+  var posTable = Object.create(null);
+  var posAll   = Object.create(null);
+  var pinnedTable = Object.create(null);
+
+  var cacheNodeIds = [];
+  var cacheEdgesArr = [];
+  var tableNodeIds = [];
+  var tableEdgeArr = [];
+
+  var colLabelPos = Object.create(null);
+  var perf = { dirty:true, needResize:true, lastRenderTs:0, renderFpsActive:30, renderFpsIdle:10, workerIdle:false };
+
+  function resize(){
+    var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    var w = Math.max(1, wrap.clientWidth);
+    var h = Math.max(1, wrap.clientHeight);
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", function(){
+    applyPanes();
+    perf.needResize = true; perf.dirty = true;
+  });
+
+  function resetViewToCenter(){
+    var w = wrap.clientWidth;
+    var h = wrap.clientHeight;
+    view.zoom = 1.0;
+    view.panX = w/2;
+    view.panY = h/2;
+  }
+  function worldToScreen(p){
+    return { x:(p.x * view.zoom) + view.panX, y:(p.y * view.zoom) + view.panY };
+  }
+  function screenToWorld(x,y){
+    return { x:(x - view.panX)/view.zoom, y:(y - view.panY)/view.zoom };
+  }
+  function keepNodeAtScreen(nodeId, sx, sy){
+    var p = posAll[nodeId];
+    if(!p) return;
+    view.panX = sx - (p.x * view.zoom);
+    view.panY = sy - (p.y * view.zoom);
+  }
+  function nodeRadius(n){
+    return (n && n.kind === "Table") ? 22 : 8;
+  }
+
+  function updateStats(){
+    var tcount = Object.keys(model.tables).length;
+    var ncount = Object.keys(graph.nodes).length;
+    var ecount = Object.keys(graph.edges).length;
+    statsEl.textContent = "tables: " + tcount + " · nodes: " + ncount + " · edges: " + ecount;
+  }
+
+  // ===== Selection/Inspector =====
+  var selected = { kind:null, id:null };
+  var hover = { kind:null, id:null };
+
+  function applySelectionUI(){
+    selInfoEl.textContent = "selected: " + (selected.kind ? (selected.kind + " " + selected.id) : "none");
+  }
+
+  function htmlEscape(s){
+    s = String(s);
+    return s.replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+    });
+  }
+
+  function renderInspector(){
+    $("#cypherOut").textContent = currentCypher();
+    $("#jsonOut").textContent = JSON.stringify(model, null, 2);
+    updateStats();
+
+    inspectBody.innerHTML = "";
+    if(!selected.kind){
+      inspectBody.innerHTML = '<div class="card"><h4>선택 없음 <span class="pill2">tip</span></h4><div class="hint">노드/엣지를 클릭하면 상세를 볼 수 있습니다.</div></div>';
+      return;
+    }
+
+    if(selected.kind === "node"){
+      var n = graph.nodes[selected.id];
+      if(!n){ inspectBody.innerHTML = '<div class="card"><h4>노드 없음</h4></div>'; return; }
+
+      if(n.kind === "Table"){
+        var tkey = n.props.tableKey;
+        var t = model.tables[tkey];
+        var colCount = Object.keys(t.columns || {}).length;
+        var pk = (t.pk || []).join(", ");
+        var fkCount = (t.fks || []).length;
+
+        var expanded = model.ui.expandedTables || {};
+        var btnText = expanded[tkey] ? "컬럼 접기" : "컬럼 펼치기";
+
+        var card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML =
+          '<h4>Table <span class="pill2">' + htmlEscape(tkey) + '</span></h4>' +
+          '<div class="kv">' +
+          '<div class="key">schema</div><div>' + htmlEscape(t.schema || "null") + '</div>' +
+          '<div class="key">name</div><div>' + htmlEscape(t.name || tkey) + '</div>' +
+          '<div class="key">columns</div><div>' + colCount + '</div>' +
+          '<div class="key">pk</div><div>' + htmlEscape(pk || "없음") + '</div>' +
+          '<div class="key">fk</div><div>' + fkCount + '</div>' +
+          '</div>' +
+          '<div class="split" style="margin:10px 0;"></div>' +
+          '<div class="row">' +
+            '<button class="smallBtn ok" id="btnToggleCols">' + btnText + '</button>' +
+            '<button class="smallBtn" id="btnResetColPos">컬럼 위치 초기화</button>' +
+          '</div>';
+
+        inspectBody.appendChild(card);
+
+        $("#btnToggleCols").onclick = function(){
+          toggleExpandTable(tkey, "T:" + tkey);
+        };
+
+        $("#btnResetColPos").onclick = function(){
+          if(model.layout.columnOffsets && model.layout.columnOffsets[tkey]){
+            delete model.layout.columnOffsets[tkey];
+            saveModel();
+            rebuildAll("column pos reset", { skipWorkerInit:true });
+            setStatus("컬럼 위치 초기화됨", "ok");
+          }else{
+            setStatus("초기화할 컬럼 위치가 없습니다", "warn");
+          }
+        };
+        return;
+      }
+
+      if(n.kind === "Column"){
+        var p = n.props || {};
+        var tkey2 = p.tableKey;
+        var cname = n.label;
+
+        var card2 = document.createElement("div");
+        card2.className = "card";
+        card2.innerHTML =
+          '<h4>Column <span class="pill2">' + htmlEscape(tkey2 + "." + cname) + '</span></h4>' +
+          '<div class="kv">' +
+          '<div class="key">type</div><div>' + htmlEscape(p.type || "UNKNOWN") + '</div>' +
+          '<div class="key">nullable</div><div>' + (p.nullable ? "true" : "false") + '</div>' +
+          '<div class="key">pk</div><div>' + (p.pk ? "true" : "false") + '</div>' +
+          '<div class="key">unique</div><div>' + (p.unique ? "true" : "false") + '</div>' +
+          '<div class="key">default</div><div>' + htmlEscape(p["default"] == null ? "null" : p["default"]) + '</div>' +
+          '</div>';
+
+        inspectBody.appendChild(card2);
+        return;
+      }
+    }
+
+    if(selected.kind === "edge"){
+      var e = graph.edges[selected.id];
+      if(!e){ inspectBody.innerHTML = '<div class="card"><h4>엣지 없음</h4></div>'; return; }
+
+      var fromLabel = (graph.nodes[e.from] && graph.nodes[e.from].label) ? graph.nodes[e.from].label : e.from;
+      var toLabel = (graph.nodes[e.to] && graph.nodes[e.to].label) ? graph.nodes[e.to].label : e.to;
+      var kind = (e.props && e.props.kind) ? e.props.kind : "EDGE";
+
+      var card3 = document.createElement("div");
+      card3.className = "card";
+      card3.innerHTML =
+        '<h4>Edge <span class="pill2">' + htmlEscape(kind) + '</span></h4>' +
+        '<div class="kv">' +
+        '<div class="key">from</div><div>' + htmlEscape(e.from + " (" + fromLabel + ")") + '</div>' +
+        '<div class="key">to</div><div>' + htmlEscape(e.to + " (" + toLabel + ")") + '</div>' +
+        '<div class="key">type</div><div>' + htmlEscape(e.type) + '</div>' +
+        '<div class="key">props</div><div>' + htmlEscape(JSON.stringify(e.props || {})) + '</div>' +
+        '</div>';
+
+      inspectBody.appendChild(card3);
+    }
+  }
+
+  // ===== Column 배치 + 라벨 배치 =====
+  function hash32(s){
+    var h = 2166136261;
+    for(var i=0;i<s.length;i++){
+      h ^= s.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  function getColOffset(tableKey, colName){
+    var o = model.layout.columnOffsets || {};
+    var t = o[tableKey];
+    if(!t) return null;
+    var c = t[colName];
+    if(!c) return null;
+    if(typeof c.dx !== "number" || typeof c.dy !== "number") return null;
+    return c;
+  }
+  function setColOffset(tableKey, colName, dx, dy){
+    if(!model.layout.columnOffsets) model.layout.columnOffsets = {};
+    if(!model.layout.columnOffsets[tableKey]) model.layout.columnOffsets[tableKey] = {};
+    model.layout.columnOffsets[tableKey][colName] = { dx:dx, dy:dy };
+  }
+
+  function computeColumnLabels(){
+    colLabelPos = Object.create(null);
+
+    var expanded = model.ui.expandedTables || {};
+    var hideColumns = !!model.options.hideColumns;
+    var showAllCols = !hideColumns;
+
+    function isExpanded(tkey){
+      return showAllCols ? true : !!expanded[tkey];
+    }
+
+    var perTable = Object.create(null);
+
+    for(var id in graph.nodes){
+      var n = graph.nodes[id];
+      if(!n || n.kind !== "Column") continue;
+      var tkey = n.props && n.props.tableKey;
+      if(!tkey) continue;
+      if(!isExpanded(tkey)) continue;
+
+      var tid = "T:" + tkey;
+      var tp = posAll[tid];
+      var cp = posAll[id];
+      if(!tp || !cp) continue;
+
+      var ang = Math.atan2(cp.y - tp.y, cp.x - tp.x);
+      if(!perTable[tkey]) perTable[tkey] = [];
+      perTable[tkey].push({ id:id, ang:ang, cx:cp.x, cy:cp.y, tx:tp.x, ty:tp.y });
+    }
+
+    for(var tkey in perTable){
+      var list = perTable[tkey];
+      list.sort(function(a,b){ return a.ang - b.ang; });
+
+      var n = list.length;
+      var seed = (hash32(tkey) % 360) * (Math.PI/180);
+
+      var tangStep = (n > 120) ? 7 : (n > 60 ? 8 : 10);
+      var radial = (n > 120) ? 14 : 16;
+
+      for(var i=0;i<n;i++){
+        var it = list[i];
+        var baseAng = it.ang;
+
+        var rx = Math.cos(baseAng), ry = Math.sin(baseAng);
+        var tx = -ry, ty = rx;
+
+        var zig = ((i % 2) === 0) ? 1 : -1;
+        var mag = Math.min(70, Math.floor(i/2) * tangStep);
+        if(n > 200) mag = Math.min(50, mag);
+
+        var lx = it.cx + rx*radial + tx*(zig*mag);
+        var ly = it.cy + ry*radial + ty*(zig*mag);
+
+        lx += Math.cos(seed)*2;
+        ly += Math.sin(seed)*2;
+
+        colLabelPos[it.id] = { x:lx, y:ly, ax:it.cx, ay:it.cy };
+      }
+    }
+  }
+
+  function layoutColumnsSpread(){
+    var GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+    var tableColsSorted = Object.create(null);
+    for(var tkey in model.tables){
+      var colsObj = (model.tables[tkey] && model.tables[tkey].columns) ? model.tables[tkey].columns : {};
+      tableColsSorted[tkey] = Object.keys(colsObj).sort();
+    }
+
+    for(var id in graph.nodes){
+      var n = graph.nodes[id];
+      if(!n || n.kind !== "Column") continue;
+
+      var p = n.props || {};
+      var tkey = p.tableKey;
+      var tid = "T:" + tkey;
+      var tp = posTable[tid];
+      if(!tp) continue;
+
+      var off = getColOffset(tkey, n.label);
+      if(off){
+        posAll[id] = { x: tp.x + off.dx, y: tp.y + off.dy };
+        continue;
+      }
+
+      var cols = tableColsSorted[tkey] || [n.label];
+      var idx = cols.indexOf(n.label);
+      if(idx < 0) idx = 0;
+      var count = Math.max(1, cols.length);
+
+      var baseR = 58;
+      var c = 8 + Math.min(16, Math.floor(count / 25));
+      var seed = (hash32(tkey) % 360) * (Math.PI/180);
+
+      var ang = seed + idx * GOLDEN_ANGLE;
+      var r = baseR + c * Math.sqrt(idx);
+
+      if(count > 200) r *= 1.10;
+      if(count > 600) r *= 1.18;
+
+      posAll[id] = { x: tp.x + Math.cos(ang)*r, y: tp.y + Math.sin(ang)*r };
+    }
+
+    computeColumnLabels();
+  }
+
+  // ===== Hit Test =====
+  function distToSegment(px,py, ax,ay, bx,by){
+    var vx = bx-ax, vy = by-ay;
+    var wx = px-ax, wy = py-ay;
+    var c1 = vx*wx + vy*wy;
+    if(c1 <= 0) return Math.hypot(px-ax, py-ay);
+    var c2 = vx*vx + vy*vy;
+    if(c2 <= c1) return Math.hypot(px-bx, py-by);
+    var t = c1 / c2;
+    var ix = ax + t*vx, iy = ay + t*vy;
+    return Math.hypot(px-ix, py-iy);
+  }
+  function hitTestNode(wx, wy){
+    for(var i=0;i<tableNodeIds.length;i++){
+      var id = tableNodeIds[i];
+      var n = graph.nodes[id];
+      var p = posAll[id];
+      if(!n || !p) continue;
+      var r = nodeRadius(n);
+      if(Math.hypot(wx - p.x, wy - p.y) <= r) return { kind:"node", id:id };
+    }
+    for(var j=0;j<cacheNodeIds.length;j++){
+      var id2 = cacheNodeIds[j];
+      var n2 = graph.nodes[id2];
+      if(!n2 || n2.kind !== "Column") continue;
+      var p2 = posAll[id2];
+      if(!p2) continue;
+      var r2 = nodeRadius(n2);
+      if(Math.hypot(wx - p2.x, wy - p2.y) <= r2) return { kind:"node", id:id2 };
+    }
+    return null;
+  }
+  function hitTestEdge(wx, wy){
+    var threshold = 8 / view.zoom;
+    for(var i=0;i<cacheEdgesArr.length;i++){
+      var e = cacheEdgesArr[i];
+      var a = posAll[e.from], b = posAll[e.to];
+      if(!a || !b) continue;
+      var d = distToSegment(wx, wy, a.x,a.y, b.x,b.y);
+      if(d <= threshold) return { kind:"edge", id:e.id };
+    }
+    return null;
+  }
+
+  // ===== Drawing helpers =====
+  function cssVar(name){
+    // ✅ 중요: theme 변수는 body에서 override되므로 body 기준으로 읽어야 캔버스에도 반영됨
+    return getComputedStyle(document.body).getPropertyValue(name).trim();
+  }
+  function roundRect(x,y,w,h,r, fill, stroke){
+    var rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+    if(fill) ctx.fill();
+    if(stroke) ctx.stroke();
+  }
+  function drawArrow(ax,ay,bx,by, size){
+    var ang = Math.atan2(by-ay, bx-ax);
+    var t = size;
+    ctx.beginPath();
+    ctx.moveTo(bx,by);
+    ctx.lineTo(bx - t*Math.cos(ang-0.45), by - t*Math.sin(ang-0.45));
+    ctx.lineTo(bx - t*Math.cos(ang+0.45), by - t*Math.sin(ang+0.45));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function render(){
+    var w = wrap.clientWidth;
+    var h = wrap.clientHeight;
+
+    // 배경
+    ctx.clearRect(0,0,w,h);
+    var bg = cssVar("--canvas-bg");
+    if(bg){
+      ctx.save();
+      ctx.fillStyle = bg;
+      ctx.fillRect(0,0,w,h);
+      ctx.restore();
+    }
+
+    // grid (BW-Light는 --canvas-grid가 투명이라 눈에 안 띔)
+    ctx.save();
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = cssVar("--canvas-grid") || "rgba(31,42,68,0.35)";
+    var step = 60 * view.zoom;
+    var startX = (view.panX % step);
+    var startY = (view.panY % step);
+    ctx.beginPath();
+    for(var x=startX; x<w; x+=step){ ctx.moveTo(x,0); ctx.lineTo(x,h); }
+    for(var y=startY; y<h; y+=step){ ctx.moveTo(0,y); ctx.lineTo(w,y); }
+    ctx.stroke();
+    ctx.restore();
+
+    var edgeCount = cacheEdgesArr.length;
+    var tooManyEdges = edgeCount > 800;
+    var superManyEdges = edgeCount > 2500;
+    var lowZoom = view.zoom < 0.90;
+    var focusNodeId = (selected.kind === "node") ? selected.id : null;
+
+    // edges
+    for(var i=0;i<cacheEdgesArr.length;i++){
+      var e = cacheEdgesArr[i];
+      var a = posAll[e.from], b = posAll[e.to];
+      if(!a || !b) continue;
+
+      if(superManyEdges && lowZoom && focusNodeId){
+        if(e.from !== focusNodeId && e.to !== focusNodeId) continue;
+      }else if(superManyEdges && lowZoom && !focusNodeId){
+        if(i % 10 !== 0) continue;
+      }
+
+      var A = worldToScreen(a);
+      var B = worldToScreen(b);
+
+      var isSelected = (selected.kind === "edge" && selected.id === e.id);
+      var isFkLike = (e.props && (e.props.kind === "FK_BUNDLE" || (e.type||"").indexOf("FK") === 0));
+
+      var alpha = 1.0;
+      if(model.options.showFkOnly && !isFkLike) alpha = 0.20;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = isSelected ? 3 : 2;
+
+      var isColEdge = (e.type === "HAS_COLUMN" || e.type === "PK" || (e.props && (e.props.kind === "HAS_COLUMN" || e.props.kind === "PK")));
+      ctx.strokeStyle = isSelected ? cssVar("--table-stroke-sel") : (isColEdge ? cssVar("--edge-soft") : cssVar("--edge"));
+
+      ctx.beginPath();
+      ctx.moveTo(A.x, A.y);
+      ctx.lineTo(B.x, B.y);
+      ctx.stroke();
+
+      if(!isColEdge){
+        ctx.fillStyle = isSelected ? cssVar("--table-stroke-sel") : cssVar("--edge");
+        var dx = B.x - A.x, dy = B.y - A.y;
+        var len = Math.max(1, Math.hypot(dx,dy));
+        var ux = dx/len, uy = dy/len;
+        var bx2 = B.x - ux*18, by2 = B.y - uy*18;
+        drawArrow(A.x, A.y, bx2, by2, 10);
+      }
+
+      // edge label(테이블 관계만)
+      var showLabel = ((!tooManyEdges && !lowZoom) || isSelected);
+      if(showLabel && !isColEdge){
+        var mx = (A.x + B.x) / 2;
+        var my = (A.y + B.y) / 2;
+        var label = e.type || "";
+        if(label){
+          ctx.font = "11px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          var pad = 4;
+          var tw = ctx.measureText(label).width;
+          ctx.fillStyle = cssVar("--edge-label-bg");
+          ctx.strokeStyle = cssVar("--edge-label-stroke");
+          roundRect(mx-(tw/2)-pad, my-10, tw+pad*2, 20, 8, true, true);
+          ctx.fillStyle = isSelected ? cssVar("--table-text-sel") : cssVar("--edge-label-text");
+          ctx.fillText(label, mx, my);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // table nodes
+    for(var j=0;j<tableNodeIds.length;j++){
+      var id = tableNodeIds[j];
+      var n = graph.nodes[id];
+      var p = posAll[id];
+      if(!n || !p) continue;
+
+      var P = worldToScreen(p);
+      var r = nodeRadius(n);
+      var isSelected2 = (selected.kind === "node" && selected.id === id);
+      var isHover = (hover.kind === "node" && hover.id === id);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(P.x, P.y, r, 0, Math.PI*2);
+
+      ctx.fillStyle = isSelected2 ? cssVar("--table-fill-sel") : (isHover ? cssVar("--table-fill-hover") : cssVar("--table-fill"));
+      ctx.strokeStyle = isSelected2 ? cssVar("--table-stroke-sel") : cssVar("--table-stroke");
+      ctx.lineWidth = isSelected2 ? 3 : 2;
+      ctx.fill();
+      ctx.stroke();
+
+      var label2 = n.label || n.id;
+      ctx.font = "12px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = isSelected2 ? cssVar("--table-text-sel") : cssVar("--table-text");
+      ctx.fillText(label2, P.x, P.y + r + 6);
+      ctx.restore();
+    }
+
+    // column nodes
+    for(var k=0;k<cacheNodeIds.length;k++){
+      var id2 = cacheNodeIds[k];
+      var n2 = graph.nodes[id2];
+      if(!n2 || n2.kind !== "Column") continue;
+      var p2 = posAll[id2];
+      if(!p2) continue;
+
+      var P2 = worldToScreen(p2);
+      var r2 = nodeRadius(n2);
+      var isSelected3 = (selected.kind === "node" && selected.id === id2);
+      var isHover2 = (hover.kind === "node" && hover.id === id2);
+
+      var pk = !!(n2.props && n2.props.pk);
+      var uq = !!(n2.props && n2.props.unique);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(P2.x, P2.y, r2, 0, Math.PI*2);
+
+      ctx.fillStyle = isSelected3 ? cssVar("--col-fill-sel") : (isHover2 ? cssVar("--col-fill-hover") : cssVar("--col-fill"));
+
+      if(pk) ctx.strokeStyle = isSelected3 ? cssVar("--table-stroke-sel") : cssVar("--col-stroke-pk");
+      else if(uq) ctx.strokeStyle = isSelected3 ? cssVar("--table-stroke-sel") : cssVar("--col-stroke-uq");
+      else ctx.strokeStyle = isSelected3 ? cssVar("--table-stroke-sel") : cssVar("--col-stroke");
+
+      ctx.lineWidth = isSelected3 ? 2.5 : 1.6;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // column labels
+    var showColLabels = (view.zoom >= 0.72);
+    if(showColLabels){
+      ctx.save();
+      ctx.font = "11px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 1;
+
+      var labelBg = cssVar("--col-label-bg");
+      var labelStroke = cssVar("--col-label-stroke");
+      var labelText = cssVar("--col-label-text");
+      var leader = cssVar("--col-leader");
+
+      for(var cid in colLabelPos){
+        var nn = graph.nodes[cid];
+        if(!nn || nn.kind !== "Column") continue;
+        var lp = colLabelPos[cid];
+        if(!lp) continue;
+
+        var A = worldToScreen({x:lp.ax, y:lp.ay});
+        var L = worldToScreen({x:lp.x, y:lp.y});
+
+        //ctx.strokeStyle = leader;
+        //ctx.beginPath();
+        //ctx.moveTo(A.x, A.y);
+        //ctx.lineTo(L.x, L.y);
+        //ctx.stroke();
+
+        var text = nn.label || "";
+        if(!text) continue;
+
+        var tw = ctx.measureText(text).width;
+        var padX = 6, padY = 5;
+        var bw = tw + padX*2;
+        var bh = 18;
+
+        ctx.fillStyle = labelBg;
+        ctx.strokeStyle = labelStroke;
+        roundRect(L.x - bw/2, L.y - bh/2, bw, bh, 9, true, true);
+
+        ctx.fillStyle = labelText;
+        ctx.textAlign = "center";
+        ctx.fillText(text, L.x, L.y);
+      }
+      ctx.restore();
+    }
+  }
+
+  // ===== Worker Layout (Table만 force) =====
+  var worker = null;
+  var workerIds = [];
+  var workerN = 0;
+  var workerStarted = false;
+
+  function workerMain(){
+    var ids = [];
+    var N = 0;
+    var edges = [];
+    var pos = null;
+    var vel = null;
+    var pinned = null;
+    var rads = null;
+    var idToIdx = new Map();
+
+    var simActive = true;
+    var idleFrames = 0;
+    var lastPost = 0;
+    var seed = Math.random();
+
+    var cfg = {
+      kRep: 2000,
+      kSpring: 0.028,
+      springLen: 175,
+      damping: 0.78,
+      kCenter: 0.0016,
+      cellSize: 260,
+      cutoffMul: 2.4,
+      maxEdgePerStep: 2000,
+      dt: 1,
+      postFpsActive: 24,
+      postFpsIdle: 8,
+      stepFpsActive: 50,
+      stepFpsIdle: 20
+    };
+
+    function rand01(){
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    }
+
+    function initPositions(){
+      pos = new Float32Array(N * 2);
+      vel = new Float32Array(N * 2);
+      pinned = new Uint8Array(N);
+      for(var i=0;i<N;i++){
+        var a = rand01() * Math.PI * 2;
+        var rr = 220 + rand01() * 140;
+        pos[i*2] = Math.cos(a) * rr;
+        pos[i*2+1] = Math.sin(a) * rr;
+        vel[i*2] = 0;
+        vel[i*2+1] = 0;
+        pinned[i] = 0;
+      }
+    }
+
+    function applyPair(i, j){
+      if(pinned[i] && pinned[j]) return;
+
+      var ax = pos[i*2], ay = pos[i*2+1];
+      var bx = pos[j*2], by = pos[j*2+1];
+
+      var dx = ax - bx;
+      var dy = ay - by;
+      var dist = Math.hypot(dx, dy);
+      if(dist < 0.001){
+        dx = rand01() - 0.5;
+        dy = rand01() - 0.5;
+        dist = Math.hypot(dx, dy);
+      }
+
+      var minDist = rads[i] + rads[j] + 56;
+      var dd = Math.max(minDist, dist);
+      if(dd > cfg.cellSize * cfg.cutoffMul) return;
+
+      var f = cfg.kRep / (dd * dd);
+      var ux = dx / dist;
+      var uy = dy / dist;
+
+      if(!pinned[i]){
+        vel[i*2] += ux * f;
+        vel[i*2+1] += uy * f;
+      }
+      if(!pinned[j]){
+        vel[j*2] -= ux * f;
+        vel[j*2+1] -= uy * f;
+      }
+    }
+
+    function step(){
+      if(!simActive || N === 0) return;
+
+      var grid = new Map();
+      var cs = cfg.cellSize;
+
+      for(var i=0;i<N;i++){
+        var x = pos[i*2], y = pos[i*2+1];
+        var cx = Math.floor(x / cs);
+        var cy = Math.floor(y / cs);
+        var key = String(cx) + "," + String(cy);
+        var arr = grid.get(key);
+        if(!arr){ arr = []; grid.set(key, arr); }
+        arr.push(i);
+      }
+
+      var neigh = [[0,0],[1,0],[0,1],[1,1],[-1,1]];
+
+      grid.forEach(function(arr, key){
+        var comma = key.indexOf(",");
+        var cx = parseInt(key.slice(0, comma), 10);
+        var cy = parseInt(key.slice(comma+1), 10);
+
+        for(var a=0;a<arr.length;a++){
+          for(var b=a+1;b<arr.length;b++){
+            applyPair(arr[a], arr[b]);
+          }
+        }
+
+        for(var ni=1; ni<neigh.length; ni++){
+          var dx = neigh[ni][0], dy = neigh[ni][1];
+          var nk = String(cx+dx) + "," + String(cy+dy);
+          var barr = grid.get(nk);
+          if(!barr) continue;
+
+          for(var ai=0; ai<arr.length; ai++){
+            var ii = arr[ai];
+            for(var bj=0; bj<barr.length; bj++){
+              applyPair(ii, barr[bj]);
+            }
+          }
+        }
+      });
+
+      var E = edges.length;
+      var stride = (E > cfg.maxEdgePerStep) ? Math.ceil(E / cfg.maxEdgePerStep) : 1;
+      for(var ei=0; ei<E; ei+=stride){
+        var e = edges[ei];
+        var a2 = e.a, b2 = e.b;
+
+        var ax2 = pos[a2*2], ay2 = pos[a2*2+1];
+        var bx2 = pos[b2*2], by2 = pos[b2*2+1];
+
+        var dx2 = bx2 - ax2;
+        var dy2 = by2 - ay2;
+        var dist2 = Math.max(0.01, Math.hypot(dx2, dy2));
+
+        var target = cfg.springLen;
+        var delta = dist2 - target;
+        var ux2 = dx2 / dist2;
+        var uy2 = dy2 / dist2;
+
+        var fx = ux2 * (cfg.kSpring * delta);
+        var fy = uy2 * (cfg.kSpring * delta);
+
+        if(!pinned[a2]){
+          vel[a2*2] += fx;
+          vel[a2*2+1] += fy;
+        }
+        if(!pinned[b2]){
+          vel[b2*2] -= fx;
+          vel[b2*2+1] -= fy;
+        }
+      }
+
+      var energy = 0;
+      var VEL_EPS = 0.010;
+      var ENERGY_EPS = 0.16;
+      var FREEZE_FRAMES = 18;
+
+      for(i=0;i<N;i++){
+        if(!pinned[i]){
+          vel[i*2] += (-pos[i*2]) * cfg.kCenter;
+          vel[i*2+1] += (-pos[i*2+1]) * cfg.kCenter;
+
+          vel[i*2] *= cfg.damping;
+          vel[i*2+1] *= cfg.damping;
+
+          if(Math.abs(vel[i*2]) < VEL_EPS) vel[i*2] = 0;
+          if(Math.abs(vel[i*2+1]) < VEL_EPS) vel[i*2+1] = 0;
+
+          pos[i*2] += vel[i*2] * cfg.dt;
+          pos[i*2+1] += vel[i*2+1] * cfg.dt;
+        }else{
+          vel[i*2] = 0;
+          vel[i*2+1] = 0;
+        }
+
+        var vx = vel[i*2], vy = vel[i*2+1];
+        energy += vx*vx + vy*vy;
+      }
+
+      if(energy < ENERGY_EPS){
+        idleFrames++;
+        if(idleFrames >= FREEZE_FRAMES){
+          simActive = false;
+          for(i=0;i<N;i++){
+            vel[i*2] = 0;
+            vel[i*2+1] = 0;
+          }
+        }
+      }else{
+        idleFrames = 0;
+        simActive = true;
+      }
+    }
+
+    function postPositions(ts){
+      var fps = simActive ? cfg.postFpsActive : cfg.postFpsIdle;
+      var interval = 1000 / fps;
+      if(ts - lastPost < interval) return;
+      lastPost = ts;
+
+      var out = pos.slice();
+      postMessage({ type:"pos", buf: out.buffer, idle: !simActive }, [out.buffer]);
+    }
+
+    function loop(ts){
+      var stepFps = simActive ? cfg.stepFpsActive : cfg.stepFpsIdle;
+      var stepInterval = 1000 / stepFps;
+
+      if(!loop.lastStepTs) loop.lastStepTs = ts;
+      if(ts - loop.lastStepTs >= stepInterval){
+        loop.lastStepTs = ts;
+        step();
+      }
+      postPositions(ts);
+      setTimeout(function(){ loop(performance.now()); }, 0);
+    }
+
+    onmessage = function(ev){
+      var msg = ev.data || {};
+
+      if(msg.type === "initGraph"){
+        ids = msg.ids || [];
+        N = ids.length;
+        seed = msg.seed || Math.random();
+
+        idToIdx = new Map();
+        for(var i=0;i<N;i++) idToIdx.set(ids[i], i);
+
+        rads = new Float32Array(N);
+        var rIn = msg.rads || [];
+        for(var j=0;j<N;j++) rads[j] = rIn[j] || 22;
+
+        initPositions();
+
+        var eIn = msg.edges || [];
+        edges = eIn.map(function(e){
+          var a = idToIdx.get(e.fromId);
+          var b = idToIdx.get(e.toId);
+          if(a == null || b == null) return null;
+          return { a:a, b:b };
+        }).filter(Boolean);
+
+        simActive = true;
+        idleFrames = 0;
+        postMessage({ type:"initAck", ids: ids });
+
+        loop.lastStepTs = 0;
+        loop(performance.now());
+        return;
+      }
+
+      if(msg.type === "reset"){
+        seed = msg.seed || Math.random();
+        initPositions();
+        simActive = true;
+        idleFrames = 0;
+        return;
+      }
+
+      if(msg.type === "pin"){
+        var ii = idToIdx.get(msg.id);
+        if(ii == null) return;
+        pinned[ii] = 1;
+        pos[ii*2] = msg.x;
+        pos[ii*2+1] = msg.y;
+        simActive = true;
+        idleFrames = 0;
+        return;
+      }
+
+      if(msg.type === "unpinAll"){
+        for(var k=0;k<N;k++) pinned[k] = 0;
+        simActive = true;
+        idleFrames = 0;
+        return;
+      }
+    };
+  }
+
+  function buildWorker(){
+    if(worker){
+      worker.terminate();
+      worker = null;
+      workerStarted = false;
+    }
+    var src = "(" + workerMain.toString() + ")();";
+    var blob = new Blob([src], { type:"application/javascript" });
+    var url = URL.createObjectURL(blob);
+    worker = new Worker(url);
+    URL.revokeObjectURL(url);
+
+    worker.onmessage = function(ev){
+      var msg = ev.data || {};
+      if(msg.type === "initAck"){
+        workerIds = msg.ids || [];
+        workerN = workerIds.length;
+
+        for(var i=0;i<workerIds.length;i++){
+          var id = workerIds[i];
+          if(!posTable[id]) posTable[id] = { x:0, y:0 };
+        }
+        for(var key in posTable){
+          if(tableNodeIds.indexOf(key) < 0) delete posTable[key];
+        }
+
+        workerStarted = true;
+        setStatus("worker ready", "ok");
+        log("Worker initAck: tables=" + workerN, "info");
+        return;
+      }
+
+      if(msg.type === "pos"){
+        var arr = new Float32Array(msg.buf);
+        var n = Math.min(workerN, Math.floor(arr.length/2));
+        for(var i2=0;i2<n;i2++){
+          var id2 = workerIds[i2];
+          var p2 = posTable[id2] || (posTable[id2] = {x:0,y:0});
+          p2.x = arr[i2*2];
+          p2.y = arr[i2*2+1];
+          posAll[id2] = { x:p2.x, y:p2.y };
+        }
+        perf.workerIdle = !!msg.idle;
+
+        layoutColumnsSpread();
+        perf.dirty = true;
+      }
+    };
+
+    worker.onerror = function(e){
+      setStatus("worker error", "bad");
+      log("Worker error: " + (e.message || "unknown"), "error");
+    };
+  }
+
+  function sendGraphToWorker(){
+    if(!worker) buildWorker();
+
+    var ids = tableNodeIds.slice();
+    var rads = ids.map(function(){ return 22; });
+    var edgesMsg = tableEdgeArr.map(function(e){ return { fromId:e.from, toId:e.to }; });
+
+    worker.postMessage({ type:"initGraph", ids:ids, rads:rads, edges:edgesMsg, seed:(model.layout.seed || Math.random()) });
+  }
+
+  // ===== Rebuild =====
+  function rebuildAll(reason, opts){
+    opts = opts || {};
+
+    graph = buildGraphFromModel();
+
+    cacheNodeIds = Object.keys(graph.nodes);
+    cacheEdgesArr = Object.values(graph.edges);
+
+    tableNodeIds = [];
+    for(var i=0;i<cacheNodeIds.length;i++){
+      var id = cacheNodeIds[i];
+      var n = graph.nodes[id];
+      if(n && n.kind === "Table") tableNodeIds.push(id);
+    }
+
+    tableEdgeArr = [];
+    for(var j=0;j<cacheEdgesArr.length;j++){
+      var e = cacheEdgesArr[j];
+      var a = graph.nodes[e.from];
+      var b = graph.nodes[e.to];
+      if(a && b && a.kind === "Table" && b.kind === "Table"){
+        tableEdgeArr.push(e);
+      }
+    }
+
+    for(var t=0;t<tableNodeIds.length;t++){
+      var tid = tableNodeIds[t];
+      if(!posTable[tid]) posTable[tid] = { x:0, y:0 };
+      posAll[tid] = { x:posTable[tid].x, y:posTable[tid].y };
+    }
+    for(var key in posTable){
+      if(tableNodeIds.indexOf(key) < 0) delete posTable[key];
+    }
+    for(var nId in graph.nodes){
+      if(!posAll[nId]) posAll[nId] = { x:0, y:0 };
+    }
+
+    layoutColumnsSpread();
+    updateStats();
+    renderInspector();
+
+    if(!opts.skipWorkerInit){
+      sendGraphToWorker();
+    }
+
+    if(opts.anchorNodeId && typeof opts.anchorSX === "number" && typeof opts.anchorSY === "number"){
+      keepNodeAtScreen(opts.anchorNodeId, opts.anchorSX, opts.anchorSY);
+    }
+
+    perf.dirty = true;
+    setStatus(reason || "rebuild", "info");
+  }
+
+  function autoLayout(){
+    model.layout.seed = Math.random();
+    model.layout.lastAutoLayoutAt = new Date().toISOString();
+    saveModel();
+    if(worker){
+      worker.postMessage({ type:"reset", seed:model.layout.seed });
+      worker.postMessage({ type:"unpinAll" });
+    }
+    setStatus("auto layout reset", "ok");
+    log("auto layout reset + unpinAll", "info");
+    perf.dirty = true;
+  }
+
+  // ===== Expand/Collapse (anchor 유지) =====
+  function toggleExpandTable(tableKey, nodeId, sx, sy){
+    if(!model.ui.expandedTables) model.ui.expandedTables = {};
+    model.ui.expandedTables[tableKey] = !model.ui.expandedTables[tableKey];
+    saveModel();
+
+    var nid = nodeId || ("T:" + tableKey);
+
+    if(typeof sx !== "number" || typeof sy !== "number"){
+      var p = posAll[nid];
+      if(p){
+        var sc = worldToScreen(p);
+        sx = sc.x; sy = sc.y;
+      }else{
+        sx = wrap.clientWidth/2;
+        sy = wrap.clientHeight/2;
+      }
+    }
+
+    rebuildAll("toggle expand", {
+      skipWorkerInit: true,
+      anchorNodeId: nid,
+      anchorSX: sx,
+      anchorSY: sy
+    });
+  }
+
+  // ===== Interaction =====
+  var pointer = { x:0, y:0, wx:0, wy:0 };
+  var drag = {
+    mode:null, nodeId:null, startX:0, startY:0,
+    startPanX:0, startPanY:0,
+    offsetX:0, offsetY:0,
+    moved:false,
+    colTableKey:null, colName:null
+  };
+
+  function updatePointer(e){
+    var rect = canvas.getBoundingClientRect();
+    pointer.x = (e.clientX - rect.left);
+    pointer.y = (e.clientY - rect.top);
+    var w = screenToWorld(pointer.x, pointer.y);
+    pointer.wx = w.x;
+    pointer.wy = w.y;
+  }
+  function isTableNodeId(id){ return id && id.indexOf("T:") === 0; }
+  function tableKeyFromNodeId(id){ return isTableNodeId(id) ? id.slice(2) : null; }
+
+  canvas.addEventListener("pointermove", function(e){
+    updatePointer(e);
+
+    if(drag.mode === "node" && drag.nodeId){
+      var id = drag.nodeId;
+      if(isTableNodeId(id)){
+        var p = posTable[id] || (posTable[id] = {x:0,y:0});
+        p.x = pointer.wx + drag.offsetX;
+        p.y = pointer.wy + drag.offsetY;
+        posAll[id] = { x:p.x, y:p.y };
+        pinnedTable[id] = true;
+
+        if(workerStarted) worker.postMessage({ type:"pin", id:id, x:p.x, y:p.y });
+
+        layoutColumnsSpread();
+        drag.moved = true;
+        perf.dirty = true;
+      }
+      return;
+    }
+
+    if(drag.mode === "col" && drag.nodeId){
+      var cid = drag.nodeId;
+      var cn = graph.nodes[cid];
+      if(cn && cn.kind === "Column"){
+        var tkey = drag.colTableKey;
+        var cName = drag.colName;
+        var tid = "T:" + tkey;
+        var tp = posTable[tid];
+        if(tp){
+          var newX = pointer.wx + drag.offsetX;
+          var newY = pointer.wy + drag.offsetY;
+
+          posAll[cid] = { x:newX, y:newY };
+
+          var dx = newX - tp.x;
+          var dy = newY - tp.y;
+          setColOffset(tkey, cName, dx, dy);
+
+          layoutColumnsSpread();
+          drag.moved = true;
+          perf.dirty = true;
+        }
+      }
+      return;
+    }
+
+    if(drag.mode === "pan"){
+      var dxp = pointer.x - drag.startX;
+      var dyp = pointer.y - drag.startY;
+      view.panX = drag.startPanX + dxp;
+      view.panY = drag.startPanY + dyp;
+      drag.moved = true;
+      perf.dirty = true;
+      return;
+    }
+
+    var hitN = hitTestNode(pointer.wx, pointer.wy);
+    if(hitN){
+      hover = hitN;
+      var n = graph.nodes[hitN.id];
+      if(n && n.kind === "Table") canvas.style.cursor = "grab";
+      else if(n && n.kind === "Column") canvas.style.cursor = "move";
+      else canvas.style.cursor = "pointer";
+    }else{
+      var hitE = hitTestEdge(pointer.wx, pointer.wy);
+      hover = hitE ? hitE : {kind:null,id:null};
+      canvas.style.cursor = hitE ? "pointer" : "default";
+    }
+  });
+
+  canvas.addEventListener("pointerdown", function(e){
+    canvas.setPointerCapture(e.pointerId);
+    updatePointer(e);
+    drag.moved = false;
+
+    var hitN = hitTestNode(pointer.wx, pointer.wy);
+    if(hitN){
+      var node = graph.nodes[hitN.id];
+
+      if(node && node.kind === "Table"){
+        drag.mode = "node";
+        drag.nodeId = hitN.id;
+        drag.startX = pointer.x;
+        drag.startY = pointer.y;
+
+        var p = posTable[hitN.id] || (posTable[hitN.id] = {x:0,y:0});
+        drag.offsetX = (p.x - pointer.wx);
+        drag.offsetY = (p.y - pointer.wy);
+        pinnedTable[hitN.id] = true;
+
+        if(workerStarted) worker.postMessage({ type:"pin", id:hitN.id, x:p.x, y:p.y });
+        perf.dirty = true;
+        return;
+      }
+
+      if(node && node.kind === "Column"){
+        drag.mode = "col";
+        drag.nodeId = hitN.id;
+        drag.startX = pointer.x;
+        drag.startY = pointer.y;
+
+        var cp = posAll[hitN.id] || {x:pointer.wx, y:pointer.wy};
+        drag.offsetX = (cp.x - pointer.wx);
+        drag.offsetY = (cp.y - pointer.wy);
+
+        drag.colTableKey = node.props.tableKey;
+        drag.colName = node.label;
+
+        perf.dirty = true;
+        return;
+      }
+
+      drag.mode = "pan";
+      drag.nodeId = null;
+      drag.startX = pointer.x;
+      drag.startY = pointer.y;
+      drag.startPanX = view.panX;
+      drag.startPanY = view.panY;
+      return;
+    }
+
+    drag.mode = "pan";
+    drag.nodeId = null;
+    drag.startX = pointer.x;
+    drag.startY = pointer.y;
+    drag.startPanX = view.panX;
+    drag.startPanY = view.panY;
+  });
+
+  canvas.addEventListener("pointerup", function(e){
+    updatePointer(e);
+
+    if(drag.moved){
+      if(drag.mode === "col"){
+        saveModel();
+        setStatus("컬럼 위치 저장됨", "ok");
+      }
+      drag.mode = null;
+      drag.nodeId = null;
+      drag.colTableKey = null;
+      drag.colName = null;
+      return;
+    }
+
+    var hitN = hitTestNode(pointer.wx, pointer.wy);
+    var hitE = (!hitN) ? hitTestEdge(pointer.wx, pointer.wy) : null;
+
+    drag.mode = null;
+    drag.nodeId = null;
+    drag.colTableKey = null;
+    drag.colName = null;
+
+    if(hitN){
+      if(e.shiftKey){
+        if(!(selected.kind === "node" && selected.id && isTableNodeId(selected.id) && isTableNodeId(hitN.id) && selected.id !== hitN.id)){
+          setStatus("수동 링크는 테이블↔테이블만 가능합니다(먼저 Table 선택)", "warn");
+          return;
+        }
+
+        var type = $("#relType").value || "ASSOCIATES";
+        if(model.options.autoUpperRel) type = type.toUpperCase();
+
+        var fromKey = tableKeyFromNodeId(selected.id);
+        var toKey = tableKeyFromNodeId(hitN.id);
+        model.manualEdges.push({ fromTableKey:fromKey, toTableKey:toKey, type:type });
+
+        saveModel();
+        rebuildAll("manual edge added", { skipWorkerInit:true });
+        setStatus("edge added: " + type, "ok");
+        log("manual link: " + fromKey + " -[:" + type + "]-> " + toKey, "info");
+
+        applySelectionUI();
+        perf.dirty = true;
+        return;
+      }
+
+      selected = { kind:"node", id:hitN.id };
+      applySelectionUI();
+      renderInspector();
+      perf.dirty = true;
+      return;
+    }
+
+    if(hitE){
+      selected = { kind:"edge", id:hitE.id };
+      applySelectionUI();
+      renderInspector();
+      perf.dirty = true;
+      return;
+    }
+
+    selected = { kind:null, id:null };
+    applySelectionUI();
+    renderInspector();
+    perf.dirty = true;
+  });
+
+  canvas.addEventListener("dblclick", function(e){
+    updatePointer(e);
+    var hitN = hitTestNode(pointer.wx, pointer.wy);
+    if(hitN){
+      var nn = graph.nodes[hitN.id];
+      if(nn && nn.kind === "Table"){
+        toggleExpandTable(hitN.id.slice(2), hitN.id, pointer.x, pointer.y);
+        perf.dirty = true;
+      }
+    }
+  });
+
+  canvas.addEventListener("wheel", function(e){
+    e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    var sx = (e.clientX - rect.left);
+    var sy = (e.clientY - rect.top);
+
+    var before = screenToWorld(sx, sy);
+    var factor = Math.exp((-e.deltaY) * 0.0012);
+    view.zoom = Math.max(0.25, Math.min(2.8, view.zoom * factor));
+    var after = screenToWorld(sx, sy);
+
+    view.panX += (after.x - before.x) * view.zoom;
+    view.panY += (after.y - before.y) * view.zoom;
+
+    perf.dirty = true;
+  }, { passive:false });
+
+  // ===== Buttons / Tabs =====
+  function downloadText(filename, text){
+    var blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
+  }
+  function copyToClipboard(text){
+    if(!navigator.clipboard || !navigator.clipboard.writeText){
+      setStatus("clipboard not available. Use Export.", "warn");
+      return;
+    }
+    navigator.clipboard.writeText(text).then(function(){
+      setStatus("copied to clipboard", "ok");
+    }).catch(function(){
+      setStatus("clipboard copy failed", "warn");
+    });
+  }
+
+  $("#btnParse").addEventListener("click", function(){
+    try{
+      syncUIToOptions();
+
+      var beforeHadGraph = (Object.keys(model.tables || {}).length > 0);
+      var sql = $("#sqlIn").value;
+      var parsed = parseCreateTables(sql);
+      if(!parsed.length){
+        setStatus("CREATE TABLE을 찾지 못했습니다", "warn");
+        log("parse result 0. ddl format check", "warn");
+        return;
+      }
+
+      upsertTablesToModel(parsed);
+      saveModel();
+      selected = {kind:null, id:null};
+
+      rebuildAll("parsed tables: " + parsed.length, { skipWorkerInit:false });
+
+      if(!beforeHadGraph) resetViewToCenter();
+
+      log("parse ok: tables=" + parsed.length, "info");
+      setStatus("parsed tables: " + parsed.length, "ok");
+      perf.dirty = true;
+    }catch(e){
+      setStatus("parse failed", "bad");
+      log("parse failed: " + e.message, "error");
+    }
+  });
+
+  $("#btnLayout").addEventListener("click", function(){ autoLayout(); });
+  $("#btnCopyCypher").addEventListener("click", function(){ copyToClipboard($("#cypherOut").textContent || ""); });
+  $("#btnExportJson").addEventListener("click", function(){
+    downloadText("gp3_model.json", JSON.stringify(model, null, 2));
+    setStatus("json exported", "ok");
+  });
+
+  $("#btnImportJson").addEventListener("click", function(){
+    var inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "application/json,.json";
+    inp.onchange = function(){
+      var file = inp.files && inp.files[0];
+      if(!file) return;
+      file.text().then(function(text){
+        try{
+          var obj = JSON.parse(text);
+          if(!obj || typeof obj !== "object" || !obj.tables){
+            setStatus("invalid json", "bad");
+            log("invalid json structure (missing tables)", "error");
+            return;
+          }
+          localStorage.setItem(LS_KEY, JSON.stringify(obj));
+          location.reload();
+        }catch(e){
+          setStatus("import failed", "bad");
+          log("json import failed: " + e.message, "error");
+        }
+      });
+    };
+    inp.click();
+  });
+
+  $("#btnClear").addEventListener("click", function(){
+    localStorage.removeItem(LS_KEY);
+    location.reload();
+  });
+
+  var tabs = document.querySelectorAll(".tab");
+  for(var i=0;i<tabs.length;i++){
+    (function(el){
+      el.addEventListener("click", function(){
+        for(var j=0;j<tabs.length;j++) tabs[j].classList.remove("active");
+        el.classList.add("active");
+        var tab = el.getAttribute("data-tab");
+        $("#outCypher").style.display = (tab === "cypher") ? "block" : "none";
+        $("#outInspect").style.display = (tab === "inspect") ? "block" : "none";
+        $("#outJson").style.display = (tab === "json") ? "block" : "none";
+        $("#outLog").style.display = (tab === "log") ? "block" : "none";
+      });
+    })(tabs[i]);
+  }
+
+  // ===== Animation loop =====
+  function animate(ts){
+    if(perf.needResize){
+      resize();
+      perf.needResize = false;
+      perf.dirty = true;
+    }
+
+    var fps = perf.workerIdle ? perf.renderFpsIdle : perf.renderFpsActive;
+    var interval = 1000 / fps;
+
+    if(perf.dirty && (ts - perf.lastRenderTs) >= interval){
+      perf.lastRenderTs = ts;
+      render();
+      perf.dirty = false;
+    }
+    requestAnimationFrame(animate);
+  }
+
+  // ===== INIT =====
+  function init(){
+    applyTheme();
+    applyPanes();
+    syncOptionsToUI();
+
+    resetViewToCenter();
+
+    buildWorker();
+
+    if(Object.keys(model.tables || {}).length === 0){
+      var seedSql = $("#sqlIn").value || "";
+      var parsed = parseCreateTables(seedSql);
+      if(parsed.length){
+        upsertTablesToModel(parsed);
+        saveModel();
+        log("auto parse on init: tables=" + parsed.length, "info");
+      }
+    }
+
+    rebuildAll("ready", { skipWorkerInit:false });
+
+    $("#cypherOut").textContent = currentCypher();
+    $("#jsonOut").textContent = JSON.stringify(model, null, 2);
+
+    applySelectionUI();
+    setStatus("ready", "info");
+    log("app started. model loaded", "info");
+
+    perf.needResize = true;
+    requestAnimationFrame(animate);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
